@@ -9,5 +9,7 @@ describe('Windows scripts (URS-NF-013)', () => {
     const code = src.split('\n').filter((l) => !/^\s*#/.test(l));
     for (const line of code.filter((l) => /&\s*(node|npx|corepack|pnpm|tar|winget|gh)\b/.test(l))) expect(line, line.trim()).not.toMatch(/'[^']*"[^']*'/);
     expect(code.join('\n')).not.toMatch(/node\s+-e\b/);
+    // Defined in 5.1 script modules, which do not load when 5.1 is started from PowerShell 7 (inherited PSModulePath).
+    expect(code.join('\n')).not.toMatch(/\b(Get-FileHash|New-Guid|Format-Hex|Import-PowerShellDataFile|ConvertFrom-SddlString)\b/);
   });
 });

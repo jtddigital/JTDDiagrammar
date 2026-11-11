@@ -42,6 +42,13 @@ function Get-Headers($Accept) {
   $h
 }
 
+# .NET directly: Get-FileHash lives in a 5.1 script module that fails to load when 5.1 is started from PowerShell 7.
+function Get-Sha256($Path) {
+  $sha = [Security.Cryptography.SHA256]::Create()
+  $stream = [IO.File]::OpenRead($Path)
+  try { -join ($sha.ComputeHash($stream) | ForEach-Object { $_.ToString('x2') }) } finally { $stream.Dispose(); $sha.Dispose() }
+}
+
 $path = if ($Want -eq 'latest') { 'releases/latest' } else { "releases/tags/$Want" }
 try { $release = Invoke-RestMethod -Uri "$Api/repos/$Repo/$path" -Headers (Get-Headers 'application/vnd.github+json') -UseBasicParsing }
 catch { Fail "cannot read release '$Want' of $Repo (private repository? set GITHUB_TOKEN)" }
@@ -59,7 +66,7 @@ try {
   Invoke-WebRequest -Uri $tar.url -Headers (Get-Headers 'application/octet-stream') -OutFile $file -UseBasicParsing
   Invoke-WebRequest -Uri $sum.url -Headers (Get-Headers 'application/octet-stream') -OutFile "$file.sha256" -UseBasicParsing
   $expected = ((Get-Content "$file.sha256" -Raw) -split '\s')[0]
-  if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $expected.ToUpper()) { Fail 'checksum mismatch; download aborted' }
+  if ((Get-Sha256 $file) -ne $expected.ToLower()) { Fail 'checksum mismatch; download aborted' }
 
   $versions = Join-Path $JtdHome 'versions'
   $dest = Join-Path $versions $Tag
