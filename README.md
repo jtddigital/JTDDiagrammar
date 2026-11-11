@@ -467,6 +467,7 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `nodes[].lane` | string |  | Lane id; required when the diagram has lanes. |
 | `nodes[].phase` | string |  | Phase id; required when the diagram has phases. |
 | `nodes[].order` | integer |  | Hint: nodes in the same column and lane are placed in ascending order. |
+| `nodes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `nodes[].style` | object |  | Colour and dash overrides (see Styling). |
 | `edges` | list of objects |  | Directed connections. |
 | `edges[].id` | string |  | Optional; generated when absent. |
@@ -475,6 +476,7 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `edges[].label` | string |  | Text on the edge. |
 | `edges[].fromSide` | `N` \| `E` \| `S` \| `W` |  | Side to leave the source by (N, E, S, W); default follows the flow. |
 | `edges[].toSide` | `N` \| `E` \| `S` \| `W` |  | Side to enter the target by; default follows the flow. |
+| `edges[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `edges[].style` | object |  | Colour and dash overrides (see Styling). |
 | `notes` | list of objects |  | Annotations, drawn as folded-corner notes. |
 | `notes[].id` | string |  | Optional; generated when absent. |
@@ -496,6 +498,7 @@ States and the transitions between them, with composite (nested) states. For lif
 | `states[].kind` | `state` \| `initial` \| `final` \| `choice` |  | `state` (default) or a pseudostate; pseudostates draw no label and cannot contain states. |
 | `states[].label` | string |  | Defaults to the id for ordinary states. |
 | `states[].states` | list of objects |  | Nested states make this a composite state. Same fields as `states[]`. |
+| `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].style` | object |  | Colour and dash overrides (see Styling). |
 | `transitions` | list of objects |  | Drawn as `event [guard] / action`; endpoints may be any state, composite or nested. |
 | `transitions[].id` | string |  | Optional; generated when absent. |
@@ -504,6 +507,7 @@ States and the transitions between them, with composite (nested) states. For lif
 | `transitions[].event` | string |  | Trigger. |
 | `transitions[].guard` | string |  | Condition, shown in brackets. |
 | `transitions[].action` | string |  | Effect, shown after a slash. |
+| `transitions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `transitions[].style` | object |  | Colour and dash overrides (see Styling). |
 
 ### `orgchart`
@@ -518,6 +522,7 @@ People and who they report to. For teams and organisations.
 | `people[].name` | string | yes | Shown first, on its own line. |
 | `people[].title` | string |  | Role, shown under the name. |
 | `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
+| `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `people[].style` | object |  | Colour and dash overrides (see Styling). |
 
 <!-- END GENERATED: reference -->
