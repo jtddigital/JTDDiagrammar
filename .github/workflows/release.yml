@@ -1,9 +1,16 @@
 name: Release
 
-# URS-NF-012: pushing a v* tag publishes the app bundle, its checksum and the installers.
+# URS-NF-012: a v* tag publishes the app bundle, its checksum and the installers.
+# If the release already exists (e.g. drafted on the releases page), the files are attached to it.
+# "Run workflow" rebuilds and re-attaches them for an existing tag.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and attach the release files for (e.g. v1.0.1)
+        required: true
 
 permissions:
   contents: write
@@ -11,8 +18,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.TAG }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -21,12 +32,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm release:pack "$TAG"
+      - name: Attach to the release, creating it if needed
         env:
-          TAG: ${{ github.ref_name }}
-      - run: |
-          cd dist-release
-          gh release create "$TAG" jtddiagrammar.tar.gz jtddiagrammar.tar.gz.sha256 install.sh install.ps1 \
-            --title "JTDDiagrammar $TAG" --generate-notes --verify-tag
-        env:
-          TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist-release
+          files=(jtddiagrammar.tar.gz jtddiagrammar.tar.gz.sha256 install.sh install.ps1)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" --title "JTDDiagrammar $TAG" --generate-notes --verify-tag
+          fi

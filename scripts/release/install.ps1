@@ -48,7 +48,8 @@ catch { Fail "cannot read release '$Want' of $Repo (private repository? set GITH
 $Tag = $release.tag_name
 $tar = $release.assets | Where-Object name -eq $Asset
 $sum = $release.assets | Where-Object name -eq "$Asset.sha256"
-if ($Tag -notmatch '^v[\w.+-]+$' -or -not $tar -or -not $sum) { Fail "release '$Want' has no $Asset" }
+if ($Tag -notmatch '^v[\w.+-]+$') { Fail "release '$Want' has an unexpected tag '$Tag'" }
+if (-not $tar -or -not $sum) { Fail "release $Tag has no $Asset attached (GitHub's 'Source code' archive is not the app). The Release workflow attaches it: check its run under Actions, or start it with 'Run workflow' for tag $Tag." }
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ('jtd-' + [Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
