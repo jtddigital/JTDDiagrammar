@@ -11,12 +11,12 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P0 | Monorepo, CI, type registry, Graph IR, schemas, validation, README pipeline | **Done** |
 | P1 | Flowchart layout + SVG rendering, README images | **Done** |
 | P2 | Cross-functional layout (lanes × phases) | **Done** |
-| P3 | REST API + web app (editor, live preview, SVG export) | Next |
-| P4 | AI generation from documents (Claude) | Planned |
+| P3 | REST API + web app (editor, live preview, SVG export) | **Done** |
+| P4 | AI generation from documents (Claude) | Next |
 | P5 | State diagrams | Planned |
 | P6–P7 | Layout quality, extras | Planned |
 
-Today the core library **validates and renders flowcharts to SVG, including cross-functional flowcharts** (lanes × phases, `LR` or `TB`). Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
+Today you can write flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
 
 ## Diagram types
 
@@ -245,9 +245,41 @@ Requires Node ≥ 22.12 and pnpm 10.
 pnpm install
 ```
 
+Build the web app and start the API, which also serves the web app, at http://localhost:8080:
+
 ```bash
-pnpm check
+pnpm --filter @jtd/web build
 ```
+
+```bash
+pnpm dev:api
+```
+
+For web development with hot reload (Vite, http://localhost:5173), run this alongside the API:
+
+```bash
+pnpm dev:web
+```
+
+Or run everything in one container:
+
+```bash
+docker build -t jtd .
+```
+
+```bash
+docker run -p 8080:8080 jtd
+```
+
+Configuration is through environment variables; see [`.env.example`](.env.example).
+
+### Web app
+
+![Web app: JSON editor with inline diagnostics, live SVG preview, export](docs/img/web-app.png)
+
+Edit JSON on the left, and the preview updates as you type. Errors are underlined in the editor and listed below it, with their JSON Pointer. The preview keeps the last valid diagram until the errors are fixed. **Export SVG** downloads exactly what the API would return for the same source. The example picker loads every registered example. Rendering happens in the browser with the same core library the API uses.
+
+### Library
 
 ```ts
 import { createRegistry, parseJson, render } from '@jtd/core';
@@ -258,15 +290,31 @@ const { svg, diagnostics } = render(value, createRegistry()); // svg is undefine
 
 Output is standalone SVG 1.1. Text uses `Arial, Liberation Sans, Helvetica, sans-serif`; the first two have identical metrics, so text fits its boxes without embedding a font. Elements carry ids and classes for styling and scripting: `n-<id>` / `jtd-node jtd-shape-<shape>` for nodes, and `e-<id>` / `jtd-edge` for edges.
 
-## API (planned, P3)
+## API
 
 | Method | Path | Returns |
 |--------|------|---------|
-| POST | `/v1/render` | `image/svg+xml` |
-| POST | `/v1/validate` | `{ valid, diagnostics[] }` |
-| POST | `/v1/generate` | AI-generated source + SVG (P4) |
-| GET | `/v1/types` | Registered diagram types |
-| GET | `/v1/schema[/{type}]` | JSON Schema |
+| POST | `/v1/render` | `image/svg+xml`, or `{ svg, diagnostics }` with `Accept: application/json` |
+| POST | `/v1/validate` | `{ valid, diagnostics }` |
+| GET | `/v1/types` | Registered diagram types and their examples |
+| GET | `/v1/schema`, `/v1/schema/{type}` | JSON Schema (2020-12), combined or per type |
+| GET | `/v1/openapi.json` | OpenAPI 3.1, generated from the route table |
+| GET | `/health` | `{ status: "ok" }` |
+
+```bash
+curl -X POST localhost:8080/v1/render -H 'content-type: application/json' --data @diagram.json -o diagram.svg
+```
+
+Errors come back as `{ diagnostics: [...] }` (shape as in [Diagnostics](#diagnostics)):
+
+| Status | When |
+|--------|------|
+| 400 | Invalid JSON or invalid diagram |
+| 413 | Body over `BODY_LIMIT`, or more than `MAX_NODES` / `MAX_EDGES` |
+| 415 | Body is not `application/json` |
+| 422 | Rendering took longer than `RENDER_TIMEOUT_MS`, so the render was stopped |
+
+Rendering runs in worker threads, so one slow diagram can't stall the server. Request bodies are never logged. SVG responses carry `Content-Security-Policy: default-src 'none'`. `POST /v1/generate` (AI) arrives in P4.
 
 ## AI generation (planned, P4)
 
@@ -286,6 +334,8 @@ packages/core/src
   shapes/       shape library: size, outline, ports
   layout/       layered engine: cycles → rank → order → place → route
   render/svg/   geometry → SVG string
+packages/api/src   Fastify server: route table → routes + OpenAPI, worker-thread render pool
+packages/web/src   Vite + React + CodeMirror: editor, live preview, export
 scripts/docs/   README generation + checks
 scripts/fonts/  font metrics generator
 ```
@@ -306,7 +356,9 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/U
 | `pnpm check` | lint + typecheck + tests + docs check (what CI runs) |
 | `pnpm test` | Vitest (unit, layout invariants, golden SVGs) |
 | `pnpm test -u` | Accept changed golden SVGs. Review the diff first. |
+| `pnpm e2e` | Playwright tests: built web app against the real API |
 | `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
+| `pnpm docs:screens` | Regenerate web app screenshots (`docs/img/*.png`) |
 | `pnpm fonts:metrics` | Regenerate `measure/font-metrics.ts` from Liberation Sans |
 
 Every change cites URS IDs and includes an impact assessment in the commit body ([URS §5](docs/URS.md)).

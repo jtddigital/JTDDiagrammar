@@ -1,3 +1,4 @@
+import { min } from '../../math.ts';
 import type { Link } from './graph.ts';
 
 /** Longest-path layering of a DAG; sources are then pulled next to their earliest successor. */
@@ -20,6 +21,6 @@ export function rank(n: number, links: readonly Link[]): number[] {
       if (--indeg[v]! === 0) queue.push(v);
     }
   }
-  for (const u of topo.reverse()) if (isSource[u] && out[u]!.length) r[u] = Math.min(...out[u]!.map((v) => r[v]!)) - 1;
+  for (const u of topo.reverse()) if (isSource[u] && out[u]!.length) r[u] = min(out[u]!.map((v) => r[v]!)) - 1;
   return r;
 }

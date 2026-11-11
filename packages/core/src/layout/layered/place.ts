@@ -1,3 +1,4 @@
+import { min, max } from '../../math.ts';
 import { pack } from '../pack.ts';
 import { EDGE_GAP, LANE_PAD, NODE_GAP } from './constants.ts';
 import { isDummy, type Chain, type Span, type Vertex } from './graph.ts';
@@ -50,13 +51,13 @@ export function place(layers: readonly number[][], verts: Vertex[], chains: read
   }
   const bands: Span[] = [];
   let at = 0;
-  laneMin.forEach((min, g) => {
+  laneMin.forEach((minSize, g) => {
     const sub = layers.map((l) => l.filter((v) => verts[v]!.group === g));
     placeGroup(sub, verts, up, down, sweeps);
     const vs = sub.flat().map((v) => verts[v]!);
-    const lo = vs.length ? Math.min(...vs.map((v) => v.pos - v.cross / 2)) : 0;
-    const hi = vs.length ? Math.max(...vs.map((v) => v.pos + v.cross / 2)) : 0;
-    const size = Math.max(hi - lo + 2 * LANE_PAD, min);
+    const lo = min(vs.map((v) => v.pos - v.cross / 2));
+    const hi = max(vs.map((v) => v.pos + v.cross / 2));
+    const size = Math.max(hi - lo + 2 * LANE_PAD, minSize);
     const shift = at + (size - (hi - lo)) / 2 - lo;
     for (const v of vs) v.pos += shift;
     bands.push({ start: at, end: at + size });

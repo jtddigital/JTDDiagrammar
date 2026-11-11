@@ -8,5 +8,5 @@ export { createRegistry } from './builtins.ts';
 export { combinedSchema } from './schema/combined.ts';
 export { parseJson, type ParseResult } from './adapters/json.ts';
 export { compile, type CompileResult } from './compile.ts';
-export { render, type RenderResult } from './render.ts';
+export { render, type RenderOptions, type RenderResult } from './render.ts';
 export { renderSvg, type SvgOptions } from './render/svg/index.ts';

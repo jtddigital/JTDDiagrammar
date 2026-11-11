@@ -1,3 +1,4 @@
+import { max } from '../../math.ts';
 import { warning } from '../../diagnostics.ts';
 import type { Band as IRBand, GraphIR } from '../../ir/types.ts';
 import { textBlock } from '../../measure/text.ts';
@@ -77,8 +78,8 @@ export const layered: LayoutEngine = {
           phaseLabels,
           lanes: laneSpans,
           phases: routed.axis.spans,
-          laneHeader: pad(Math.max(...laneLabels.map((b) => flow.main(b.width, b.height)))),
-          phaseHeader: phaseLabels.length ? pad(Math.max(...phaseLabels.map((b) => flow.cross(b.width, b.height)))) : 0,
+          laneHeader: pad(max(laneLabels.map((b) => flow.main(b.width, b.height)))),
+          phaseHeader: phaseLabels.length ? pad(max(phaseLabels.map((b) => flow.cross(b.width, b.height)))) : 0,
           length: routed.axis.length,
         })
       : { bands: [] };

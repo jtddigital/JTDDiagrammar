@@ -9,15 +9,20 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc -p packages/core && tsc -p .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/api && tsc -p packages/web && tsc -p .",
     "test": "vitest run",
     "docs:build": "tsx scripts/docs/cli.ts build",
     "docs:check": "tsx scripts/docs/cli.ts check",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check",
-    "fonts:metrics": "tsx scripts/fonts/metrics.ts"
+    "fonts:metrics": "tsx scripts/fonts/metrics.ts",
+    "dev:api": "node packages/api/src/server.ts",
+    "dev:web": "pnpm --filter @jtd/web dev",
+    "e2e": "pnpm --filter @jtd/web e2e",
+    "docs:screens": "pnpm --filter @jtd/web screens"
   },
   "devDependencies": {
     "@jtd/core": "workspace:*",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.20.5",
     "eslint": "^10.14.0",
     "fast-xml-parser": "^5.12.0",

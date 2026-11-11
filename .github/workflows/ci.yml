@@ -20,6 +20,33 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
+  e2e:
+    # Web app against the real API (URS-WEB-001..004, URS-LY-009 in a browser).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @jtd/web exec playwright install --with-deps chromium
+      - run: pnpm e2e
+
+  docker:
+    # URS-NF-006: the image builds and serves both the API and the web app.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t jtd .
+      - run: |
+          docker run -d --name jtd -p 8080:8080 jtd
+          for i in $(seq 1 30); do curl -sf localhost:8080/health && break; sleep 1; done
+          curl -sf localhost:8080/ | grep -q '<div id="root">'
+          curl -sf -X POST -H 'content-type: application/json' \
+            --data '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' localhost:8080/v1/render | grep -q '<svg'
+
   secrets:
     # URS-NF-008
     runs-on: ubuntu-latest

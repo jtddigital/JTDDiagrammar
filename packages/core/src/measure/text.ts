@@ -1,3 +1,4 @@
+import { max } from '../math.ts';
 import { FONT } from './font-metrics.ts';
 
 /** Deterministic text metrics from a bundled table: identical in Node and browsers (URS-LY-009). */
@@ -52,5 +53,5 @@ export interface TextBlock {
 
 export function textBlock(text: string, maxWidth: number, font: Font): TextBlock {
   const lines = wrap(text, maxWidth, font);
-  return { lines, width: Math.max(0, ...lines.map((l) => textWidth(l, font))), height: lines.length * lineHeight(font) };
+  return { lines, width: max(lines.map((l) => textWidth(l, font))), height: lines.length * lineHeight(font) };
 }

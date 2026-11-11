@@ -1,3 +1,4 @@
+import { max } from '../../math.ts';
 import type { Box, PlacedNode, RoutedEdge } from '../../geometry.ts';
 import type { IREdge } from '../../ir/types.ts';
 import { textBlock } from '../../measure/text.ts';
@@ -67,7 +68,7 @@ const labelOf = (e: IREdge) => (e.label ? textBlock(e.label, LABEL_TEXT_MAX, LAB
 export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axis: MainAxis } {
   const { flow, nodes, verts, layers, chains, edges } = ctx;
   const port = ports(ctx);
-  const extent = layers.map((l) => Math.max(0, ...l.map((v) => verts[v]!.main)));
+  const extent = layers.map((l) => max(l.map((v) => verts[v]!.main)));
   const crossStart = (v: number) => verts[v]!.pos - verts[v]!.cross / 2;
 
   // Cross coordinate where each chain leaves/enters each of its vertices.

@@ -171,10 +171,14 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 | GET  | `/v1/openapi.json` | OpenAPI |
 | GET  | `/health` | 200 |
 
-Limits: 1 MB body, 1000 nodes, 2000 edges, 2 s render time (URS-API-006). Diagnostic shape: `{ severity, code, message, path }`, where `path` is a JSON Pointer.
+Limits (URS-API-006): 1 MB body (413), 1000 nodes and 2000 edges (413, checked by core `render()` after compiling and before layout), and a **5 s** render time (422 `limit.time`). The planned 2 s was raised after benchmarking: a random 1000-node / 2000-edge graph takes about 2.4 s. Diagnostic shape: `{ severity, code, message, path }`, where `path` is a JSON Pointer.
+
+**As built in P3** (`packages/api`). Routes are declared once as a table (`routes/*.ts`). The server registers them, and `openapi.ts` derives the OpenAPI 3.1 document from the same table, so the two can't drift. Rendering runs in a `RenderPool` of worker threads (`pool.ts`, `render-worker.ts`): one job per worker, and a job past the timeout has its worker terminated and replaced. Validation is cheap and runs on the main thread. The registry is loaded from a configurable module, so tests can register the fixture type in the server and its workers (URS-EXT-002). Only JSON bodies are accepted (`text/plain` parser removed). Fastify request errors map to diagnostics (`errors.ts`). Bodies are never logged. SVG responses carry a `default-src 'none'` CSP. The built web app is served at `/` when present. Node runs the TypeScript sources directly (type stripping, no build step); workspace packages resolve through symlinks, which keeps them outside `node_modules` and so allowed to be stripped. The Docker image relies on the same property.
 
 ## 8. Web app
 Split pane: a CodeMirror editor next to an SVG preview with pan and zoom. Rendering happens client-side through `@jtd/core`. The editor fetches its schema from the registry using the document's `type`, so it contains no type-specific code (URS-WEB-010). Export downloads the SVG string that is already rendered (URS-WEB-003). The generate panel calls the API (the key never reaches the browser) and loads the result into the editor (URS-WEB-011..014).
+
+**As built in P3** (`packages/web`, Vite + React + CodeMirror 6). `useDiagram` re-renders 250 ms after the last edit, client-side, and keeps the last valid SVG. While the render is behind the editor, the status reads "Updating…" and Export is disabled. E2E found that without this, Export could save the previous diagram. `editor/locate.ts` maps each diagnostic's JSON Pointer to a source range with `jsonc-parser` (property → key; array element → opening bracket; missing → nearest ancestor; parse errors → parser offset), shown with `@codemirror/lint`. The preview is an `<img>` of a blob URL, so SVG content can never run script in the app, scaled to fit the pane. Pan/zoom is URS-WEB-006 (P7). Not yet: schema autocomplete (URS-WEB-005) and moving rendering into a Web Worker for very large diagrams. The bundle is about 600 kB minified (React, CodeMirror, Ajv); code-splitting is deferred.
 
 ## 9. AI generation (`@jtd/ai`)
 ```

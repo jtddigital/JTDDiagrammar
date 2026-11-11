@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.6 (draft) |
+| Version | 0.7 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -81,8 +81,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-LY-006 | S | Edges do not pass through nodes. | Segment/box intersection test. | T | Proposed |
 | URS-LY-007 | S | Edge crossings and bends are minimised (heuristic). | Crossing count ≤ baseline on fixtures. | T | Partial |
 | URS-LY-008 | S | Edge labels do not overlap nodes. | Box intersection test. | T | Proposed |
-| URS-LY-009 | M | Text measurement is identical in Node and the browser (bundled font metrics, no DOM). | Same widths in both runtimes. | T | Implemented |
-| URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI. | T | Proposed |
+| URS-LY-009 | M | Text measurement is identical in Node and the browser (bundled font metrics, no DOM). | Same widths in both runtimes. | T | Verified |
+| URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI. | T | Verified |
 | URS-LY-011 | S | Self-loop edges are routed without overlapping their node. | Geometry assertion. | T | Partial |
 | URS-LY-012 | S | Compound layout: containers are sized to their children, and edges may cross container boundaries. | Geometry assertion. | T | Proposed |
 
@@ -101,17 +101,17 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.7 API (API)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-API-001 | M | REST over HTTP, versioned under `/v1`. | — | I | Proposed |
-| URS-API-002 | M | `POST /v1/render` returns `image/svg+xml` for any registered type. | Integration test per type. | T | Proposed |
-| URS-API-003 | M | `POST /v1/validate` returns diagnostics JSON. | Integration test. | T | Proposed |
-| URS-API-004 | M | `GET /v1/schema` returns the combined schema; `GET /v1/schema/{type}` returns one type's schema. | Integration test. | T | Proposed |
-| URS-API-005 | M | Invalid input returns `400` with diagnostics; oversize input returns `413`. | Integration test. | T | Proposed |
-| URS-API-006 | M | Limits on body size, node/edge count and render time. | Limit tests. | T | Proposed |
-| URS-API-007 | S | Input format is chosen by `Content-Type` (JSON; XML once URS-IN-006 lands). | Integration test. | T | Proposed |
-| URS-API-008 | S | An OpenAPI document is published. | `GET /v1/openapi.json`. | T | Proposed |
-| URS-API-009 | S | `GET /health`. | Returns 200. | T | Proposed |
+| URS-API-001 | M | REST over HTTP, versioned under `/v1`. | — | I | Verified |
+| URS-API-002 | M | `POST /v1/render` returns `image/svg+xml` for any registered type. | Integration test per type. | T | Verified |
+| URS-API-003 | M | `POST /v1/validate` returns diagnostics JSON. | Integration test. | T | Verified |
+| URS-API-004 | M | `GET /v1/schema` returns the combined schema; `GET /v1/schema/{type}` returns one type's schema. | Integration test. | T | Verified |
+| URS-API-005 | M | Invalid input returns `400` with diagnostics; oversize input returns `413`. | Integration test. | T | Verified |
+| URS-API-006 | M | Limits on body size, node/edge count and render time. | Limit tests. | T | Verified |
+| URS-API-007 | S | Input format is chosen by `Content-Type` (JSON; XML once URS-IN-006 lands). | Integration test. | T | Partial |
+| URS-API-008 | S | An OpenAPI document is published. | `GET /v1/openapi.json`. | T | Verified |
+| URS-API-009 | S | `GET /health`. | Returns 200. | T | Verified |
 | URS-API-010 | C | `GET /v1/render?src=<base64url>` for `<img>` embedding. | Integration test. | T | Proposed |
-| URS-API-011 | M | `GET /v1/types` lists the registered types with their descriptions. | Integration test. | T | Proposed |
+| URS-API-011 | M | `GET /v1/types` lists the registered types with their descriptions. | Integration test. | T | Verified |
 | URS-API-012 | M | `POST /v1/generate` (multipart: `files[]`, `text`, `type` or `auto`, options) returns `{ source, valid, diagnostics, attempts, usage }`, plus `svg` when valid. | Integration test with a mock client. | T | Proposed |
 | URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Proposed |
 | URS-API-014 | S | `generate` and `refine` stream progress as SSE when called with `Accept: text/event-stream` (URS-AI-015). | Integration test. | T | Proposed |
@@ -120,16 +120,16 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.8 Web App (WEB)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-WEB-001 | M | Source editor with syntax highlighting. | D | D | Proposed |
-| URS-WEB-002 | M | Live preview with debounced re-render on edit. The last good render is kept when there is an error. | E2E test. | T | Proposed |
-| URS-WEB-003 | M | Export SVG download, byte-identical to the API output for the same input. | E2E hash comparison. | T | Proposed |
-| URS-WEB-004 | M | Diagnostics shown inline at their source location. | E2E test. | T | Proposed |
+| URS-WEB-001 | M | Source editor with syntax highlighting. | D | D | Verified |
+| URS-WEB-002 | M | Live preview with debounced re-render on edit. The last good render is kept when there is an error. | E2E test. | T | Verified |
+| URS-WEB-003 | M | Export SVG download, byte-identical to the API output for the same input. | E2E hash comparison. | T | Verified |
+| URS-WEB-004 | M | Diagnostics shown inline at their source location. | E2E test. | T | Verified |
 | URS-WEB-005 | S | Schema-aware autocomplete. | D | D | Proposed |
 | URS-WEB-006 | S | Pan and zoom in the preview. | D | D | Proposed |
-| URS-WEB-007 | S | Built-in example templates for each type. | D | D | Proposed |
+| URS-WEB-007 | S | Built-in example templates for each type. | D | D | Verified |
 | URS-WEB-008 | C | Persist to localStorage; shareable URL. | E2E test. | T | Proposed |
 | URS-WEB-009 | C | Clicking a node in the preview jumps to its source. | E2E test. | T | Proposed |
-| URS-WEB-010 | M | Editor validation and autocomplete follow the document's `type`, with no type-specific code in the web app. | E2E test with two types. | T | Proposed |
+| URS-WEB-010 | M | Editor validation and autocomplete follow the document's `type`, with no type-specific code in the web app. | E2E test with two types. | T | Partial |
 | URS-WEB-011 | M | Generate panel: paste text or drop files, pick a type or `auto`, then generate. The result loads into the editor (editable) with its diagnostics. | E2E test with a mock API. | T | Proposed |
 | URS-WEB-012 | S | Generation shows staged progress and can be cancelled. | E2E test. | T | Proposed |
 | URS-WEB-013 | S | Refine box: a natural-language instruction applied to the current source. | E2E test. | T | Proposed |
@@ -166,9 +166,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 |----|-----|-------------|---------------------|--------|--------|
 | URS-DOC-001 | M | The README covers purpose, features, quick start (install, run the API, run the web app), API reference with `curl` examples, language reference per type, AI generation usage and configuration, an architecture overview, the development workflow (URS process) and the licence. | Inspection checklist. | I | Partial |
 | URS-DOC-002 | M | The README shows a rendered example of **every** registered diagram type (flowchart, cross-functional, state, …) next to its source. | CI check (URS-DOC-004). | T | Verified |
-| URS-DOC-003 | M | README images are generated by a script (`pnpm docs:images`) from `fixtures/`: diagrams as SVG from core, the web app as PNG via Playwright. None are made by hand. | The script reproduces the committed files. | T | Partial |
+| URS-DOC-003 | M | README images are generated by a script (`pnpm docs:images`) from `fixtures/`: diagrams as SVG from core, the web app as PNG via Playwright. None are made by hand. | The script reproduces the committed files. | T | Verified |
 | URS-DOC-004 | M | CI fails if README images differ from the current renderer output, or if a registered type has no README example. | CI job. | T | Verified |
-| URS-DOC-005 | S | Web app screenshots of the editor with preview and of the AI generate panel. | Present in the README. | I | Proposed |
+| URS-DOC-005 | S | Web app screenshots of the editor with preview and of the AI generate panel. | Present in the README. | I | Partial |
 | URS-DOC-006 | S | The per-type language reference (field tables) is generated from the authoring schemas. | The script reproduces the committed files. | T | Proposed |
 
 ### 3.11 Non-Functional (NF)
@@ -179,7 +179,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-NF-003 | M | Unit tests per module plus golden SVG snapshots; CI runs on every push. | CI is green. | T | Verified |
 | URS-NF-004 | M | Every change cites URS IDs and records an impact assessment (§5). | Commit/PR inspection. | I | Implemented |
 | URS-NF-005 | S | ≥ 80 % line coverage on `core`. | CI gate. | T | Proposed |
-| URS-NF-006 | S | A container image serves the API and the static web app. | `docker run` serves both. | D | Proposed |
+| URS-NF-006 | S | A container image serves the API and the static web app. | `docker run` serves both. | D | Implemented |
 | URS-NF-007 | S | Only permissively licensed dependencies (MIT/Apache/BSD/ISC/OFL). | License check in CI. | T | Proposed |
 | URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Verified |
 | URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
@@ -190,7 +190,7 @@ Updated with each change. `—` = not started.
 | URS ID | Module(s) | Test(s) | Note |
 |--------|-----------|---------|------|
 | EXT-001, EXT-005 | core/src/registry/ | core/test/registry.test.ts | |
-| EXT-002 | core/src/compile.ts | core/test/extensibility.test.ts | Core only; API/web in P3. |
+| EXT-002 | core/src/compile.ts, api/src/config.ts (registryModule) | core/test/extensibility.test.ts, api/test/api.test.ts | Core and API verified with the fixture type; the web app uses built-ins only. |
 | EXT-003, IN-002 | core/src/validate/envelope.ts | core/test/envelope.test.ts | |
 | EXT-004, NF-001, NF-009 | eslint.config.js, core/tsconfig.json (no DOM/Node types) | test/boundaries.test.ts | |
 | EXT-006 | core/src/schema/combined.ts | core/test/extensibility.test.ts | |
@@ -203,7 +203,7 @@ Updated with each change. `—` = not started.
 | RN-002 | core/src/render/svg/bands.ts | core/test/render.test.ts, golden/cff-* | |
 | NF-002 | tsconfig.base.json | `pnpm typecheck` | |
 | NF-004 | CLAUDE.md, commit bodies | — | Inspection. |
-| DOC-001 | README.md | — | API/AI/web sections pending P3/P4. |
+| DOC-001 | README.md | — | AI section pending P4. |
 | TYP-001, DM-004 | core/src/shapes/, core/src/diagrams/flowchart/ | core/test/shapes.test.ts, golden/shapes | |
 | DM-003, LY-004 | core/src/layout/flow.ts, layout/layered/{cycles,rank}.ts | core/test/layout.test.ts | |
 | DM-006, DM-007 | core/src/measure/text.ts, layout/layered/route.ts | core/test/measure.test.ts, golden/text | |
@@ -211,14 +211,22 @@ Updated with each change. `—` = not started.
 | LY-002 | core/src/layout/pack.ts, layered/place.ts | core/test/layout.test.ts, pack.test.ts | No overlaps; nodes inside their lane × phase cell, clear of headers. |
 | LY-005 | core/src/layout/layered/route.ts | core/test/layout.test.ts | |
 | LY-007 | core/src/layout/layered/order.ts | — | Barycenter heuristic; no crossing baseline yet (P6). |
-| LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Chromium checked by hand: within 0.02 px. Not in CI yet (P3, Playwright). |
+| LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
 | LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle | Basic; no dedicated assertion. |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts | Well-formed, allowed elements; Chromium render. No DTD/Inkscape check yet. |
 | RN-003..005 | core/src/render/svg/{index,escape,text}.ts | core/test/render.test.ts, golden/* | |
 | RN-006 | core/src/measure/font-metrics.ts (Arial-compatible stack) | — | Fallback stack, no embedding. |
 | NF-003 | vitest + golden SVGs + CI | core/test/golden.test.ts | CI green on P0. |
-| DOC-002..004 | scripts/docs/, docs/img/ | scripts/docs/readme.test.ts, `pnpm docs:check` | Web app screenshots in P3. |
+| DOC-002..004 | scripts/docs/, docs/img/ | scripts/docs/readme.test.ts, `pnpm docs:check` | |
 | NF-008 | .env.example, CI `secrets` job | CI | Green on P0. |
+| API-001..006, API-009, API-011 | packages/api/src/{app,pool,render-worker,errors}.ts, routes/*.ts | packages/api/test/api.test.ts | Real worker threads; timeout kill and recovery tested. |
+| API-007 | packages/api/src/app.ts (JSON only) | api.test.ts (415) | XML awaits URS-IN-006. |
+| API-008 | packages/api/src/openapi.ts (derived from route table) | api.test.ts | |
+| WEB-001..004, WEB-007 | packages/web/src/** | packages/web/e2e/app.spec.ts, web/test/locate.test.ts | Includes regression test for stale export during debounce. |
+| WEB-010 | packages/web/src (no type-specific code) | e2e (all examples) | Second type arrives in P5; then E2E with two types. |
+| LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~110 ms. 1000/2000 random graph ~2.4 s. |
+| DOC-005 | packages/web/e2e/screens.spec.ts → docs/img/web-app.png | `pnpm docs:check` (presence) | AI panel screenshot in P4. PNGs are not byte-compared. |
+| NF-006 | Dockerfile, CI `docker` job | CI | Final stage simulated locally (prod install + serve); image build runs in CI. |
 
 ## 5. Change Impact Assessment (required per change)
 ```
@@ -233,6 +241,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.7 | 2026-11-11 | P3: REST API and web app. 17 requirements verified; API-007, WEB-010 and DOC-005 partial; NF-006 implemented. Render timeout default 5 s (benchmarked). |
 | 0.6 | 2026-11-11 | Cross-functional layout delivered (now P2; API/web renumbered to P3 at the user's request). TYP-002, DM-001/002, LY-002/003, RN-002 verified. |
 | 0.5 | 2026-11-11 | P1 implemented: flowchart layout and SVG rendering, README images, MIT licence. Statuses and matrix updated. |
 | 0.4 | 2026-11-11 | P0 implemented: statuses and traceability matrix updated. Added the Partial status. |
