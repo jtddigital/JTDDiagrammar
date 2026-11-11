@@ -65,12 +65,19 @@ jobs:
           curl -sf localhost:8080/v1/ai | grep -q '"enabled":false'
 
   install:
-    # URS-NF-010/011: install a packed release from a stand-in GitHub API and launch it, on each OS.
+    # URS-NF-010/011/013: install a packed release from a stand-in GitHub API, launch it, update, uninstall.
+    # Windows first: both Windows PowerShell 5.1 (what users have) and PowerShell 7. Linux runs install.sh.
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - { os: windows-latest, ps: powershell }
+          - { os: windows-latest, ps: pwsh }
+          - { os: ubuntu-latest, ps: '' }
+    name: install (${{ matrix.os }} ${{ matrix.ps || 'bash' }})
     runs-on: ${{ matrix.os }}
+    env:
+      JTD_E2E_PS: ${{ matrix.ps }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -5,7 +5,7 @@
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -15,6 +15,8 @@ import { ASSET, pack } from './pack.ts';
 const TAG = 'v9.9.9';
 const TOKEN = 'e2e-token';
 const win = process.platform === 'win32';
+/** PowerShell to test with: Windows PowerShell 5.1 by default on Windows; JTD_E2E_PS=pwsh also runs the Windows scripts elsewhere. */
+const ps = process.env.JTD_E2E_PS || (win ? 'powershell' : undefined);
 
 function check(ok: unknown, what: string): void {
   if (!ok) throw new Error(`release e2e: ${what}`);
@@ -47,10 +49,14 @@ const home = mkdtempSync(join(tmpdir(), 'jtd-home-'));
 pack(TAG, out);
 const gh = await fakeGitHub(out);
 const env = { ...process.env, JTD_API: gh.url, JTD_REPO: 'test/repo', JTD_HOME: home, JTD_BIN: join(home, 'bin'), GITHUB_TOKEN: TOKEN, GH_TOKEN: '' };
-const installer = win
-  ? ['powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(out, 'install.ps1')]]
-  : ['bash', [join(out, 'install.sh')]];
-const launcher = win ? join(home, 'bin', 'jtddiagrammar.cmd') : join(home, 'bin', 'jtddiagrammar');
+const psFile = (f: string) => ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f];
+const installer: [string, string[]] = ps ? [ps, psFile(join(out, 'install.ps1'))] : ['bash', [join(out, 'install.sh')]];
+// The .cmd shim needs cmd.exe; elsewhere the PowerShell launcher is called directly.
+const launcher: [string, string[]] = win
+  ? [join(home, 'bin', 'jtddiagrammar.cmd'), []]
+  : ps
+    ? [ps, psFile(join(home, 'versions', TAG, 'bin', 'jtddiagrammar.ps1'))]
+    : [join(home, 'bin', 'jtddiagrammar'), []];
 /** Async, so the stand-in server in this process keeps answering. */
 async function run(cmd: string, args: string[], extra = {}) {
   const p = spawn(cmd, args, { env: { ...env, ...extra }, shell: win && cmd.endsWith('.cmd') });
@@ -64,13 +70,13 @@ async function run(cmd: string, args: string[], extra = {}) {
 
 let app: ChildProcess | undefined;
 try {
-  const first = await run(installer[0] as string, installer[1] as string[]);
+  const first = await run(installer[0], installer[1]);
   process.stderr.write(first.stderr);
   check(first.status === 0, 'installs the latest release with a token');
-  check((await run(launcher, ['version'])).stdout.trim() === TAG, 'launcher reports the installed version');
+  check((await run(launcher[0], [...launcher[1], 'version'])).stdout.trim() === TAG, 'launcher reports the installed version');
 
   const port = 18_000 + Math.floor(Math.random() * 1000);
-  app = spawn(launcher, ['start', '--port', String(port), '--no-open'], { env, stdio: 'inherit', shell: win });
+  app = spawn(launcher[0], [...launcher[1], 'start', '--port', String(port), '--no-open'], { env, stdio: 'inherit', shell: win, detached: !win });
   const url = `http://localhost:${port}`;
   let up = false;
   for (let i = 0; i < 120 && !up; i++) {
@@ -82,14 +88,21 @@ try {
   const svg = await fetch(`${url}/v1/render`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' });
   check((await svg.text()).startsWith('<svg'), 'renders through the API');
 
-  const again = await run(installer[0] as string, [...(installer[1] as string[]), TAG]);
+  const again = await run(installer[0], [...installer[1], TAG]);
   check(again.status === 0 && gh.downloads() === 4, 'updates in place to a named release');
-  const denied = await run(installer[0] as string, installer[1] as string[], { GITHUB_TOKEN: 'wrong' });
+  const denied = await run(installer[0], installer[1], { GITHUB_TOKEN: 'wrong' });
   check(denied.status !== 0 && /GITHUB_TOKEN/.test(denied.stderr + denied.stdout), 'explains a refused private repository');
+
+  if (ps) {
+    const removed = await run(launcher[0], [...launcher[1], 'uninstall']);
+    let gone = false;
+    for (let i = 0; i < 20 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
+    check(removed.status === 0 && gone, 'uninstall removes the installation');
+  }
 } finally {
   if (app?.pid) {
     if (win) spawnSync('taskkill', ['/pid', String(app.pid), '/T', '/F']);
-    else app.kill('SIGTERM');
+    else process.kill(-app.pid, 'SIGTERM'); // the launcher's whole process group
   }
   gh.server.close();
   await new Promise((r) => setTimeout(r, 500));

@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.16 (draft) |
+| Version | 0.17 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -191,8 +191,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-NF-007 | S | Only permissively licensed dependencies (MIT/Apache/BSD/ISC/OFL). | License check in CI. | T | Verified |
 | URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Verified |
 | URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
-| URS-NF-010 | M | One-command installer for Linux, macOS and Windows that installs the latest GitHub release (or a named one), verifies its SHA-256, works with a private repo given a token, keeps user config across updates, and can update in place. | CI installs a packed release from a stand-in GitHub API on all three OSes. | T | Implemented |
+| URS-NF-010 | M | One-command installer for Linux, macOS and Windows that installs the latest GitHub release (or a named one), verifies its SHA-256, works with a private repo given a token, keeps user config across updates, and can update in place. | CI installs a packed release from a stand-in GitHub API on Windows (PowerShell 5.1 and 7) and Linux. macOS shares the Linux script. | T | Implemented |
 | URS-NF-011 | M | One command (`jtddiagrammar`), plus a Start Menu or desktop entry, starts the app on localhost, waits until it is healthy, and opens the browser. Bound to 127.0.0.1 by default. | CI launches the installed app and checks health, web app and render. | T | Implemented |
+| URS-NF-013 | M | Windows is the primary install target: the installer works in Windows PowerShell 5.1 and PowerShell 7, needs no admin rights, installs Node.js LTS with winget when it is missing, and adds Start Menu and desktop shortcuts and a PATH entry. `jtddiagrammar uninstall` removes all of them. | CI on Windows with both PowerShells: install, launch, update, uninstall. | T | Implemented |
 | URS-NF-012 | S | Pushing a `v*` tag runs the checks and publishes a GitHub release with the app bundle, its checksum and both installers. | Workflow inspection; bundle built by the same script CI tests. | I | Implemented |
 
 ## 4. Traceability Matrix
@@ -275,7 +276,7 @@ Updated with each change. `—` = not started.
 | WEB-009 | core/src/render.ts (`ir` in result), web/src/pick.ts | web/test/pick.test.ts, web/e2e/preview.spec.ts | SVG id prefix + model id → IR `src` pointer → `locate()`. |
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
-| NF-010, NF-011 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job on Linux, macOS, Windows) | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token. Dependencies come from the lockfile at install time, so one archive serves every OS. Linux passes locally. |
+| NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash) | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
 | NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Verified on the first tagged release. |
 
 ## 5. Change Impact Assessment (required per change)
@@ -291,6 +292,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.17 | 2026-11-11 | Windows-first installer: added NF-013 (winget Node, shortcuts, uninstall, both PowerShells). macOS dropped from CI (shares the Linux script). |
 | 0.16 | 2026-11-11 | Added NF-010 (installer), NF-011 (launcher), NF-012 (release workflow); implemented. Node floor raised to 22.18 (type stripping on by default). |
 | 0.15 | 2026-11-11 | Sweep E: inline sanitised preview with pan/zoom, click to source, hover quotes, schema autocomplete, persistence and share links, staged progress and refine in the web app, PNG export, web `REGISTRY_MODULE`. EXT-008, TYP-006 (rescoped), RN-007 (rescoped), WEB-005/006/008/009/012/013/014 verified. Added TYP-007, RN-009. W: TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022. |
 | 0.14 | 2026-11-11 | Sweep D: refine, provenance, progress over SSE, cost estimate, rate limiting, image input, evaluation corpus. AI-013/014/015/017/019/021, API-013/014 verified; AI-018 partial (not yet run). |
