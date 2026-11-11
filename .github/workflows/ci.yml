@@ -74,10 +74,13 @@ jobs:
           - { os: windows-latest, ps: powershell }
           - { os: windows-latest, ps: pwsh }
           - { os: ubuntu-latest, ps: '' }
-    name: install (${{ matrix.os }} ${{ matrix.ps || 'bash' }})
+          # PowerShell 7 passing native arguments the way 5.1 does (quotes stripped).
+          - { os: ubuntu-latest, ps: pwsh, legacy: '1' }
+    name: install (${{ matrix.os }} ${{ matrix.ps || 'bash' }}${{ matrix.legacy && ' legacy' || '' }})
     runs-on: ${{ matrix.os }}
     env:
       JTD_E2E_PS: ${{ matrix.ps }}
+      JTD_E2E_LEGACY: ${{ matrix.legacy }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

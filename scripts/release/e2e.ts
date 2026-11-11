@@ -17,6 +17,8 @@ const TOKEN = 'e2e-token';
 const win = process.platform === 'win32';
 /** PowerShell to test with: Windows PowerShell 5.1 by default on Windows; JTD_E2E_PS=pwsh also runs the Windows scripts elsewhere. */
 const ps = process.env.JTD_E2E_PS || (win ? 'powershell' : undefined);
+/** JTD_E2E_LEGACY=1 makes PowerShell 7 pass native arguments the way Windows PowerShell 5.1 does (quotes stripped). */
+const legacy = Boolean(process.env.JTD_E2E_LEGACY);
 
 function check(ok: unknown, what: string): void {
   if (!ok) throw new Error(`release e2e: ${what}`);
@@ -49,14 +51,19 @@ const home = mkdtempSync(join(tmpdir(), 'jtd-home-'));
 pack(TAG, out);
 const gh = await fakeGitHub(out);
 const env = { ...process.env, JTD_API: gh.url, JTD_REPO: 'test/repo', JTD_HOME: home, JTD_BIN: join(home, 'bin'), GITHUB_TOKEN: TOKEN, GH_TOKEN: '' };
-const psFile = (f: string) => ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f];
-const installer: [string, string[]] = ps ? [ps, psFile(join(out, 'install.ps1'))] : ['bash', [join(out, 'install.sh')]];
+/** PowerShell arguments that run script `f` with `extra` arguments. */
+const psArgs = (f: string, extra: string[]) =>
+  legacy
+    ? ['-NoProfile', '-Command', `$PSNativeCommandArgumentPassing = 'Legacy'; & '${f}' ${extra.map((x) => `'${x}'`).join(' ')}; exit $LASTEXITCODE`]
+    : ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', f, ...extra];
+const installer = (...extra: string[]): [string, string[]] => (ps ? [ps, psArgs(join(out, 'install.ps1'), extra)] : ['bash', [join(out, 'install.sh'), ...extra]]);
 // The .cmd shim needs cmd.exe; elsewhere the PowerShell launcher is called directly.
-const launcher: [string, string[]] = win
-  ? [join(home, 'bin', 'jtddiagrammar.cmd'), []]
-  : ps
-    ? [ps, psFile(join(home, 'versions', TAG, 'bin', 'jtddiagrammar.ps1'))]
-    : [join(home, 'bin', 'jtddiagrammar'), []];
+const launcher = (...extra: string[]): [string, string[]] =>
+  win
+    ? [join(home, 'bin', 'jtddiagrammar.cmd'), extra]
+    : ps
+      ? [ps, psArgs(join(home, 'versions', TAG, 'bin', 'jtddiagrammar.ps1'), extra)]
+      : [join(home, 'bin', 'jtddiagrammar'), extra];
 /** Async, so the stand-in server in this process keeps answering. */
 async function run(cmd: string, args: string[], extra = {}) {
   const p = spawn(cmd, args, { env: { ...env, ...extra }, shell: win && cmd.endsWith('.cmd') });
@@ -70,13 +77,13 @@ async function run(cmd: string, args: string[], extra = {}) {
 
 let app: ChildProcess | undefined;
 try {
-  const first = await run(installer[0], installer[1]);
+  const first = await run(...installer());
   process.stderr.write(first.stderr);
   check(first.status === 0, 'installs the latest release with a token');
-  check((await run(launcher[0], [...launcher[1], 'version'])).stdout.trim() === TAG, 'launcher reports the installed version');
+  check((await run(...launcher('version'))).stdout.trim() === TAG, 'launcher reports the installed version');
 
   const port = 18_000 + Math.floor(Math.random() * 1000);
-  app = spawn(launcher[0], [...launcher[1], 'start', '--port', String(port), '--no-open'], { env, stdio: 'inherit', shell: win, detached: !win });
+  app = spawn(...launcher('start', '--port', String(port), '--no-open'), { env, stdio: 'inherit', shell: win, detached: !win });
   const url = `http://localhost:${port}`;
   let up = false;
   for (let i = 0; i < 120 && !up; i++) {
@@ -88,13 +95,13 @@ try {
   const svg = await fetch(`${url}/v1/render`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' });
   check((await svg.text()).startsWith('<svg'), 'renders through the API');
 
-  const again = await run(installer[0], [...installer[1], TAG]);
+  const again = await run(...installer(TAG));
   check(again.status === 0 && gh.downloads() === 4, 'updates in place to a named release');
-  const denied = await run(installer[0], installer[1], { GITHUB_TOKEN: 'wrong' });
+  const denied = await run(...installer(), { GITHUB_TOKEN: 'wrong' });
   check(denied.status !== 0 && /GITHUB_TOKEN/.test(denied.stderr + denied.stdout), 'explains a refused private repository');
 
   if (ps) {
-    const removed = await run(launcher[0], [...launcher[1], 'uninstall']);
+    const removed = await run(...launcher('uninstall'));
     let gone = false;
     for (let i = 0; i < 20 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
     check(removed.status === 0 && gone, 'uninstall removes the installation');
