@@ -455,11 +455,11 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `lanes` | list of objects |  | Functional bands (rows for `LR`). Present → cross-functional flowchart. |
 | `lanes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `lanes[].label` | string | yes | Header text. |
-| `lanes[].style` | object |  | Colour and dash overrides (see Styling). |
+| `lanes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 | `phases` | list of objects |  | Stages across the lanes. Require lanes. |
 | `phases[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `phases[].label` | string | yes | Header text. |
-| `phases[].style` | object |  | Colour and dash overrides (see Styling). |
+| `phases[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 | `nodes` | list of objects | yes | Steps, decisions and other shapes. |
 | `nodes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `nodes[].shape` | `process` \| `decision` \| `terminator` \| `document` \| `data` \| `subprocess` \| `connector` |  | Default `process`. |
@@ -468,7 +468,7 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `nodes[].phase` | string |  | Phase id; required when the diagram has phases. |
 | `nodes[].order` | integer |  | Hint: nodes in the same column and lane are placed in ascending order. |
 | `nodes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `nodes[].style` | object |  | Colour and dash overrides (see Styling). |
+| `nodes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 | `edges` | list of objects |  | Directed connections. |
 | `edges[].id` | string |  | Optional; generated when absent. |
 | `edges[].from` | string | yes | Source node id. |
@@ -477,14 +477,14 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `edges[].fromSide` | `N` \| `E` \| `S` \| `W` |  | Side to leave the source by (N, E, S, W); default follows the flow. |
 | `edges[].toSide` | `N` \| `E` \| `S` \| `W` |  | Side to enter the target by; default follows the flow. |
 | `edges[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `edges[].style` | object |  | Colour and dash overrides (see Styling). |
+| `edges[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 | `notes` | list of objects |  | Annotations, drawn as folded-corner notes. |
 | `notes[].id` | string |  | Optional; generated when absent. |
 | `notes[].text` | string | yes | Note text; `\n` breaks lines. |
 | `notes[].for` | string |  | Node the note is attached to (dotted line, no arrow). |
 | `notes[].lane` | string |  | Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s. |
 | `notes[].phase` | string |  | Phase, likewise. |
-| `notes[].style` | object |  | Colour and dash overrides (see Styling). |
+| `notes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 
 ### `state`
 
@@ -499,7 +499,7 @@ States and the transitions between them, with composite (nested) states. For lif
 | `states[].label` | string |  | Defaults to the id for ordinary states. |
 | `states[].states` | list of objects |  | Nested states make this a composite state. Same fields as `states[]`. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].style` | object |  | Colour and dash overrides (see Styling). |
+| `states[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 | `transitions` | list of objects |  | Drawn as `event [guard] / action`; endpoints may be any state, composite or nested. |
 | `transitions[].id` | string |  | Optional; generated when absent. |
 | `transitions[].from` | string | yes | Source state id. |
@@ -508,7 +508,7 @@ States and the transitions between them, with composite (nested) states. For lif
 | `transitions[].guard` | string |  | Condition, shown in brackets. |
 | `transitions[].action` | string |  | Effect, shown after a slash. |
 | `transitions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `transitions[].style` | object |  | Colour and dash overrides (see Styling). |
+| `transitions[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 
 ### `orgchart`
 
@@ -523,7 +523,7 @@ People and who they report to. For teams and organisations.
 | `people[].title` | string |  | Role, shown under the name. |
 | `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
 | `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `people[].style` | object |  | Colour and dash overrides (see Styling). |
+| `people[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
 
 <!-- END GENERATED: reference -->
 
@@ -549,10 +549,10 @@ Flowchart rules: with lanes, every node needs a `lane`; with phases, every node 
 Any node, edge, lane, phase, state or transition can take a `style`:
 
 ```json
-{ "fill": "#dcfce7", "stroke": "#14532d", "text": "#14532d", "dash": "dashed" }
+{ "fill": "#dcfce7", "stroke": "#14532d", "text": "#14532d", "dash": "dashed", "lineWidth": 3 }
 ```
 
-Colours are hex (`#rgb` or `#rrggbb`); `dash` is `solid`, `dashed` or `dotted`. On edges, `stroke` also colours the arrowhead. Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
+Colours are hex (`#rgb` or `#rrggbb`); `dash` is `solid`, `dashed` or `dotted`; `lineWidth` is the line thickness in pixels, from 0.5 to 8 (default 1.5 for nodes and edges, 1 for lane and phase borders). On edges, `stroke` also colours the arrowhead, and arrowheads grow with lines thicker than the default. Containers (composite states) take the same `style`. Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
 
 ### Diagnostics
 

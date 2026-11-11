@@ -11,12 +11,18 @@ export const direction = { type: 'string', enum: ['LR', 'TB'], default: 'LR', de
 /** Hex colours only, so nothing but a colour can reach an SVG attribute. */
 export const color = { type: 'string', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$', description: 'Hex colour, `#rgb` or `#rrggbb`.' } as const;
 
-/** Per-element style overrides (URS-DM-010). */
+/** Per-element style overrides (URS-DM-010, URS-DM-014). */
 export const style = {
   type: 'object',
-  description: 'Colour and dash overrides (see Styling).',
+  description: 'Colour, dash and line-thickness overrides (see Styling).',
   additionalProperties: false,
-  properties: { fill: color, stroke: color, text: color, dash: { type: 'string', enum: ['solid', 'dashed', 'dotted'], description: 'Line style.' } },
+  properties: {
+    fill: color,
+    stroke: color,
+    text: color,
+    dash: { type: 'string', enum: ['solid', 'dashed', 'dotted'], description: 'Line style.' },
+    lineWidth: { type: 'number', minimum: 0.5, maximum: 8, description: 'Line thickness in pixels, 0.5 to 8.' },
+  },
 } as const;
 
 export const band = {

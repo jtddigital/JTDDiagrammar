@@ -25,6 +25,9 @@ describe('inline SVG sanitiser (URS-RN-004, URS-WEB-009)', () => {
     const out = el.outerHTML;
     expect(out).not.toMatch(/script|foreignObject|onload|onclick|href|image|<a|<use|url\(|evil|background/i);
     expect(out).toContain('stroke="#000"');
+    const widths = sanitizeSvg('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0" stroke-width="2.5"/><rect stroke-width="calc(1px)"/></svg>')!.outerHTML;
+    expect(widths).toContain('stroke-width="2.5"');
+    expect(widths).not.toContain('calc');
   });
 
   it('rejects documents that are not SVG', () => {

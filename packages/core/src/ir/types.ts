@@ -10,6 +10,8 @@ export interface Style {
   stroke?: string;
   text?: string;
   dash?: 'solid' | 'dashed' | 'dotted';
+  /** Line thickness in px, 0.5–8 (URS-DM-014). */
+  lineWidth?: number;
 }
 
 /** JSON Pointer to the source element, for diagnostics. */

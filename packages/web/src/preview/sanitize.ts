@@ -20,6 +20,9 @@ const SAFE: Record<string, RegExp> = {
   'marker-end': /^url\(#[\w-]+\)$/,
   style: /^[a-z-]+:[a-z-]+(;[a-z-]+:[a-z-]+)*$/,
   transform: /^translate\([-\d.]+ [-\d.]+\)$/,
+  'stroke-width': /^\d+(\.\d+)?$/,
+  markerWidth: /^\d+(\.\d+)?$/,
+  markerHeight: /^\d+(\.\d+)?$/,
 };
 
 function clean(el: Element): void {

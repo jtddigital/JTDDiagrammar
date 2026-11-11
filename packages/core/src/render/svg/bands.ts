@@ -6,8 +6,8 @@ import { esc } from './escape.ts';
 import { lines } from './text.ts';
 import { dash, type Palette } from './theme.ts';
 
-const rect = (b: Box, fill: string, stroke: string, extra = '') =>
-  `<rect x="${num(b.x)}" y="${num(b.y)}" width="${num(b.w)}" height="${num(b.h)}" fill="${fill}" stroke="${stroke}" stroke-width="1"${extra}/>`;
+const rect = (b: Box, fill: string, stroke: string, extra = '', width = 1) =>
+  `<rect x="${num(b.x)}" y="${num(b.y)}" width="${num(b.w)}" height="${num(b.h)}" fill="${fill}" stroke="${stroke}" stroke-width="${num(width)}"${extra}/>`;
 
 const label = (b: PlacedBand) =>
   lines(
@@ -23,11 +23,12 @@ const group = (b: PlacedBand, body: string) => `<g id="${b.kind[0]}-${esc(b.id)}
 /** Lane rows and phase columns with header cells, beneath edges and nodes (URS-RN-002). `style.fill` colours the header. */
 export function bands(bs: readonly PlacedBand[], P: Palette, corner?: Box): string {
   const stroke = (b: PlacedBand) => b.style?.stroke ?? P.bandStroke;
+  const width = (b: PlacedBand) => b.style?.lineWidth ?? 1;
   const lanes = bs
     .filter((b) => b.kind === 'lane')
-    .map((b) => group(b, rect(b, P.laneFill, stroke(b), dash(b.style?.dash)) + rect(b.header, b.style?.fill ?? P.laneHeaderFill, stroke(b)) + label(b)));
+    .map((b) => group(b, rect(b, P.laneFill, stroke(b), dash(b.style?.dash), width(b)) + rect(b.header, b.style?.fill ?? P.laneHeaderFill, stroke(b), '', width(b)) + label(b)));
   const phases = bs
     .filter((b) => b.kind === 'phase')
-    .map((b) => group(b, rect(b, 'none', stroke(b), dash(b.style?.dash)) + rect(b.header, b.style?.fill ?? P.phaseHeaderFill, stroke(b)) + label(b)));
+    .map((b) => group(b, rect(b, 'none', stroke(b), dash(b.style?.dash), width(b)) + rect(b.header, b.style?.fill ?? P.phaseHeaderFill, stroke(b), '', width(b)) + label(b)));
   return lanes.join('') + phases.join('') + (corner ? rect(corner, P.phaseHeaderFill, P.bandStroke) : '');
 }
