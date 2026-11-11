@@ -1,0 +1,26 @@
+{
+  "name": "jtddiagrammar",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p packages/core && tsc -p .",
+    "test": "vitest run",
+    "docs:build": "tsx scripts/docs/cli.ts build",
+    "docs:check": "tsx scripts/docs/cli.ts check",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "eslint": "^10.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0",
+    "@jtd/core": "workspace:*"
+  }
+}

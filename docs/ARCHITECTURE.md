@@ -14,7 +14,7 @@ source ─adapter─▶ doc ─registry[type]─▶ DiagramType
 | Layer | Knows about | Never knows about |
 |-------|-------------|-------------------|
 | adapters (json, xml*) | text formats | diagram types |
-| types/* | its own source model, the IR | layout internals, SVG |
+| diagrams/* | its own source model, the IR | layout internals, SVG |
 | layout/* | IR, geometry, text metrics | types |
 | render/svg | geometry, shape registry | types, layout |
 
@@ -22,28 +22,30 @@ Enforced with `no-restricted-imports` (URS-EXT-004, URS-NF-001).
 
 ## 3. Core contracts
 ```ts
+// As implemented in P0: packages/core/src/registry/diagram-type.ts
 interface DiagramType<M = unknown> {
   id: string;                          // "flowchart" | "state" | …
-  schema: JSONSchema;                  // validates M (URS-EXT-006)
-  shapes: string[];                    // allowed shape ids (URS-DM-004)
+  title: string; description: string;
+  schema: JSONSchema;                  // authoring schema with unique $id (URS-EXT-006); allowed shapes are an enum (URS-DM-004)
   engine: string;                      // "layered" (URS-EXT-005)
   validate?(m: M): Diagnostic[];       // semantic hook (URS-EXT-007)
   toIR(m: M): GraphIR;
-  ai: {                                // URS-EXT-009
+  examples: [Example, ...Example[]];   // README + web templates (URS-EXT-010, URS-DOC-002, URS-WEB-007)
+  ai: {                                // added in P4 (URS-EXT-009)
     schema: JSONSchema;                // generation schema: structured-output-safe subset (URS-AI-004)
     fromGenerated(g: unknown): M;      // deterministic: generation output → authoring source
     guide: string;                     // type-specific prompt guidance
     examples: { input: string; output: unknown }[];
   };
-  readme: { title: string; fixture: string };  // URS-EXT-010
 }
 
+// As implemented in P0: packages/core/src/ir/types.ts. Every element carries `src` (JSON Pointer) for diagnostics.
 interface GraphIR {
   direction: 'LR' | 'TB';
-  nodes: { id: string; shape: string; label: string; parent?: string; order?: number; style?: Style }[];
-  edges: { id: string; from: string; to: string; label?: string; ports?: Ports; marker?: string; style?: Style }[];
-  containers: { id: string; label?: string; parent?: string; style?: Style }[];          // URS-DM-013
-  partitions?: { lanes: Band[]; phases?: Band[]; assign: Record<string, { lane: string; phase?: string }> }; // URS-DM-001/002
+  nodes: { id; shape; label; parent?; order?; lane?; phase?; src? }[];   // lane/phase on the node, not in a lookup map
+  edges: { id; from; to; label?; src? }[];                               // ports/marker/style added with DM-009/010
+  containers: { id; label?; parent?; src? }[];                           // URS-DM-013
+  partitions?: { lanes: Band[]; phases?: Band[] };                       // URS-DM-001/002
 }
 
 interface LayoutEngine { id: string; layout(ir: GraphIR, m: Measurer): Geometry }
@@ -55,13 +57,15 @@ interface Shape { id: string; textBox(w, h): Box; outline(w, h): PathData; ports
 ```
 packages/
   core/src/
-    registry.ts               types + engines + shapes
+    registry/                 diagram-type.ts, layout-engine.ts, registry.ts
     ir/                       types.ts
+    schema/                   fragments.ts (envelope, id, band), combined.ts
     adapters/                 json.ts, xml.ts*
-    validate/                 schema.ts (Ajv), common.ts (ids, refs)
-    types/
-      flowchart/              schema.json, model.ts, to-ir.ts, validate.ts, index.ts
-      state/                  schema.json, model.ts, to-ir.ts, validate.ts, index.ts
+    validate/                 envelope.ts, schema.ts (Ajv), common.ts (ids, refs, partitions)
+    compile.ts                envelope → schema → type rules + IR + common rules
+    diagrams/                 index.ts (createRegistry)
+      flowchart/              schema.ts, model.ts, to-ir.ts, validate.ts, examples.ts, index.ts
+      state/                  (P5)
     shapes/                   registry.ts, process.ts, decision.ts, terminator.ts, state.ts, initial.ts, final.ts, …
     measure/                  font-metrics.ts (generated), text.ts
     layout/
@@ -81,7 +85,7 @@ packages/
   api/src/routes/             render.ts, validate.ts, schema.ts, types.ts, generate.ts, refine.ts, health.ts
   web/src/                    editor/, preview/, export/, generate/, examples/<type>/
 fixtures/<type>/              samples + golden SVGs + README example
-scripts/docs/                 images.ts (fixtures → docs/img/*.svg, Playwright → *.png), reference.ts
+scripts/docs/                 readme.ts + cli.ts (P0: example sources, check); images.ts (P1: examples → docs/img/*.svg, Playwright → *.png); reference.ts
 docs/img/                     generated; never hand-edited
 README.md
 ```

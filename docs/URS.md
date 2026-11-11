@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.3 (draft) |
+| Version | 0.4 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -13,29 +13,29 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 - **ID**: `URS-<AREA>-<NNN>`. IDs are never reused or renumbered; retired items are marked `Withdrawn`.
 - **Priority** (MoSCoW): M = Must, S = Should, C = Could, W = Won't (this release).
 - **Verify**: T = automated test, I = inspection, D = demonstration.
-- **Status**: Proposed → Accepted → Implemented → Verified (or Withdrawn).
+- **Status**: Proposed → Accepted → Partial (some acceptance criteria met; see matrix) → Implemented → Verified (automated test passes) — or Withdrawn.
 
 ## 3. Requirements
 
 ### 3.1 Extensibility (EXT)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-EXT-001 | M | Each diagram type is a plugin that implements one `DiagramType` interface and is registered in core. | Registry lists all built-in types. | T | Proposed |
-| URS-EXT-002 | M | Adding a type requires no change to adapters, API, web app or SVG renderer. | A test-only fixture type renders through the API and the web app. | T | Proposed |
-| URS-EXT-003 | M | Every source declares `type`. A missing or unknown type returns a diagnostic that lists the registered types. | Test. | T | Proposed |
-| URS-EXT-004 | M | Types compile to a shared Graph IR (nodes, edges, containers, partitions). Layout and rendering consume only the IR and the geometry built from it. | Lint rule: `layout/` and `render/` never import from `types/`. | T | Proposed |
-| URS-EXT-005 | M | Layout engines are pluggable and each type selects one. v1 ships `layered`. | Engine registry test. | T | Proposed |
-| URS-EXT-006 | M | Each type ships its own JSON Schema. The combined schema dispatches on `type`. | Ajv validates per-type fixtures through the combined schema. | T | Proposed |
-| URS-EXT-007 | M | Each type can add semantic validation rules through a hook. | Hook test. | T | Proposed |
+| URS-EXT-001 | M | Each diagram type is a plugin that implements one `DiagramType` interface and is registered in core. | Registry lists all built-in types. | T | Verified |
+| URS-EXT-002 | M | Adding a type requires no change to adapters, API, web app or SVG renderer. | A test-only fixture type renders through the API and the web app. | T | Partial |
+| URS-EXT-003 | M | Every source declares `type`. A missing or unknown type returns a diagnostic that lists the registered types. | Test. | T | Verified |
+| URS-EXT-004 | M | Types compile to a shared Graph IR (nodes, edges, containers, partitions). Layout and rendering consume only the IR and the geometry built from it. | Lint rule: `layout/` and `render/` never import from `diagrams/`. | T | Verified |
+| URS-EXT-005 | M | Layout engines are pluggable and each type selects one. v1 ships `layered`. | Engine registry test. | T | Verified |
+| URS-EXT-006 | M | Each type ships its own JSON Schema. The combined schema dispatches on `type`. | Ajv validates per-type fixtures through the combined schema. | T | Verified |
+| URS-EXT-007 | M | Each type can add semantic validation rules through a hook. | Hook test. | T | Verified |
 | URS-EXT-008 | C | Diagram types can be registered from outside the repo as separate packages. | — | T | Proposed |
 | URS-EXT-009 | M | Each type also ships its AI generation assets: a generation schema, guidance text, examples and a converter from generated output to authoring source (URS-AI-004). Adding a type requires no change to the `ai` package. | The test-only fixture type generates through a mock client. | T | Proposed |
-| URS-EXT-010 | M | Each type ships a README example (source + rendered image) (URS-DOC-002). | CI check (URS-DOC-004). | T | Proposed |
+| URS-EXT-010 | M | Each type ships a README example (source + rendered image) (URS-DOC-002). | CI check (URS-DOC-004). | T | Verified |
 
 ### 3.2 Diagram Types (TYP)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-TYP-001 | M | `flowchart`: nodes (`process`, `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`) and directed edges. | Each shape has a snapshot. | T | Proposed |
-| URS-TYP-002 | M | Cross-functional flowchart = `flowchart` with `lanes` and optional `phases` (URS-DM-001/002). It is not a separate type. | Same nodes render both with and without lanes. | T | Proposed |
+| URS-TYP-001 | M | `flowchart`: nodes (`process`, `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`) and directed edges. | Each shape has a snapshot. | T | Partial |
+| URS-TYP-002 | M | Cross-functional flowchart = `flowchart` with `lanes` and optional `phases` (URS-DM-001/002). It is not a separate type. | Same nodes render both with and without lanes. | T | Partial |
 | URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Proposed |
 | URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Proposed |
 | URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Proposed |
@@ -44,11 +44,11 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.3 Input / Language (IN)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-IN-001 | M | Diagrams are defined in JSON that conforms to the published JSON Schema. | A valid sample passes Ajv; invalid samples fail. | T | Proposed |
-| URS-IN-002 | M | Every source declares a schema `version`. Breaking changes bump the major version. | An unknown major version gives an explicit error. | T | Proposed |
-| URS-IN-003 | M | Each type picks the source structure that fits it best (flat ID references for flowcharts, nesting for composite states). Every structure compiles to the same IR. | I | I | Proposed |
-| URS-IN-004 | M | Validation reports **all** errors, each with a JSON Pointer path and a message. | A doc with 3 errors yields 3 diagnostics. | T | Proposed |
-| URS-IN-005 | M | Common semantic validation: unique IDs and no dangling references. | Each rule has a failing test. | T | Proposed |
+| URS-IN-001 | M | Diagrams are defined in JSON that conforms to the published JSON Schema. | A valid sample passes Ajv; invalid samples fail. | T | Verified |
+| URS-IN-002 | M | Every source declares a schema `version`. Breaking changes bump the major version. | An unknown major version gives an explicit error. | T | Verified |
+| URS-IN-003 | M | Each type picks the source structure that fits it best (flat ID references for flowcharts, nesting for composite states). Every structure compiles to the same IR. | I | I | Partial |
+| URS-IN-004 | M | Validation reports **all** errors, each with a JSON Pointer path and a message. | A doc with 3 errors yields 3 diagnostics. | T | Verified |
+| URS-IN-005 | M | Common semantic validation: unique IDs and no dangling references. | Each rule has a failing test. | T | Verified |
 | URS-IN-006 | S | XML input via an adapter that maps to the identical source model. | JSON and XML equivalents render byte-identical SVG. | T | Proposed |
 | URS-IN-007 | C | YAML input via an adapter. | As URS-IN-006. | T | Proposed |
 | URS-IN-008 | C | A short text language that compiles to the same model. | As URS-IN-006. | T | Proposed |
@@ -56,12 +56,12 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.4 Common Model (DM) — available to any type that opts in
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-DM-001 | M | Partitions: **lanes**, ordered and labelled bands. Each type opts in. | Lanes render in source order. | T | Proposed |
-| URS-DM-002 | M | Partitions: **phases**, bands perpendicular to lanes. Optional. | Renders both with and without phases. | T | Proposed |
-| URS-DM-003 | M | `direction`: `LR` or `TB` for every type. With partitions, lanes run along the flow direction. | Same model renders in both directions. | T | Proposed |
-| URS-DM-004 | M | Shared shape library (a registry). Each type declares which shapes it allows. | A disallowed shape gives a diagnostic. | T | Proposed |
-| URS-DM-005 | M | With partitions, each node belongs to exactly one lane, and to exactly one phase when phases exist. | A missing or invalid reference gives a diagnostic. | T | Proposed |
-| URS-DM-006 | M | Directed edges with an optional label. | The label renders on the edge. | T | Proposed |
+| URS-DM-001 | M | Partitions: **lanes**, ordered and labelled bands. Each type opts in. | Lanes render in source order. | T | Partial |
+| URS-DM-002 | M | Partitions: **phases**, bands perpendicular to lanes. Optional. | Renders both with and without phases. | T | Partial |
+| URS-DM-003 | M | `direction`: `LR` or `TB` for every type. With partitions, lanes run along the flow direction. | Same model renders in both directions. | T | Partial |
+| URS-DM-004 | M | Shared shape library (a registry). Each type declares which shapes it allows. | A disallowed shape gives a diagnostic. | T | Partial |
+| URS-DM-005 | M | With partitions, each node belongs to exactly one lane, and to exactly one phase when phases exist. | A missing or invalid reference gives a diagnostic. | T | Verified |
+| URS-DM-006 | M | Directed edges with an optional label. | The label renders on the edge. | T | Partial |
 | URS-DM-007 | S | Multi-line labels, with auto-wrap at a configurable maximum node width. | `\n` and long text both wrap. | T | Proposed |
 | URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Proposed |
 | URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Proposed |
@@ -164,32 +164,48 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.10 Documentation (DOC)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-DOC-001 | M | The README covers purpose, features, quick start (install, run the API, run the web app), API reference with `curl` examples, language reference per type, AI generation usage and configuration, an architecture overview, the development workflow (URS process) and the licence. | Inspection checklist. | I | Proposed |
-| URS-DOC-002 | M | The README shows a rendered example of **every** registered diagram type (flowchart, cross-functional, state, …) next to its source. | CI check (URS-DOC-004). | T | Proposed |
-| URS-DOC-003 | M | README images are generated by a script (`pnpm docs:images`) from `fixtures/`: diagrams as SVG from core, the web app as PNG via Playwright. None are made by hand. | The script reproduces the committed files. | T | Proposed |
-| URS-DOC-004 | M | CI fails if README images differ from the current renderer output, or if a registered type has no README example. | CI job. | T | Proposed |
+| URS-DOC-001 | M | The README covers purpose, features, quick start (install, run the API, run the web app), API reference with `curl` examples, language reference per type, AI generation usage and configuration, an architecture overview, the development workflow (URS process) and the licence. | Inspection checklist. | I | Partial |
+| URS-DOC-002 | M | The README shows a rendered example of **every** registered diagram type (flowchart, cross-functional, state, …) next to its source. | CI check (URS-DOC-004). | T | Partial |
+| URS-DOC-003 | M | README images are generated by a script (`pnpm docs:images`) from `fixtures/`: diagrams as SVG from core, the web app as PNG via Playwright. None are made by hand. | The script reproduces the committed files. | T | Partial |
+| URS-DOC-004 | M | CI fails if README images differ from the current renderer output, or if a registered type has no README example. | CI job. | T | Partial |
 | URS-DOC-005 | S | Web app screenshots of the editor with preview and of the AI generate panel. | Present in the README. | I | Proposed |
 | URS-DOC-006 | S | The per-type language reference (field tables) is generated from the authoring schemas. | The script reproduces the committed files. | T | Proposed |
 
 ### 3.11 Non-Functional (NF)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-NF-001 | M | Modular: `core` is pure and isomorphic (no DOM, no Node APIs); `api` and `web` consume it. | Lint rule bans those imports. | T | Proposed |
-| URS-NF-002 | M | TypeScript `strict`. | `tsc` runs in CI. | T | Proposed |
-| URS-NF-003 | M | Unit tests per module plus golden SVG snapshots; CI runs on every push. | CI is green. | T | Proposed |
-| URS-NF-004 | M | Every change cites URS IDs and records an impact assessment (§5). | Commit/PR inspection. | I | Proposed |
+| URS-NF-001 | M | Modular: `core` is pure and isomorphic (no DOM, no Node APIs); `api` and `web` consume it. | Lint rule bans those imports. | T | Verified |
+| URS-NF-002 | M | TypeScript `strict`. | `tsc` runs in CI. | T | Verified |
+| URS-NF-003 | M | Unit tests per module plus golden SVG snapshots; CI runs on every push. | CI is green. | T | Partial |
+| URS-NF-004 | M | Every change cites URS IDs and records an impact assessment (§5). | Commit/PR inspection. | I | Implemented |
 | URS-NF-005 | S | ≥ 80 % line coverage on `core`. | CI gate. | T | Proposed |
 | URS-NF-006 | S | A container image serves the API and the static web app. | `docker run` serves both. | D | Proposed |
 | URS-NF-007 | S | Only permissively licensed dependencies (MIT/Apache/BSD/ISC/OFL). | License check in CI. | T | Proposed |
-| URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Proposed |
-| URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Proposed |
+| URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Implemented |
+| URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
 
 ## 4. Traceability Matrix
 Updated with each change. `—` = not started.
 
-| URS ID | Module(s) | Test(s) |
-|--------|-----------|---------|
-| _all_  | —         | —       |
+| URS ID | Module(s) | Test(s) | Note |
+|--------|-----------|---------|------|
+| EXT-001, EXT-005 | core/src/registry/ | core/test/registry.test.ts | |
+| EXT-002 | core/src/compile.ts | core/test/extensibility.test.ts | Core only; API/web in P2. |
+| EXT-003, IN-002 | core/src/validate/envelope.ts | core/test/envelope.test.ts | |
+| EXT-004, NF-001, NF-009 | eslint.config.js, core/tsconfig.json (no DOM/Node types) | test/boundaries.test.ts | |
+| EXT-006 | core/src/schema/combined.ts | core/test/extensibility.test.ts | |
+| EXT-007 | core/src/diagrams/flowchart/validate.ts | core/test/flowchart.test.ts | |
+| EXT-010 | core/src/registry/diagram-type.ts (`examples` required) | scripts/docs/readme.test.ts | |
+| IN-001, IN-004 | core/src/validate/schema.ts, core/src/adapters/json.ts | core/test/schema.test.ts, core/test/json.test.ts | Semantic rules run only once the schema passes. |
+| IN-003 | core/src/diagrams/flowchart/ | core/test/flowchart.test.ts | Flowchart only so far. |
+| IN-005, DM-005 | core/src/validate/common.ts | core/test/common.test.ts | Pointer targets the element, not the field. |
+| DM-001..003, DM-006, TYP-001, TYP-002 | core/src/diagrams/flowchart/, core/src/ir/types.ts | core/test/flowchart.test.ts | Model and validation only; layout/render P1/P3. |
+| DM-004 | core/src/diagrams/flowchart/schema.ts (shape enum) | core/test/schema.test.ts | Shape registry and geometry in P1. |
+| NF-002 | tsconfig.base.json | `pnpm typecheck` | |
+| NF-003 | .github/workflows/ci.yml, vitest.config.ts | all | Golden SVGs in P1. |
+| NF-004 | CLAUDE.md, commit bodies | — | Inspection. |
+| NF-008 | .env.example, CI `secrets` job (gitleaks) | — | CI not yet observed green. |
+| DOC-001..004 | README.md, scripts/docs/ | scripts/docs/readme.test.ts, `pnpm docs:check` | Example sources only; images in P1. |
 
 ## 5. Change Impact Assessment (required per change)
 ```
@@ -204,5 +220,6 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.4 | 2026-11-11 | P0 implemented: statuses and traceability matrix updated. Added the Partial status. |
 | 0.3 | 2026-11-11 | Added AI generation (AI-001..022), documentation (DOC-001..006), EXT-009/010, API-012..015, WEB-011..014, NF-008/009. |
 | 0.2 | 2026-11-11 | Generalised to multiple diagram types. Added EXT, TYP, DM-013, LY-011/012, API-011, WEB-010. Rescoped IN-003, DM-001..006, LY-002/003, RN-002/003, API-002/004, WEB-007 from cross-functional-only to type-agnostic. |
