@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.28.0",
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.18"
   },
   "scripts": {
     "lint": "eslint .",
@@ -22,7 +22,9 @@
     "ai:live": "tsx scripts/ai/live-check.ts",
     "quality": "tsx scripts/quality.ts",
     "licences": "tsx scripts/ci/licences.ts",
-    "ai:eval": "tsx scripts/ai/eval.ts"
+    "ai:eval": "tsx scripts/ai/eval.ts",
+    "release:pack": "tsx scripts/release/pack.ts",
+    "release:e2e": "tsx scripts/release/e2e.ts"
   },
   "devDependencies": {
     "@jtd/ai": "workspace:*",

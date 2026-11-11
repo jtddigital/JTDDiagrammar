@@ -64,6 +64,23 @@ jobs:
             --data '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' localhost:8080/v1/render | grep -q '<svg'
           curl -sf localhost:8080/v1/ai | grep -q '"enabled":false'
 
+  install:
+    # URS-NF-010/011: install a packed release from a stand-in GitHub API and launch it, on each OS.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release:e2e
+
   secrets:
     # URS-NF-008
     runs-on: ubuntu-latest

@@ -562,9 +562,49 @@ Validation reports **every** problem, not only the first. Each one carries a JSO
 { "severity": "error", "code": "ref.lane", "message": "node 'ship' references unknown lane 'wh'", "path": "/nodes/3" }
 ```
 
+## Install
+
+Installs the latest release for your user (no admin rights) and adds a `jtddiagrammar` command. Needs [Node.js](https://nodejs.org) 22.18 or later and access to the npm registry (dependencies are installed from the release's lockfile).
+
+Linux and macOS:
+
+```bash
+curl -fsSL https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.sh | bash
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.ps1 | iex
+```
+
+If the repository is private, the download links above need a signed-in browser, so get the installer from the [releases page](https://github.com/jtddigital/JTDDiagrammar/releases/latest) and run it with a token that can read the repository (or after `gh auth login`):
+
+```bash
+GITHUB_TOKEN=<token> bash install.sh
+```
+
+Then launch it:
+
+```bash
+jtddiagrammar
+```
+
+This starts the app on http://localhost:8080 (local only), waits until it's ready and opens your browser. Ctrl+C stops it. On Windows there is also a **JTDDiagrammar** Start Menu entry; on Linux, a desktop entry.
+
+| Command | Does |
+|---------|------|
+| `jtddiagrammar --port 9000 --no-open` | Another port; don't open the browser |
+| `jtddiagrammar update` | Install the latest release (or `update v1.2.3`) |
+| `jtddiagrammar version` | Show the installed version |
+
+Settings, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder (`~/.local/share/jtddiagrammar`, or `%LOCALAPPDATA%\jtddiagrammar` on Windows). Updates keep it. The installer verifies each download's SHA-256 and keeps the previous version alongside the new one.
+
+**Publishing a release:** push a tag such as `v1.0.0`. The `Release` workflow runs the checks and attaches the bundle, its checksum and both installers. CI installs and launches a packed release on Linux, macOS and Windows on every push (`pnpm release:e2e`).
+
 ## Quick start
 
-Requires Node ≥ 22.12 and pnpm 10.
+To work on the code instead, you need Node ≥ 22.18 and pnpm 10.
 
 ```bash
 pnpm install

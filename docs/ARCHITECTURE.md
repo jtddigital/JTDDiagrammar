@@ -231,6 +231,9 @@ files/text ─ingest─▶ content blocks ─(type=auto? select)─▶ Claude + 
 - `pnpm docs:images` renders every type's README fixture through core into `docs/img/<type>.svg` and captures the web app (editor, generate panel) to PNG with Playwright. (URS-DOC-003/005)
 - A CI job re-runs the script and fails on any diff, or when a registered type has no fixture. That ties the docs to the registry, so a new type can't ship undocumented. (URS-DOC-004, URS-EXT-010)
 
+## 10a. Distribution
+A release is one archive, `jtddiagrammar.tar.gz`. It holds the same files as the Docker image: the TypeScript sources of `core`, `ai` and `api`, the built web app, and the lockfile, plus the launchers. The installers (`install.sh`, `install.ps1`) take the latest or a named GitHub release, using the API asset URLs so private repos work with a token. They verify the SHA-256 and extract into `versions/<tag>`, then run `pnpm install --prod --frozen-lockfile` there through corepack. `current` (a symlink, or a one-line file on Windows) selects the version; the previous version is kept. `config.env` sits outside the version directories, so updates keep it. The `jtddiagrammar` launcher loads it, binds to 127.0.0.1, waits for `/health`, then opens the browser. Installing dependencies on the target avoids shipping pnpm's symlinked `node_modules`, which Windows tar cannot extract reliably. The cost is that the npm registry must be reachable at install time. (URS-NF-010..012)
+
 ## 11. Delivery phases
 | Phase | Scope | Key URS |
 |-------|-------|---------|
