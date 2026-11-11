@@ -39,6 +39,22 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0
   },
+  "hints-notes": {
+    "crossings": 5,
+    "overlaps": 1,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
+  "hints-tb-lanes": {
+    "crossings": 0,
+    "overlaps": 1,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "long-edges": {
     "crossings": 0,
     "overlaps": 0,
@@ -126,6 +142,14 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 1
+  },
+  "orgchart-basic": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
   },
   "random-30": {
     "crossings": 41,

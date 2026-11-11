@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.12 (draft) |
+| Version | 0.13 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -44,7 +44,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Verified |
 | URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Verified |
 | URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Verified |
-| URS-TYP-006 | C | Further types (sequence, ER, org chart), each as a plugin. | — | T | Proposed |
+| URS-TYP-006 | C | Further types (sequence, ER, org chart), each as a plugin. | — | T | Partial |
 
 ### 3.3 Input / Language (IN)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -69,10 +69,10 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-006 | M | Directed edges with an optional label. | The label renders on the edge. | T | Verified |
 | URS-DM-007 | S | Multi-line labels, with auto-wrap at a configurable maximum node width. | `\n` and long text both wrap. | T | Verified |
 | URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Verified |
-| URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Proposed |
+| URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Verified |
 | URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Verified |
 | URS-DM-011 | C | Nested sub-lanes. | — | T | Proposed |
-| URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Proposed |
+| URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Verified |
 | URS-DM-013 | S | Containers: nestable groups with labels (used by composite states and flowchart groups). | Snapshot. | T | Verified |
 
 ### 3.5 Layout (LY)
@@ -218,6 +218,9 @@ Updated with each change. `—` = not started.
 | LY-006, LY-008 | core/src/layout/{metrics,labels,obstacles,grid}.ts | core/test/quality.test.ts (hard zero) | |
 | LY-007 | core/src/layout/layered/{order,route}.ts, test/quality-baseline.json | core/test/quality.test.ts, order.test.ts, tips.test.ts | Ratchet per fixture; crossings 3452 → 3007 at P6. |
 | DM-008 | core/src/layout/layered/order.ts (hints) | core/test/order.test.ts | |
+| DM-009 | core/src/layout/layered/route.ts (hintOf, detourC, head/tail stubs), flowchart fromSide/toSide | core/test/sweep-c.test.ts, golden/hints-* | Hinted ends skip port spreading and tip allocation; edges never pass through nodes (quality ratchet). |
+| DM-012 | flowchart `notes` → `note` shape + dotted, arrowless link (IR `marker: 'none'`) | core/test/sweep-c.test.ts, golden/hints-* | Notes inherit their node's lane and phase. |
+| TYP-006 | core/src/diagrams/orgchart/* | core/test/sweep-c.test.ts, README example | Org chart only. Sequence and ER diagrams: Won't (this release); sequence needs its own layout engine. |
 | DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts (well-formed; SVG 1.1 element and attribute allowlist), web/e2e/svg.spec.ts (Chromium and Firefox) | `data-*` attributes removed (not SVG 1.1). No DTD check: the W3C DTD is unreachable from CI. |
@@ -270,6 +273,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.13 | 2026-11-11 | Sweep C: port side hints, notes, org chart type. DM-009, DM-012 verified; TYP-006 partial. |
 | 0.12 | 2026-11-11 | Sweep B: XML and YAML input (core + API), generated language reference. IN-006, IN-007, API-007, DOC-006 verified. |
 | 0.11 | 2026-11-11 | Decision D-001 (internal hosting). Sweep A: EXT-002, IN-003, RN-001, RN-006, API-010, AI-009, AI-012, NF-004, NF-005, NF-007 verified; EXT-008 partial. |
 | 0.10 | 2026-11-11 | P6: layout quality and styling. LY-006, LY-007, LY-008, DM-008 and DM-010 verified; DM-009 deferred to P7. |

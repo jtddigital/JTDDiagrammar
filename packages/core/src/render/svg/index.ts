@@ -26,13 +26,14 @@ const marker = (color: string, P: Palette) =>
 function node(n: PlacedNode, P: Palette): string {
   const s = shape(n.shape);
   const line = n.style?.stroke ?? P.nodeStroke;
+  const fill = n.style?.fill ?? (s.paint ? P[s.paint] : P.nodeFill);
   const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - (n.lines.length * lineHeight(NODE_FONT)) / 2;
   const detail = s.detail ? `<path d="${s.detail(n.w, n.h)}" fill="none" ${stroke(line)}/>` : '';
   const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${line}"/>` : '';
   const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, NODE_FONT, fillAttr(n.style?.text));
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})">` +
-    `<path d="${s.outline(n.w, n.h)}" fill="${n.style?.fill ?? P.nodeFill}" ${stroke(line)}${dash(n.style?.dash)}/>${detail}${solid}${text}</g>`
+    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line)}${dash(n.style?.dash)}/>${detail}${solid}${text}</g>`
   );
 }
 
@@ -46,7 +47,7 @@ function edge(e: RoutedEdge, P: Palette): string {
     : '';
   return (
     `<g id="e-${esc(e.id)}" class="jtd-edge">` +
-    `<path d="${d}" fill="none" ${stroke(color)}${dash(e.style?.dash)} marker-end="url(#${markerId(color, P)})"/>${label}</g>`
+    `<path d="${d}" fill="none" ${stroke(color)}${dash(e.style?.dash)}${e.marker === 'none' ? '' : ` marker-end="url(#${markerId(color, P)})"`}/>${label}</g>`
   );
 }
 
@@ -60,7 +61,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
   const H = g.height + titleH + 2 * M.margin;
   const cls = ['jtd', ...(opts.className ? [opts.className] : [])].join(' ');
   const titleSvg = title ? lines(title.lines, W / 2, M.margin, TITLE_FONT, ` font-size="${TITLE_FONT.size}" font-weight="bold" class="jtd-title"`) : '';
-  const colors = [...new Set([P.edge, ...g.edges.map((e) => e.style?.stroke ?? P.edge)])];
+  const colors = [...new Set([P.edge, ...g.edges.filter((e) => e.marker !== 'none').map((e) => e.style?.stroke ?? P.edge)])];
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="${num(W)}" height="${num(H)}" viewBox="0 0 ${num(W)} ${num(H)}" class="${esc(cls)}">` +
     (opts.title ? `<title>${esc(opts.title)}</title>` : '') +

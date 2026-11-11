@@ -114,9 +114,23 @@ const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: 
 /** Choice pseudostate: small diamond. */
 const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26) };
 
+const FOLD = 10;
+/** Note: rectangle with a folded corner (URS-DM-012). */
+const note: Shape = {
+  id: 'note',
+  paint: 'noteFill',
+  size: boxSize(FOLD),
+  outline: (w, h) => `M0 0H${n(w - FOLD)}L${n(w)} ${FOLD}V${n(h)}H0Z`,
+  detail: (w) => `M${n(w - FOLD)} 0V${FOLD}H${n(w)}`,
+  port: boxPort(),
+};
+
+/** Card: rounded rectangle for people and entities. */
+const card: Shape = { ...state, id: 'card' };
+
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

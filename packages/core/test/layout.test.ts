@@ -93,8 +93,10 @@ describe.each(partitioned)('partitions: %s', (_name, doc) => {
   });
 
   it('keeps every node inside its lane x phase cell, clear of headers (URS-LY-002)', () => {
+    // Lanes come from the IR: derived nodes (notes) inherit theirs.
+    const ir = new Map(compile(doc, reg).ir!.nodes.map((x) => [x.id, x]));
     for (const n of g.nodes) {
-      const src = doc.nodes.find((s) => s.id === n.id)!;
+      const src = ir.get(n.id)!;
       const cells = [band('lane', src.lane!), ...(src.phase ? [band('phase', src.phase)] : [])];
       for (const c of cells) {
         expect(inside(n, c), `${n.id} in ${c.id}`).toBe(true);

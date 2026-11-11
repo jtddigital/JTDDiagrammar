@@ -4,7 +4,7 @@ import { checklist } from './fixture-type.ts';
 
 describe('Registry (URS-EXT-001, URS-EXT-005)', () => {
   it('lists built-in types', () => {
-    expect(createRegistry().types().map((t) => t.id)).toEqual(['flowchart', 'state']);
+    expect(createRegistry().types().map((t) => t.id)).toEqual(['flowchart', 'state', 'orgchart']);
     expect(createRegistry().engine('layered')).toBeDefined();
   });
 

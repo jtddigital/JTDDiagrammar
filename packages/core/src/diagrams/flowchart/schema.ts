@@ -16,11 +16,35 @@ const node = {
   },
 } as const;
 
+const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
+
+const note = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['text'],
+  properties: {
+    id: { ...id, description: 'Optional; generated when absent.' },
+    text: { type: 'string', description: 'Note text; `\\n` breaks lines.' },
+    for: ref('Node the note is attached to (dotted line, no arrow).'),
+    lane: ref('Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s.'),
+    phase: ref('Phase, likewise.'),
+    style,
+  },
+} as const;
+
 const edge = {
   type: 'object',
   additionalProperties: false,
   required: ['from', 'to'],
-  properties: { id: { ...id, description: 'Optional; generated when absent.' }, from: ref('Source node id.'), to: ref('Target node id.'), label: { type: 'string', description: 'Text on the edge.' }, style },
+  properties: {
+    id: { ...id, description: 'Optional; generated when absent.' },
+    from: ref('Source node id.'),
+    to: ref('Target node id.'),
+    label: { type: 'string', description: 'Text on the edge.' },
+    fromSide: { ...side, description: 'Side to leave the source by (N, E, S, W); default follows the flow.' },
+    toSide: { ...side, description: 'Side to enter the target by; default follows the flow.' },
+    style,
+  },
 } as const;
 
 export const flowchartSchema = {
@@ -36,5 +60,6 @@ export const flowchartSchema = {
     phases: { type: 'array', minItems: 1, items: band, description: 'Stages across the lanes. Require lanes.' },
     nodes: { type: 'array', items: node, description: 'Steps, decisions and other shapes.' },
     edges: { type: 'array', items: edge, description: 'Directed connections.' },
+    notes: { type: 'array', items: note, description: 'Annotations, drawn as folded-corner notes.' },
   },
 } as const;

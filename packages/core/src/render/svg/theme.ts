@@ -13,6 +13,7 @@ export interface Palette {
   laneHeaderFill: string;
   phaseHeaderFill: string;
   containerFill: string;
+  noteFill: string;
 }
 
 export const PALETTES: Record<Theme, Palette> = {
@@ -28,6 +29,7 @@ export const PALETTES: Record<Theme, Palette> = {
     laneHeaderFill: '#f1f5f9',
     phaseHeaderFill: '#e2e8f0',
     containerFill: '#f8fafc',
+    noteFill: '#fef9c3',
   },
   dark: {
     background: '#0f172a',
@@ -41,6 +43,7 @@ export const PALETTES: Record<Theme, Palette> = {
     laneHeaderFill: '#1e293b',
     phaseHeaderFill: '#334155',
     containerFill: '#162033',
+    noteFill: '#3b3520',
   },
 };
 

@@ -1,0 +1,18 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "Hints top to bottom with lanes",
+  "direction": "TB",
+  "lanes": [{ "id": "a", "label": "Requester" }, { "id": "b", "label": "Approver" }],
+  "nodes": [
+    { "id": "ask", "label": "Ask", "lane": "a" },
+    { "id": "ok", "shape": "decision", "label": "Approve?", "lane": "b" },
+    { "id": "done", "label": "Done", "lane": "a" }
+  ],
+  "edges": [
+    { "from": "ask", "to": "ok", "fromSide": "E", "toSide": "W" },
+    { "from": "ok", "to": "done", "label": "yes" },
+    { "from": "ok", "to": "ask", "label": "no", "fromSide": "E", "toSide": "E" }
+  ],
+  "notes": [{ "text": "SLA: 2 days", "for": "ok" }]
+}

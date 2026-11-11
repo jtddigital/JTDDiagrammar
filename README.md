@@ -17,7 +17,7 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P6 | Layout quality, styling and themes | **Done** |
 | P7 | Extras (see URS Should/Could items) | Next |
 
-Today you can write **state diagrams** (with composite states) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
+Today you can write **state diagrams** (with composite states), **org charts** and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
 
 ## Diagram types
 
@@ -372,6 +372,61 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Org chart
+
+`type: orgchart` · People and reporting lines, top to bottom.
+
+![Org chart](docs/img/orgchart-basic.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Product team",
+  "people": [
+    {
+      "id": "ceo",
+      "name": "Avery Chen",
+      "title": "CEO"
+    },
+    {
+      "id": "cto",
+      "name": "Sam Patel",
+      "title": "CTO",
+      "manager": "ceo"
+    },
+    {
+      "id": "cpo",
+      "name": "Jordan Lee",
+      "title": "Head of Product",
+      "manager": "ceo"
+    },
+    {
+      "id": "eng1",
+      "name": "Riley Kim",
+      "title": "Engineer",
+      "manager": "cto"
+    },
+    {
+      "id": "eng2",
+      "name": "Morgan Diaz",
+      "title": "Engineer",
+      "manager": "cto"
+    },
+    {
+      "id": "pm",
+      "name": "Casey Ford",
+      "title": "Product Manager",
+      "manager": "cpo"
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -386,7 +441,7 @@ Fields every diagram has:
 |-------|------|----------|-------------|
 | `$schema` | string |  | Optional schema URL for editor tooling. |
 | `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
-| `type` | `flowchart` \| `state` | yes | Diagram type. |
+| `type` | `flowchart` \| `state` \| `orgchart` | yes | Diagram type. |
 | `title` | string |  | Title shown above the diagram. |
 | `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
@@ -418,7 +473,16 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `edges[].from` | string | yes | Source node id. |
 | `edges[].to` | string | yes | Target node id. |
 | `edges[].label` | string |  | Text on the edge. |
+| `edges[].fromSide` | `N` \| `E` \| `S` \| `W` |  | Side to leave the source by (N, E, S, W); default follows the flow. |
+| `edges[].toSide` | `N` \| `E` \| `S` \| `W` |  | Side to enter the target by; default follows the flow. |
 | `edges[].style` | object |  | Colour and dash overrides (see Styling). |
+| `notes` | list of objects |  | Annotations, drawn as folded-corner notes. |
+| `notes[].id` | string |  | Optional; generated when absent. |
+| `notes[].text` | string | yes | Note text; `\n` breaks lines. |
+| `notes[].for` | string |  | Node the note is attached to (dotted line, no arrow). |
+| `notes[].lane` | string |  | Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s. |
+| `notes[].phase` | string |  | Phase, likewise. |
+| `notes[].style` | object |  | Colour and dash overrides (see Styling). |
 
 ### `state`
 
@@ -441,6 +505,20 @@ States and the transitions between them, with composite (nested) states. For lif
 | `transitions[].guard` | string |  | Condition, shown in brackets. |
 | `transitions[].action` | string |  | Effect, shown after a slash. |
 | `transitions[].style` | object |  | Colour and dash overrides (see Styling). |
+
+### `orgchart`
+
+People and who they report to. For teams and organisations.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
+| `people` | list of objects | yes | Everyone in the chart. |
+| `people[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `people[].name` | string | yes | Shown first, on its own line. |
+| `people[].title` | string |  | Role, shown under the name. |
+| `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
+| `people[].style` | object |  | Colour and dash overrides (see Styling). |
 
 <!-- END GENERATED: reference -->
 

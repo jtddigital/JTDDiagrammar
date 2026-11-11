@@ -23,6 +23,7 @@ export interface PlacedNode extends Box {
 export interface RoutedEdge {
   id: string;
   style?: Style;
+  marker?: 'none';
   from: string;
   to: string;
   points: Point[];

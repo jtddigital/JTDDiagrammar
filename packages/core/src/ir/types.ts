@@ -1,6 +1,8 @@
 /** Shared Graph IR: the only structure layout and render may consume (URS-EXT-004). */
 export type Direction = 'LR' | 'TB';
 export type Theme = 'default' | 'dark';
+/** A node side in drawing terms (north = top). */
+export type Side = 'N' | 'E' | 'S' | 'W';
 
 /** Style overrides (URS-DM-010); colours are validated hex strings. */
 export interface Style {
@@ -31,6 +33,10 @@ export interface IREdge extends Sourced {
   from: string;
   to: string;
   label?: string;
+  /** Sides to leave `from` / enter `to` by (URS-DM-009). */
+  ports?: { from?: Side; to?: Side };
+  /** End marker; default arrow. */
+  marker?: 'none';
 }
 
 export interface IRContainer extends Sourced {

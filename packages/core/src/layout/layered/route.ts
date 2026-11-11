@@ -13,6 +13,8 @@ import { mainAxis, type MainAxis, type PhaseLayers } from './main-axis.ts';
 
 const LABEL_PAD = 12;
 const LOOP = 16;
+/** Length of the stub that takes a side-hinted edge clear of its node (URS-DM-009). */
+const STUB = 12;
 
 export interface SizedNode {
   id: string;
@@ -38,8 +40,21 @@ interface Ctx {
 
 export type MC = { m: number; c: number };
 
+/** The side a chain end must use when the edge asks for one other than the flow's own (URS-DM-009). */
+function hintOf({ flow, chains, edges, fixed, verts }: Ctx, ci: number, end: 0 | 1): Side | undefined {
+  const ch = chains[ci]!;
+  const e = edges[ch.edge]!;
+  const v = end === 0 ? ch.verts[0]! : ch.verts.at(-1)!;
+  if (fixed?.(ch.edge, verts[v]!.node)) return undefined;
+  const h = (end === 0) !== ch.reversed ? e.ports?.from : e.ports?.to;
+  return h && h !== (end === 0 ? flow.mainEnd : flow.mainStart) ? h : undefined;
+}
+
 /** Ports spread along a side, ordered by the neighbour's cross position. Returns local (m, c) per chain end. */
-function ports({ flow, nodes, verts, chains, fixed, loops }: Ctx): { chains: MC[][]; loops: Map<number, MC> } {
+function ports(ctx: Ctx): { chains: MC[][]; loops: Map<number, MC>; hints: (Side | undefined)[][] } {
+  const { flow, nodes, verts, chains, fixed, loops } = ctx;
+  const hints = chains.map((_, ci) => [hintOf(ctx, ci, 0), hintOf(ctx, ci, 1)]);
+  const hinted = new Map<string, { chain: number; end: 0 | 1; key: number }[]>();
   const groups = new Map<string, { chain: number; end: 0 | 1; key: number }[]>();
   // Self-loops leave from the flow-end side too; they sort first, next to the corner they turn towards.
   loops.forEach((l, i) => {
@@ -52,8 +67,9 @@ function ports({ flow, nodes, verts, chains, fixed, loops }: Ctx): { chains: MC[
       [1, ch.verts.at(-1)!, ch.verts.at(-2)!],
     ] as const;
     for (const [end, v, nbr] of ends) {
-      const k = `${v}:${end}`;
-      groups.set(k, [...(groups.get(k) ?? []), { chain: i, end, key: verts[nbr]!.pos }]);
+      const h = hints[i]![end];
+      const [map, k] = h ? [hinted, `${v}:${h}`] : [groups, `${v}:${end}`];
+      map.set(k, [...(map.get(k) ?? []), { chain: i, end, key: verts[nbr]!.pos }]);
     }
   });
   const out: MC[][] = chains.map(() => []);
@@ -87,7 +103,13 @@ function ports({ flow, nodes, verts, chains, fixed, loops }: Ctx): { chains: MC[
       else loopOut.set(loops[-1 - e.chain]!.edge, p);
     });
   }
-  return { chains: out, loops: loopOut };
+  for (const [k, list] of hinted) {
+    const [v, side] = k.split(':') as [string, Side];
+    const n = nodes[verts[Number(v)]!.node]!;
+    list.sort((a, b) => a.key - b.key || a.chain - b.chain);
+    list.forEach((e, j) => (out[e.chain]![e.end] = flow.local(shape(n.shape).port(side, n.w, n.h, list.length === 1 ? 0 : -1 + (2 * j) / (list.length - 1)))));
+  }
+  return { chains: out, loops: loopOut, hints };
 }
 
 /** A cross-axis segment in a gap: enters at c1, leaves at c2. */
@@ -160,14 +182,30 @@ const labelOf = (e: IREdge) => (e.label ? textBlock(e.label, LABEL_TEXT_MAX, LAB
 /** Orthogonal routing through the gaps between layers (URS-LY-005). */
 export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axis: MainAxis } {
   const { flow, nodes, verts, layers, chains, edges } = ctx;
-  const { chains: port, loops: loopPort } = ports(ctx);
+  const { chains: port, loops: loopPort, hints } = ports(ctx);
   const extent = layers.map((l) => max(l.map((v) => verts[v]!.main)));
   const crossStart = (v: number) => verts[v]!.pos - verts[v]!.cross / 2;
 
+  /** Cross coordinate a side-hinted end runs along once clear of its node: just outside the hinted side, or, for the far main side, outside the cross side facing its neighbour. */
+  const detourC = (ci: number, end: 0 | 1): number => {
+    const ch = chains[ci]!;
+    const [v, nbr] = end === 0 ? [ch.verts[0]!, ch.verts[1]!] : [ch.verts.at(-1)!, ch.verts.at(-2)!];
+    const [cs, ce] = [crossStart(v), crossStart(v) + verts[v]!.cross];
+    const h = hints[ci]![end]!;
+    if (h === flow.crossStart) return cs - STUB;
+    if (h === flow.crossEnd) return ce + STUB;
+    return verts[nbr]!.pos >= verts[v]!.pos ? ce + STUB : cs - STUB;
+  };
+
   // Cross coordinate where each chain leaves/enters each of its vertices.
-  const exitC = (ci: number, i: number) => (i === 0 ? crossStart(chains[ci]!.verts[0]!) + port[ci]![0]!.c : verts[chains[ci]!.verts[i]!]!.pos);
+  const exitC = (ci: number, i: number) =>
+    i === 0 ? (hints[ci]![0] ? detourC(ci, 0) : crossStart(chains[ci]!.verts[0]!) + port[ci]![0]!.c) : verts[chains[ci]!.verts[i]!]!.pos;
   const entryC = (ci: number, i: number) =>
-    i === chains[ci]!.verts.length - 1 ? crossStart(chains[ci]!.verts[i]!) + port[ci]![1]!.c : verts[chains[ci]!.verts[i]!]!.pos;
+    i === chains[ci]!.verts.length - 1
+      ? hints[ci]![1]
+        ? detourC(ci, 1)
+        : crossStart(chains[ci]!.verts[i]!) + port[ci]![1]!.c
+      : verts[chains[ci]!.verts[i]!]!.pos;
 
   // Assign each jog (cross-axis segment) in a gap to a track; overlapping jogs get different tracks.
   const track = new Map<string, number>();
@@ -221,14 +259,36 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axi
   const routed: RoutedEdge[] = chains.map((ch, ci) => {
     const e = edges[ch.edge]!;
     const last = ch.verts.length - 1;
-    const pts: MC[] = [at(ch.verts[0]!, port[ci]![0]!)];
+    // Side-hinted ends: a stub out of the node (and round it, for the far side) before joining the gaps.
+    const head = (): MC[] => {
+      const v = ch.verts[0]!;
+      const p = at(v, port[ci]![0]!);
+      const h = hints[ci]![0];
+      if (!h) return [p];
+      const c = detourC(ci, 0);
+      if (h !== flow.mainStart) return [p, { m: p.m, c }];
+      const m = mainStart(v) - STUB;
+      return [p, { m, c: p.c }, { m, c }];
+    };
+    const tail = (): MC[] => {
+      const v = ch.verts[last]!;
+      const p = at(v, port[ci]![1]!);
+      const h = hints[ci]![1];
+      if (!h) return [p];
+      const c = detourC(ci, 1);
+      if (h !== flow.mainEnd) return [{ m: p.m, c }, p];
+      const m = mainStart(v) + verts[v]!.main + STUB;
+      return [{ m, c }, { m, c: p.c }, p];
+    };
+    const pts: MC[] = head();
+    const end = tail();
     let label: MC | undefined;
     for (let i = 0; i < last; i++) {
       const a = ch.verts[i]!;
       const b = ch.verts[i + 1]!;
       const l = verts[a]!.layer;
       const [c1, c2] = [exitC(ci, i), entryC(ci, i + 1)];
-      const entry: MC = i + 1 === last ? at(b, port[ci]![1]!) : { m: start[l + 1]!, c: c2 };
+      const entry: MC = i + 1 === last ? end[0]! : { m: start[l + 1]!, c: c2 };
       if (c1 !== c2) {
         const m = trackM(l, `${ci}:${i}`);
         pts.push({ m, c: c1 }, { m, c: c2 });
@@ -237,6 +297,7 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axi
       pts.push(entry);
       if (isDummy(verts[b]!)) pts.push({ m: gapStart(l + 1), c: c2 });
     }
+    pts.push(...end.slice(1));
     if (ch.reversed) pts.reverse();
     const b = labels[ch.edge];
     return {

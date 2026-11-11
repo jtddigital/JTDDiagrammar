@@ -1,6 +1,8 @@
 import type { Point } from '../geometry.ts';
 
-export type Side = 'N' | 'E' | 'S' | 'W';
+import type { Side } from '../ir/types.ts';
+
+export type { Side };
 
 export const PAD_X = 12;
 export const PAD_Y = 8;
@@ -22,6 +24,8 @@ export interface Shape {
   unlabelled?: boolean;
   /** Edges attach only at the four side midpoints (diamonds); the router allocates them jointly. */
   tips?: boolean;
+  /** Default fill from the theme palette instead of the node fill (e.g. notes). */
+  paint?: 'noteFill';
   /** Vertical offset of the label centre from the box centre. */
   labelDy?(w: number, h: number): number;
   /** Boundary point on a side; t ∈ [-1, 1] spreads multiple edges along the side where the shape allows. */

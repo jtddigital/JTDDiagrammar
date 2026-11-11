@@ -1,4 +1,4 @@
-import type { Direction, Style, Theme } from '../../ir/types.ts';
+import type { Direction, Side, Style, Theme } from '../../ir/types.ts';
 
 export const FLOWCHART_SHAPES = ['process', 'decision', 'terminator', 'document', 'data', 'subprocess', 'connector'] as const;
 export type FlowchartShape = (typeof FLOWCHART_SHAPES)[number];
@@ -24,6 +24,18 @@ export interface FlowEdge {
   from: string;
   to: string;
   label?: string;
+  fromSide?: Side;
+  toSide?: Side;
+  style?: Style;
+}
+
+/** A note attached to a node, or free-standing (URS-DM-012). */
+export interface FlowNote {
+  id?: string;
+  text: string;
+  for?: string;
+  lane?: string;
+  phase?: string;
   style?: Style;
 }
 
@@ -38,4 +50,5 @@ export interface Flowchart {
   phases?: FlowBand[];
   nodes: FlowNode[];
   edges?: FlowEdge[];
+  notes?: FlowNote[];
 }
