@@ -18,7 +18,8 @@
     "dev:api": "node packages/api/src/server.ts",
     "dev:web": "pnpm --filter @jtd/web dev",
     "e2e": "pnpm --filter @jtd/web e2e",
-    "docs:screens": "pnpm --filter @jtd/web screens"
+    "docs:screens": "pnpm --filter @jtd/web screens",
+    "ai:live": "tsx scripts/ai/live-check.ts"
   },
   "devDependencies": {
     "@jtd/core": "workspace:*",
@@ -30,6 +31,7 @@
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.2",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "@jtd/ai": "workspace:*"
   }
 }

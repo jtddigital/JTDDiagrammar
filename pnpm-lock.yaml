@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@jtd/ai':
+        specifier: workspace:*
+        version: link:packages/ai
       '@jtd/core':
         specifier: workspace:*
         version: link:packages/core

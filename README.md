@@ -348,7 +348,7 @@ The response is `{ type, reason?, source, valid, diagnostics, attempts, usage, s
 - Material and results are not logged or stored.
 - Closing the request (or **Cancel** in the web app) aborts the Claude call.
 
-**Status:** this is tested end to end against a deterministic mock, never the live API, in CI. A live check and an accuracy evaluation suite (URS-AI-018) are still to do.
+**Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; it has not yet been run with a key. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
 
 ## Architecture
 
@@ -390,6 +390,7 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/U
 | `pnpm e2e` | Playwright tests: built web app against the real API |
 | `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
 | `pnpm docs:screens` | Regenerate web app screenshots (`docs/img/*.png`) |
+| `pnpm ai:live` | Live check of AI generation against the real API. Needs `ANTHROPIC_API_KEY`, costs a few cents, never runs in CI; outputs go to `.live/` |
 | `pnpm fonts:metrics` | Regenerate `measure/font-metrics.ts` from Liberation Sans |
 
 Every change cites URS IDs and includes an impact assessment in the commit body ([URS §5](docs/URS.md)).

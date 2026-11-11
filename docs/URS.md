@@ -156,7 +156,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Proposed |
 | URS-AI-016 | S | Prompt caching: the stable prefix (system prompt, type guidance, examples) is cached and kept free of volatile data. | Live check: `cache_read_input_tokens > 0` on a repeat call. | T | Partial |
 | URS-AI-017 | S | Usage reported per request: input/output tokens, cache reads, attempts and estimated cost. | Mock test. | T | Partial |
-| URS-AI-018 | S | Evaluation suite: a corpus of input documents with reference diagrams. Metrics: valid on first try, valid after repairs, node/edge recall, lane-assignment accuracy. It runs on demand (it costs money), not on every CI run. | Report produced. | D | Proposed |
+| URS-AI-018 | S | Evaluation suite: a corpus of input documents with reference diagrams. Metrics: valid on first try, valid after repairs, node/edge recall, lane-assignment accuracy. It runs on demand (it costs money), not on every CI run. | Report produced. | D | Partial |
 | URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Proposed |
 | URS-AI-020 | M | The Claude client sits behind an interface with a deterministic mock. CI never calls the live API. | CI has no key; tests pass. | T | Verified |
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Proposed |
@@ -235,6 +235,7 @@ Updated with each change. `—` = not started.
 | AI-012 | no logging of bodies or material | Inspection | Retention: nothing is stored, so nothing to configure. |
 | AI-017 | generate.ts usage totals | ai/test/generate.test.ts | Tokens, cache and attempts reported; no cost estimate yet. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
+| AI-018 | scripts/ai/{live-check,cases}.ts (`pnpm ai:live`) | scripts/ai/cases.test.ts (checks only) | Smoke subset: 3 cases with pass/fail checks, usage and cache reporting. No reference diagrams or recall metrics yet. Not yet run: no key available in the session. |
 | API-012, API-015, API-016 | api/src/routes/generate.ts, errors.ts | api/test/generate.test.ts, web/e2e/generate.spec.ts | |
 | WEB-011, WEB-012 | web/src/generate/* | web/e2e/generate.spec.ts | WEB-012: cancel plus a status line; no staged progress. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
@@ -252,6 +253,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.8.1 | 2026-11-11 | AI-018 partial: live-check script (`pnpm ai:live`). |
 | 0.8 | 2026-11-11 | P4: AI generation. Added API-016. 18 requirements verified; AI-009, AI-011, AI-016, AI-017 and WEB-012 partial; AI-012 implemented. No live API call yet. |
 | 0.7 | 2026-11-11 | P3: REST API and web app. 17 requirements verified; API-007, WEB-010 and DOC-005 partial; NF-006 implemented. Render timeout default 5 s (benchmarked). |
 | 0.6 | 2026-11-11 | Cross-functional layout delivered (now P2; API/web renumbered to P3 at the user's request). TYP-002, DM-001/002, LY-002/003, RN-002 verified. |
