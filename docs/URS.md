@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.8 (draft) |
+| Version | 0.8.2 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -149,12 +149,12 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-008 | M | Stop reasons are handled: `refusal` (with server-side fallbacks enabled) and `max_tokens` (truncation counts as a failure and is never parsed as success). Each surfaces as a distinct error code. | Mock test per stop reason. | T | Verified |
 | URS-AI-009 | M | Input limits on file size, file count and pages (PDF ≤ 600 pages, request ≤ 32 MB), plus a token pre-check with `count_tokens`. Over-limit input returns `413` with the reason. No silent truncation. | Limit tests. | T | Partial |
 | URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. | Log scrub test; bundle grep in CI. | T | Verified |
-| URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Partial |
+| URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Verified |
 | URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Implemented |
 | URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction. The result goes through URS-AI-005/006. | Mock test. | T | Proposed |
 | URS-AI-014 | S | Provenance: generated nodes and edges may carry a `source` quote from the input. This is a schema field, because the Citations API cannot be combined with structured outputs. | Fixture test. | T | Proposed |
 | URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Proposed |
-| URS-AI-016 | S | Prompt caching: the stable prefix (system prompt, type guidance, examples) is cached and kept free of volatile data. | Live check: `cache_read_input_tokens > 0` on a repeat call. | T | Partial |
+| URS-AI-016 | S | Prompt caching: the stable prefix (system prompt, type guidance, examples) is cached and kept free of volatile data. | Live check: `cache_read_input_tokens > 0` on a repeat call. | T | Verified |
 | URS-AI-017 | S | Usage reported per request: input/output tokens, cache reads, attempts and estimated cost. | Mock test. | T | Partial |
 | URS-AI-018 | S | Evaluation suite: a corpus of input documents with reference diagrams. Metrics: valid on first try, valid after repairs, node/edge recall, lane-assignment accuracy. It runs on demand (it costs money), not on every CI run. | Report produced. | D | Partial |
 | URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Proposed |
@@ -228,14 +228,14 @@ Updated with each change. `—` = not started.
 | NF-006 | Dockerfile, CI `docker` job | CI | Image built and served in CI (P3 run green). |
 | EXT-009, AI-004 | core/src/registry/diagram-type.ts (AiAssets), core/src/diagrams/flowchart/ai.ts | core/test/ai-assets.test.ts | Subset lint plus a 300-sample property test: only `pattern` errors survive conversion. |
 | AI-001, AI-009 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | PDF page count not checked; the API's own limit applies. |
-| AI-002, AI-003, AI-008, AI-016 | packages/ai/src/anthropic.ts | ai/test/anthropic.test.ts (stubbed SDK) | AI-016: cache_control on a byte-stable system prompt; live cache-hit check pending a key. |
+| AI-002, AI-003, AI-008, AI-016 | packages/ai/src/anthropic.ts | ai/test/anthropic.test.ts (stubbed SDK) | AI-016: cache_control on a byte-stable system prompt. Live run 2026-11-11: first call wrote 1827 cached tokens, the next two read 1827 each. |
 | AI-005..007 | packages/ai/src/generate.ts, prompt.ts | ai/test/generate.test.ts, api/test/generate.test.ts | |
 | AI-010 | api/src/config.ts (presence only), eslint.config.js | api/test/generate.test.ts, test/boundaries.test.ts | Key read by the SDK only; web cannot import AI code. |
-| AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts | Structural defences tested; model behaviour needs the live eval (AI-018). |
+| AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts, `pnpm ai:live` (prompt injection case) | Structural defences tested. Live run 2026-11-11: injected title and `<script>` node ignored, output schema-valid, SVG has no unescaped script. One live fixture so far. |
 | AI-012 | no logging of bodies or material | Inspection | Retention: nothing is stored, so nothing to configure. |
 | AI-017 | generate.ts usage totals | ai/test/generate.test.ts | Tokens, cache and attempts reported; no cost estimate yet. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
-| AI-018 | scripts/ai/{live-check,cases}.ts (`pnpm ai:live`) | scripts/ai/cases.test.ts (checks only) | Smoke subset: 3 cases with pass/fail checks, usage and cache reporting. No reference diagrams or recall metrics yet. Not yet run: no key available in the session. |
+| AI-018 | scripts/ai/{live-check,cases}.ts (`pnpm ai:live`) | scripts/ai/cases.test.ts (checks only) | Smoke subset: 3 cases with pass/fail checks, usage and cache reporting. No reference diagrams or recall metrics yet. Live run 2026-11-11 (claude-opus-5-5, effort high): 3/3 pass, all valid on the first attempt, 5–7 s each. |
 | API-012, API-015, API-016 | api/src/routes/generate.ts, errors.ts | api/test/generate.test.ts, web/e2e/generate.spec.ts | |
 | WEB-011, WEB-012 | web/src/generate/* | web/e2e/generate.spec.ts | WEB-012: cancel plus a status line; no staged progress. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
@@ -253,6 +253,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.8.2 | 2026-11-11 | First live run of `pnpm ai:live`: 3/3 pass. AI-011 and AI-016 verified; AI-018 stays partial (no reference corpus or recall metrics). |
 | 0.8.1 | 2026-11-11 | AI-018 partial: live-check script (`pnpm ai:live`). |
 | 0.8 | 2026-11-11 | P4: AI generation. Added API-016. 18 requirements verified; AI-009, AI-011, AI-016, AI-017 and WEB-012 partial; AI-012 implemented. No live API call yet. |
 | 0.7 | 2026-11-11 | P3: REST API and web app. 17 requirements verified; API-007, WEB-010 and DOC-005 partial; NF-006 implemented. Render timeout default 5 s (benchmarked). |

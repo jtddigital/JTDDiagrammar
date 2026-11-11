@@ -348,7 +348,7 @@ The response is `{ type, reason?, source, valid, diagnostics, attempts, usage, s
 - Material and results are not logged or stored.
 - Closing the request (or **Cancel** in the web app) aborts the Claude call.
 
-**Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; it has not yet been run with a key. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
+**Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; its first run (2026-11-11, `claude-opus-5-5`) passed all three, each valid on the first attempt, with the cached prefix read on repeat calls. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
 
 ## Architecture
 
