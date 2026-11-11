@@ -1,7 +1,7 @@
 # Architecture & Plan — JTDDiagrammar
 
 ## 1. Principle
-Diagram types are plugins. Everything downstream of a type plugin (layout, routing, shapes, SVG, API, web app) is type-agnostic and works only on a shared **Graph IR**. A cross-functional flowchart is a flowchart with partitions. A state diagram is a graph with containers. Neither gets special code outside its own plugin. (URS-EXT-001..006)
+Diagram types are plugins, each carrying its own schema, IR converter, AI generation assets and README example. Everything downstream of a type plugin (layout, routing, shapes, SVG, API, web app) is type-agnostic and works only on a shared **Graph IR**. A cross-functional flowchart is a flowchart with partitions. A state diagram is a graph with containers. Neither gets special code outside its own plugin. (URS-EXT-001..006)
 
 ## 2. Pipeline
 ```
@@ -29,6 +29,13 @@ interface DiagramType<M = unknown> {
   engine: string;                      // "layered" (URS-EXT-005)
   validate?(m: M): Diagnostic[];       // semantic hook (URS-EXT-007)
   toIR(m: M): GraphIR;
+  ai: {                                // URS-EXT-009
+    schema: JSONSchema;                // generation schema: structured-output-safe subset (URS-AI-004)
+    fromGenerated(g: unknown): M;      // deterministic: generation output → authoring source
+    guide: string;                     // type-specific prompt guidance
+    examples: { input: string; output: unknown }[];
+  };
+  readme: { title: string; fixture: string };  // URS-EXT-010
 }
 
 interface GraphIR {
@@ -64,9 +71,19 @@ packages/
       labels.ts
     render/svg/               document.ts, nodes.ts, edges.ts, bands.ts, containers.ts, markers.ts, escape.ts
     index.ts                  render(src) → { svg, diagnostics }
-  api/src/routes/             render.ts, validate.ts, schema.ts, types.ts, health.ts
-  web/src/                    editor/, preview/, export/, examples/<type>/
-fixtures/<type>/              samples + golden SVGs
+  ai/src/                     Node only; core never imports it (URS-NF-009)
+    client/                   claude.ts (Anthropic SDK), mock.ts, types.ts   (URS-AI-020)
+    ingest/                   pdf.ts (pass-through document block), docx.ts, html.ts, text.ts, limits.ts
+    prompt/                   system.ts, build.ts (cache-stable prefix ordering)
+    generate.ts               select type → generate → convert → validate → repair loop
+    repair.ts                 diagnostics → correction message
+    eval/                     corpus/, run.ts, metrics.ts   (URS-AI-018)
+  api/src/routes/             render.ts, validate.ts, schema.ts, types.ts, generate.ts, refine.ts, health.ts
+  web/src/                    editor/, preview/, export/, generate/, examples/<type>/
+fixtures/<type>/              samples + golden SVGs + README example
+scripts/docs/                 images.ts (fixtures → docs/img/*.svg, Playwright → *.png), reference.ts
+docs/img/                     generated; never hand-edited
+README.md
 ```
 
 ## 5. Source formats (schema v1, drafts)
@@ -133,6 +150,8 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 |--------|------|-----|
 | POST | `/v1/render` | `image/svg+xml`, or 400 with diagnostics |
 | POST | `/v1/validate` | `{ valid, diagnostics[] }` |
+| POST | `/v1/generate` | `{ source, valid, diagnostics, attempts, usage, svg? }`, or an SSE stream |
+| POST | `/v1/refine` | as `generate` |
 | GET  | `/v1/types` | registered types |
 | GET  | `/v1/schema[/{type}]` | JSON Schema |
 | GET  | `/v1/openapi.json` | OpenAPI |
@@ -141,25 +160,50 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 Limits: 1 MB body, 1000 nodes, 2000 edges, 2 s render time (URS-API-006). Diagnostic shape: `{ severity, code, message, path }`, where `path` is a JSON Pointer.
 
 ## 8. Web app
-Split pane: a CodeMirror editor next to an SVG preview with pan and zoom. Rendering happens client-side through `@jtd/core`. The editor fetches its schema from the registry using the document's `type`, so it contains no type-specific code (URS-WEB-010). Export downloads the SVG string that is already rendered (URS-WEB-003).
+Split pane: a CodeMirror editor next to an SVG preview with pan and zoom. Rendering happens client-side through `@jtd/core`. The editor fetches its schema from the registry using the document's `type`, so it contains no type-specific code (URS-WEB-010). Export downloads the SVG string that is already rendered (URS-WEB-003). The generate panel calls the API (the key never reaches the browser) and loads the result into the editor (URS-WEB-011..014).
 
-## 9. Delivery phases
+## 9. AI generation (`@jtd/ai`)
+```
+files/text ─ingest─▶ content blocks ─(type=auto? select)─▶ Claude + output_config.format(type.ai.schema)
+   ─▶ JSON ─type.ai.fromGenerated─▶ source ─core: schema + semantic + layout─▶ ok? ─▶ { source, svg }
+                                                   └─ fail ─▶ repair msg (diagnostics) ─▶ Claude … ≤ N
+```
+- **Two schemas per type.** The *authoring* schema is the full schema used by the editor, the API and Ajv. The *generation* schema is the subset structured outputs supports: no recursion, no `minLength`/`minimum`, `additionalProperties: false` everywhere. For example, a state diagram is generated flat with `parent` refs, and `fromGenerated` nests it. The authoring validators remain the source of truth, so a constraint the generation schema had to drop is still enforced. (URS-AI-004/005)
+- **Repair loop.** Diagnostics (JSON Pointer + message) go back to Claude as a follow-up turn. The default is 2 retries, and the best attempt is always returned with an honest `valid` flag. (URS-AI-006)
+- **Ingest.** PDF is passed through as a `document` block (≤ 32 MB, ≤ 600 pages). DOCX, HTML and MD are converted to text server-side. Inputs over the limits are rejected after a `count_tokens` pre-check, never truncated. (URS-AI-001/009)
+- **Request.** The model defaults to `claude-opus-5-5`, with adaptive thinking and effort configurable. Requests are streamed. Server-side `fallbacks` handle refusals, and `stop_reason` is checked before parsing. (URS-AI-002/008)
+- **Caching.** Prefix order: system prompt → type guide → examples → [cache breakpoint] → documents → instruction. Nothing volatile goes in the prefix. (URS-AI-016)
+- **Safety.** No tools are exposed, and the server fixes the type and schema, so document text can only influence field *values*, which the renderer escapes. Nothing is logged or persisted by default. (URS-AI-010..012)
+- **Provenance.** An optional `source` quote is stored per node or edge as a schema field, because Citations can't be combined with structured outputs. (URS-AI-014)
+- **Tests.** `ClaudeClient` is an interface; CI uses a deterministic mock and the live eval runs on demand. (URS-AI-018/020)
+
+## 10. Documentation
+- `README.md` contains overview, quick start, API with `curl`, a per-type section (source + rendered image), AI usage and config, architecture and workflow. (URS-DOC-001/002)
+- `pnpm docs:images` renders every type's README fixture through core into `docs/img/<type>.svg` and captures the web app (editor, generate panel) to PNG with Playwright. (URS-DOC-003/005)
+- A CI job re-runs the script and fails on any diff, or when a registered type has no fixture. That ties the docs to the registry, so a new type can't ship undocumented. (URS-DOC-004, URS-EXT-010)
+
+## 11. Delivery phases
 | Phase | Scope | Key URS |
 |-------|-------|---------|
-| **P0** Foundations | monorepo, CI, registry, IR, schema composition, common validation | EXT-001..007, IN-001..005, NF-001..004 |
-| **P1** Flowchart | measuring, layered engine, basic router, flowchart shapes, SVG | TYP-001, DM-003..006, LY-001..005, LY-009, RN-001..005 |
-| **P2** API + Web (thin) | render/validate/types/schema routes, editor, preview, export | API-001..009, API-011, WEB-001..004, WEB-010 |
+| **P0** Foundations | monorepo, CI, registry, IR, schema composition, common validation, README skeleton + docs-image pipeline | EXT-001..007, EXT-010, IN-001..005, NF-001..004, NF-008, DOC-001, DOC-003/004 |
+| **P1** Flowchart | measuring, layered engine, basic router, flowchart shapes, SVG, README example | TYP-001, DM-003..006, LY-001..005, LY-009, RN-001..005, DOC-002 |
+| **P2** API + Web (thin) | render/validate/types/schema routes, editor, preview, export | API-001..009, API-011, WEB-001..004, WEB-010, DOC-005 |
 | **P3** Cross-functional | partitions constraint, band rendering | TYP-002, DM-001/002/005, LY-002/003, RN-002 |
-| **P4** State | containers, compound layout, self-loops, state shapes | TYP-003..005, DM-013, LY-011/012 |
-| **P5** Layout quality | obstacle avoidance, crossing minimisation, label placement, wrapping, styling | LY-006..008, LY-010, DM-007..010 |
-| **P6** Extras | XML/YAML adapters, autocomplete, examples, share links, PNG/PDF | IN-006..008, WEB-005..009, RN-007 |
+| **P4** AI generation | `ai` package, ingest, generation schemas, repair loop, generate API, generate panel, mock + eval | AI-001..012, AI-020, EXT-009, API-012/015, WEB-011, NF-009 |
+| **P5** State | containers, compound layout, self-loops, state shapes | TYP-003..005, DM-013, LY-011/012 |
+| **P6** Layout quality | obstacle avoidance, crossing minimisation, label placement, wrapping, styling | LY-006..008, LY-010, DM-007..010 |
+| **P7** Extras | AI refine/provenance/streaming/eval, XML/YAML adapters, autocomplete, share links, PNG/PDF | AI-013..019, API-013/014, WEB-005..009, WEB-012..014, IN-006..008, RN-007, DOC-006 |
 
-P1 → P2 gets a working end-to-end slice early. P3 and P4 then validate the plugin seams with two quite different types.
+P1 → P2 gets a working end-to-end slice early. AI generation (P4) comes after cross-functional so the main target type exists first. P5 then tests the plugin seams, generation included, with a very different type. Each phase updates the README images; CI enforces it.
 
-## 10. Risks
+## 12. Risks
 | Risk | Mitigation |
 |------|------------|
 | The IR is shaped around flowcharts and doesn't fit later types | Build P3 (partitions) and P4 (containers) before stabilising the IR. Add new engines rather than bending `layered`. |
 | Edge routing quality makes or breaks the product | Keep it isolated behind the `route/` interface; maintain a fixture suite of hard cases. |
 | Font metrics drift between runtimes | Use a single bundled font and a generated width table; never measure through the DOM. |
 | Schema churn breaks users | `version` field per document, plus adapters from older major versions. |
+| Generated diagrams are schema-valid but semantically wrong (missed steps, wrong lane) | Run the eval corpus with recall and lane-accuracy metrics; the user reviews in the editor before export; provenance quotes. |
+| The generation schema drifts from the authoring schema | A property test proves that every generated output converts to an authoring-valid source shape (URS-AI-004). |
+| Large documents cost money and are slow | `count_tokens` pre-check, a per-request token budget, prompt caching, and configurable effort. |
+| Prompt injection via documents | No tools; type and schema fixed by the server; output is data only and escaped. |
