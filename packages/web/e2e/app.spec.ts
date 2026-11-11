@@ -20,15 +20,16 @@ test('renders the first example on load (URS-WEB-001)', async ({ page }) => {
 
 test('live preview follows edits and keeps the last good render on error (URS-WEB-002)', async ({ page }) => {
   await open(page);
-  const before = await preview(page).getAttribute('src');
+  const before = await preview(page).innerHTML();
   await setSource(page, flow('Edited'));
-  await expect(preview(page)).not.toHaveAttribute('src', before!);
-  const good = await preview(page).getAttribute('src');
+  await expect(preview(page)).toContainText('Edited');
+  const good = await preview(page).innerHTML();
+  expect(good).not.toBe(before);
 
   await setSource(page, '{ "version": "1", "type": ');
   await expect(status(page)).toHaveText('1 error');
   await expect(page.getByText('Showing the last valid diagram')).toBeVisible();
-  await expect(preview(page)).toHaveAttribute('src', good!);
+  expect(await preview(page).innerHTML()).toBe(good);
   await expect(page.getByRole('button', { name: 'Export SVG' })).toBeDisabled();
 });
 

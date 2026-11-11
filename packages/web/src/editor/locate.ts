@@ -23,7 +23,7 @@ function walk(root: Node, path: readonly string[]): Node | undefined {
  * element its JSON Pointer names (nearest existing ancestor if it is missing). Properties highlight
  * their key, objects and arrays their opening bracket.
  */
-export function locate(text: string, d: Diagnostic): Range {
+export function locate(text: string, d: Pick<Diagnostic, 'code' | 'path'>): Range {
   const errors: ParseError[] = [];
   const root = parseTree(text, errors, { disallowComments: true, allowTrailingComma: false });
   const clamp = (r: Range): Range => ({ from: Math.min(r.from, text.length), to: Math.min(Math.max(r.to, r.from + 1), text.length) });

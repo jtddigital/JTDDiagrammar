@@ -19,3 +19,12 @@ describe('web app is type-agnostic (URS-EXT-002, URS-WEB-010)', () => {
     for (const f of files(src)) for (const id of ids) expect(readFileSync(f, 'utf8'), `${f} mentions '${id}'`).not.toMatch(new RegExp(`['"\`]${id}['"\`]`));
   });
 });
+
+describe('web registry module (URS-EXT-008)', () => {
+  it('defaults to the built-ins and follows REGISTRY_MODULE like the API', async () => {
+    const { registryModule } = await import('../registry-alias.ts');
+    expect(registryModule({})).toBe('@jtd/core');
+    expect(registryModule({ REGISTRY_MODULE: '@acme/diagrams' })).toBe('@acme/diagrams');
+    expect(registryModule({ REGISTRY_MODULE: './types.ts' }, '/srv/app')).toBe('/srv/app/types.ts');
+  });
+});

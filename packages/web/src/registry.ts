@@ -1,6 +1,7 @@
-import { createRegistry, type Registry } from '@jtd/core';
+import type { Registry } from '@jtd/core';
+import { createRegistry } from '@jtd/registry';
 
-/** The same registry and renderer the API uses, so exports match the API byte for byte (URS-WEB-003). */
+/** The same registry and renderer the API uses, so exports match the API byte for byte (URS-WEB-003, URS-EXT-008). */
 export const registry = createRegistry();
 
 /** Every example of every registered type (URS-WEB-007); no type-specific code (URS-WEB-010). */

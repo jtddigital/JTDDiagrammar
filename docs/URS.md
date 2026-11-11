@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.14 (draft) |
+| Version | 0.15 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -11,7 +11,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 
 ## 2. Conventions
 - **ID**: `URS-<AREA>-<NNN>`. IDs are never reused or renumbered; retired items are marked `Withdrawn`.
-- **Priority** (MoSCoW): M = Must, S = Should, C = Could, W = Won't (this release).
+- **Priority** (MoSCoW): M = Must, S = Should, C = Could, W = Won't (this release). W items keep their ID and stay `Proposed`; the matrix records why they were deferred.
 - **Verify**: T = automated test, I = inspection, D = demonstration.
 - **Status**: Proposed → Accepted → Partial (some acceptance criteria met; see matrix) → Implemented → Verified (automated test passes) — or Withdrawn.
 
@@ -32,7 +32,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-EXT-005 | M | Layout engines are pluggable and each type selects one. v1 ships `layered`. | Engine registry test. | T | Verified |
 | URS-EXT-006 | M | Each type ships its own JSON Schema. The combined schema dispatches on `type`. | Ajv validates per-type fixtures through the combined schema. | T | Verified |
 | URS-EXT-007 | M | Each type can add semantic validation rules through a hook. | Hook test. | T | Verified |
-| URS-EXT-008 | C | Diagram types can be registered from outside the repo as separate packages. | — | T | Partial |
+| URS-EXT-008 | C | Diagram types can be registered from outside the repo as separate packages. | `REGISTRY_MODULE` selects the registry in the API and, at build time, in the web app. | T | Verified |
 | URS-EXT-009 | M | Each type also ships its AI generation assets: a generation schema, guidance text, examples and a converter from generated output to authoring source (URS-AI-004). Adding a type requires no change to the `ai` package. | The test-only fixture type generates through a mock client. | T | Verified |
 | URS-EXT-010 | M | Each type ships a README example (source + rendered image) (URS-DOC-002). | CI check (URS-DOC-004). | T | Verified |
 
@@ -44,7 +44,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Verified |
 | URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Verified |
 | URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Verified |
-| URS-TYP-006 | C | Further types (sequence, ER, org chart), each as a plugin. | — | T | Partial |
+| URS-TYP-006 | C | Org chart type, as a plugin. | README example; validation and layout tests. | T | Verified |
+| URS-TYP-007 | W | Sequence and ER diagram types. | — | T | Proposed |
 
 ### 3.3 Input / Language (IN)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -56,7 +57,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-IN-005 | M | Common semantic validation: unique IDs and no dangling references. | Each rule has a failing test. | T | Verified |
 | URS-IN-006 | S | XML input via an adapter that maps to the identical source model. | JSON and XML equivalents render byte-identical SVG. | T | Verified |
 | URS-IN-007 | C | YAML input via an adapter. | As URS-IN-006. | T | Verified |
-| URS-IN-008 | C | A short text language that compiles to the same model. | As URS-IN-006. | T | Proposed |
+| URS-IN-008 | W | A short text language that compiles to the same model. | As URS-IN-006. | T | Proposed |
 
 ### 3.4 Common Model (DM) — available to any type that opts in
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -71,7 +72,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Verified |
 | URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Verified |
 | URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Verified |
-| URS-DM-011 | C | Nested sub-lanes. | — | T | Proposed |
+| URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
 | URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Verified |
 | URS-DM-013 | S | Containers: nestable groups with labels (used by composite states and flowchart groups). | Snapshot. | T | Verified |
 
@@ -100,8 +101,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-RN-004 | M | All user text is XML-escaped; no script or foreignObject is emitted. | Injection fixtures are escaped. | T | Verified |
 | URS-RN-005 | S | SVG elements carry `id`/`class` values derived from model IDs and the diagram type. | Selector test. | T | Verified |
 | URS-RN-006 | S | Font is embedded, or a safe fallback stack is used, so the file renders standalone. | D | D | Verified |
-| URS-RN-007 | C | PNG / PDF export. | — | T | Proposed |
-| URS-RN-008 | C | Visio (.vsdx) export/import. | — | T | Proposed |
+| URS-RN-007 | C | PNG export from the web app, at 2× the SVG size. | E2E test checks the PNG dimensions. | T | Verified |
+| URS-RN-008 | W | Visio (.vsdx) export/import. | — | T | Proposed |
+| URS-RN-009 | W | PDF export. | — | T | Proposed |
 
 ### 3.7 API (API)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -130,16 +132,16 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-002 | M | Live preview with debounced re-render on edit. The last good render is kept when there is an error. | E2E test. | T | Verified |
 | URS-WEB-003 | M | Export SVG download, byte-identical to the API output for the same input. | E2E hash comparison. | T | Verified |
 | URS-WEB-004 | M | Diagnostics shown inline at their source location. | E2E test. | T | Verified |
-| URS-WEB-005 | S | Schema-aware autocomplete. | D | D | Proposed |
-| URS-WEB-006 | S | Pan and zoom in the preview. | D | D | Proposed |
+| URS-WEB-005 | S | Schema-aware autocomplete: property names and enum values from the document type's schema. | Unit and E2E tests. | T | Verified |
+| URS-WEB-006 | S | Pan and zoom in the preview. | E2E test (buttons, wheel, drag). | T | Verified |
 | URS-WEB-007 | S | Built-in example templates for each type. | D | D | Verified |
-| URS-WEB-008 | C | Persist to localStorage; shareable URL. | E2E test. | T | Proposed |
-| URS-WEB-009 | C | Clicking a node in the preview jumps to its source. | E2E test. | T | Proposed |
+| URS-WEB-008 | C | Persist to localStorage; shareable URL. | E2E test. | T | Verified |
+| URS-WEB-009 | C | Clicking a node in the preview jumps to its source. | E2E test. | T | Verified |
 | URS-WEB-010 | M | Editor validation and autocomplete follow the document's `type`, with no type-specific code in the web app. | E2E test with two types. | T | Verified |
 | URS-WEB-011 | M | Generate panel: paste text or drop files, pick a type or `auto`, then generate. The result loads into the editor (editable) with its diagnostics. | E2E test with a mock API. | T | Verified |
-| URS-WEB-012 | S | Generation shows staged progress and can be cancelled. | E2E test. | T | Partial |
-| URS-WEB-013 | S | Refine box: a natural-language instruction applied to the current source. | E2E test. | T | Proposed |
-| URS-WEB-014 | S | Hovering a node shows its provenance quote (URS-AI-014). | E2E test. | T | Proposed |
+| URS-WEB-012 | S | Generation shows staged progress and can be cancelled. | E2E test. | T | Verified |
+| URS-WEB-013 | S | Refine box: a natural-language instruction applied to the current source. | E2E test. | T | Verified |
+| URS-WEB-014 | S | Hovering a node shows its provenance quote (URS-AI-014). | E2E test. | T | Verified |
 
 ### 3.9 AI Generation (AI)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -165,7 +167,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Verified |
 | URS-AI-020 | M | The Claude client sits behind an interface with a deterministic mock. CI never calls the live API. | CI has no key; tests pass. | T | Verified |
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
-| URS-AI-022 | C | Bulk generation via the Message Batches API. | — | T | Proposed |
+| URS-AI-022 | W | Bulk generation via the Message Batches API. | — | T | Proposed |
 
 ### 3.10 Documentation (DOC)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -220,7 +222,8 @@ Updated with each change. `—` = not started.
 | DM-008 | core/src/layout/layered/order.ts (hints) | core/test/order.test.ts | |
 | DM-009 | core/src/layout/layered/route.ts (hintOf, detourC, head/tail stubs), flowchart fromSide/toSide | core/test/sweep-c.test.ts, golden/hints-* | Hinted ends skip port spreading and tip allocation; edges never pass through nodes (quality ratchet). |
 | DM-012 | flowchart `notes` → `note` shape + dotted, arrowless link (IR `marker: 'none'`) | core/test/sweep-c.test.ts, golden/hints-* | Notes inherit their node's lane and phase. |
-| TYP-006 | core/src/diagrams/orgchart/* | core/test/sweep-c.test.ts, README example | Org chart only. Sequence and ER diagrams: Won't (this release); sequence needs its own layout engine. |
+| TYP-006 | core/src/diagrams/orgchart/* | core/test/sweep-c.test.ts, README example | Rescoped to org chart in v0.15; sequence and ER moved to TYP-007. |
+| TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022 | — | — | Won't (this release), v0.15. TYP-007: sequence diagrams need a new layout engine (lifelines, time axis); ER needs a crow's-foot marker set. IN-008: JSON/XML/YAML plus AI drafting cover authoring; a DSL adds a parser and a second syntax to maintain. DM-011: sub-lanes need nested band layout. RN-008: .vsdx is a large OPC/XML format. RN-009: browsers print SVG to PDF; a server PDF needs a renderer dependency. AI-022: no bulk use case under D-001. |
 | DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts (well-formed; SVG 1.1 element and attribute allowlist), web/e2e/svg.spec.ts (Chromium and Firefox) | `data-*` attributes removed (not SVG 1.1). No DTD check: the W3C DTD is unreachable from CI. |
@@ -245,7 +248,7 @@ Updated with each change. `—` = not started.
 | AI-001 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | |
 | API-010 | api/src/routes/render.ts (GET) | api/test/api.test.ts | |
 | AI-009 | ai/src/ingest/files.ts (pdf-lib page count) | ai/test/ingest.test.ts | Files, size, total, pages, tokens. |
-| EXT-008 | api/src/config.ts (`REGISTRY_MODULE`) | api/test/api.test.ts | API only; the web bundle ships built-in types. |
+| EXT-008 | api/src/config.ts (`REGISTRY_MODULE`), web/vite.config.ts + registry-alias.ts (`@jtd/registry` alias) | api/test/api.test.ts, web/test/registry.test.ts | Web: chosen at build time. A build with the fixture registry ships the `checklist` type (checked by hand). |
 | NF-005 | vitest.config.ts (threshold 80 %) | `pnpm test` | Core at 99.8 % lines. |
 | NF-007 | scripts/ci/licences.ts (`pnpm licences`, part of `pnpm check`) | scripts/ci/licences.test.ts | SPDX expressions evaluated; prod deps only. |
 | AI-002, AI-003, AI-008, AI-016 | packages/ai/src/anthropic.ts | ai/test/anthropic.test.ts (stubbed SDK) | AI-016: cache_control on a byte-stable system prompt. Live run 2026-11-11: first call wrote 1827 cached tokens, the next two read 1827 each. |
@@ -262,7 +265,12 @@ Updated with each change. `—` = not started.
 | AI-021 | ai/src/ingest/files.ts (PNG, JPEG, GIF, WebP) | ai/test/refine.test.ts | |
 | AI-018 | scripts/ai/{eval,corpus,metrics}.ts (`pnpm ai:eval`), live-check | scripts/ai/metrics.test.ts | Corpus of 6 documents across all three types; metrics: valid first/final, node and edge recall, lane accuracy. Not yet run with a key; the live smoke check passed 3/3 (v0.8.2). |
 | API-012, API-015, API-016 | api/src/routes/generate.ts, errors.ts | api/test/generate.test.ts, web/e2e/generate.spec.ts | |
-| WEB-011, WEB-012 | web/src/generate/* | web/e2e/generate.spec.ts | WEB-012: cancel plus a status line; no staged progress. |
+| WEB-011..013 | web/src/generate/{api,progress,GeneratePanel}.* | web/e2e/generate.spec.ts, web/test/api.test.ts | SSE parsed from the fetch stream; falls back to plain JSON replies. |
+| WEB-005 | web/src/editor/complete.ts | web/test/complete.test.ts, web/e2e/preview.spec.ts | Driven by the registered schema of the document's `type` (WEB-010). |
+| WEB-006, WEB-014, RN-004 | web/src/preview/{Preview.tsx,sanitize.ts} | web/e2e/preview.spec.ts, web/test/sanitize.test.ts | Inline SVG, sanitised against the RN-001 allowlist (scripts, handlers, links, `url()` refs dropped). Quotes show as native `<title>` tooltips. |
+| WEB-008 | web/src/persist.ts | web/test/persist.test.ts, web/e2e/preview.spec.ts | Share link is `#src=` + base64url(deflate-raw); nothing stored server-side. |
+| WEB-009 | core/src/render.ts (`ir` in result), web/src/pick.ts | web/test/pick.test.ts, web/e2e/preview.spec.ts | SVG id prefix + model id → IR `src` pointer → `locate()`. |
+| RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
 
 ## 5. Change Impact Assessment (required per change)
@@ -278,6 +286,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.15 | 2026-11-11 | Sweep E: inline sanitised preview with pan/zoom, click to source, hover quotes, schema autocomplete, persistence and share links, staged progress and refine in the web app, PNG export, web `REGISTRY_MODULE`. EXT-008, TYP-006 (rescoped), RN-007 (rescoped), WEB-005/006/008/009/012/013/014 verified. Added TYP-007, RN-009. W: TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022. |
 | 0.14 | 2026-11-11 | Sweep D: refine, provenance, progress over SSE, cost estimate, rate limiting, image input, evaluation corpus. AI-013/014/015/017/019/021, API-013/014 verified; AI-018 partial (not yet run). |
 | 0.13 | 2026-11-11 | Sweep C: port side hints, notes, org chart type. DM-009, DM-012 verified; TYP-006 partial. |
 | 0.12 | 2026-11-11 | Sweep B: XML and YAML input (core + API), generated language reference. IN-006, IN-007, API-007, DOC-006 verified. |

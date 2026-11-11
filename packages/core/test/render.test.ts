@@ -59,6 +59,12 @@ describe('SVG output', () => {
     expect(out).toMatch(/<g id="p-order" class="jtd-phase">.*>Order<\/text><\/g>/);
   });
 
+  it('returns the IR so drawn elements map back to source (URS-WEB-009)', () => {
+    const r = render(reg.type('flowchart')!.examples[0]!.source, reg);
+    expect(r.ir!.nodes.map((n) => `n-${n.id}`)).toEqual(r.geometry!.nodes.map((n) => `n-${n.id}`));
+    expect(r.ir!.nodes[0]!.src).toBe('/nodes/0');
+  });
+
   it('reports a missing layout engine instead of throwing', () => {
     const r = render({ version: '1', type: 'flowchart', nodes: [] }, new Registry().registerType(flowchart));
     expect(r.svg).toBeUndefined();

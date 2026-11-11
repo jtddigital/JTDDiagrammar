@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Web sources import the build-time registry module (URS-EXT-008); tests use the built-ins.
+  resolve: { alias: { '@jtd/registry': '@jtd/core' } },
   test: {
     include: ['packages/*/test/**/*.test.ts', 'scripts/**/*.test.ts', 'test/**/*.test.ts'],
     // URS-NF-005: core keeps ≥ 80 % line coverage.

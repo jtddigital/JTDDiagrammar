@@ -68,3 +68,64 @@ test('the real server without credentials reports AI as unavailable (URS-API-015
   await page.getByRole('button', { name: 'Generate with AI' }).click();
   await expect(page.getByText('AI generation is not configured on this server.')).toBeVisible();
 });
+
+const sse = (events: [string, unknown][]) => events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join('');
+
+test('shows staged progress from the event stream (URS-WEB-012)', async ({ page }) => {
+  await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true } }));
+  // route.fulfill delivers the whole body at once; a paced stream is needed to see each stage.
+  await page.addInitScript((body: string[]) => {
+    const real = window.fetch;
+    window.fetch = (input, init) => {
+      if (String(input) !== '/v1/generate') return real(input, init);
+      (window as unknown as { accept: string }).accept = new Headers(init?.headers).get('accept') ?? '';
+      const stream = new ReadableStream({
+        async start(c) {
+          for (const chunk of body) {
+            c.enqueue(new TextEncoder().encode(chunk));
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          c.close();
+        },
+      });
+      return Promise.resolve(new Response(stream, { headers: { 'content-type': 'text/event-stream' } }));
+    };
+    // Record every status line; polling assertions can miss a short-lived one.
+    const notes: string[] = ((window as unknown as { notes: string[] }).notes = []);
+    new MutationObserver(() => {
+      const t = document.querySelector('.generate .note')?.textContent;
+      if (t && t !== notes.at(-1)) notes.push(t);
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+  }, [sse([['progress', { stage: 'ingest' }]]), sse([['progress', { stage: 'repair', attempt: 2 }]]), sse([['result', generated]])]);
+  await open(page);
+  await page.getByRole('button', { name: 'Generate with AI' }).click();
+  await panel(page).getByLabel('Material').fill('notes');
+  await panel(page).getByRole('button', { name: 'Generate' }).click();
+  await expect(panel(page)).toContainText('Generated a flowchart in 2 attempts.');
+  expect(await page.evaluate(() => (window as unknown as { notes: string[] }).notes)).toEqual([
+    'Starting… this can take a minute.',
+    'Reading documents…',
+    'Fixing problems… (attempt 2)',
+    'Generated a flowchart in 2 attempts. steps and actors.',
+  ]);
+  expect(await page.evaluate(() => (window as unknown as { accept: string }).accept)).toContain('text/event-stream');
+});
+
+test('refines the current diagram from an instruction (URS-WEB-013)', async ({ page }) => {
+  await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true } }));
+  let body: { source?: { title?: string }; instruction?: string } = {};
+  await page.route('/v1/refine', (r) => {
+    body = r.request().postDataJSON() as typeof body;
+    return r.fulfill({ json: { ...generated, attempts: 1, source: { ...generated.source, title: 'Refined' } } });
+  });
+  await open(page);
+  await page.getByRole('button', { name: 'Generate with AI' }).click();
+  const refine = panel(page).getByRole('button', { name: 'Refine' });
+  await expect(refine).toBeDisabled();
+  await panel(page).getByLabel('Instruction').fill('rename it');
+  await refine.click();
+  await expect(panel(page)).toContainText('Refined a flowchart in 1 attempt.');
+  await expect(page.locator('.cm-content')).toContainText('"title": "Refined"');
+  expect(body.instruction).toBe('rename it');
+  expect(body.source?.title).toBeDefined();
+});

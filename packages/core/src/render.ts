@@ -1,6 +1,7 @@
 import { error, type Diagnostic } from './diagnostics.ts';
 import { compile } from './compile.ts';
 import type { Geometry } from './geometry.ts';
+import type { GraphIR } from './ir/types.ts';
 import type { Registry } from './registry/registry.ts';
 import { applyStyles } from './render/styles.ts';
 import { renderSvg } from './render/svg/index.ts';
@@ -14,6 +15,8 @@ export interface RenderOptions {
 export interface RenderResult {
   svg?: string;
   geometry?: Geometry;
+  /** The compiled IR; its `src` pointers map drawn elements back to the source (URS-WEB-009). */
+  ir?: GraphIR;
   diagnostics: Diagnostic[];
 }
 
@@ -32,5 +35,5 @@ export function render(doc: unknown, reg: Registry, opts: RenderOptions = {}): R
   const geometry = applyStyles(layout.geometry, c.ir);
   const diagnostics = layout.diagnostics;
   const svg = renderSvg(geometry, { ...(c.ir.title !== undefined && { title: c.ir.title }), className: `jtd-${c.type.id}` });
-  return { svg, geometry, diagnostics: [...c.diagnostics, ...diagnostics] };
+  return { svg, geometry, ir: c.ir, diagnostics: [...c.diagnostics, ...diagnostics] };
 }

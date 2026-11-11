@@ -15,9 +15,9 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P4 | AI generation from documents (Claude) | **Done** |
 | P5 | State diagrams (composite states) | **Done** |
 | P6 | Layout quality, styling and themes | **Done** |
-| P7 | Extras (see URS Should/Could items) | Next |
+| P7 | Extras: XML/YAML, hints, notes, org chart, refine, provenance, streaming, autocomplete, share links, PNG | **Done** |
 
-Today you can write **state diagrams** (with composite states), **org charts** and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
+Today you can write **state diagrams** (with composite states), **org charts** and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with autocomplete, live preview, pan/zoom, share links and SVG/PNG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
 
 ## Diagram types
 
@@ -602,7 +602,14 @@ Configuration is through environment variables; see [`.env.example`](.env.exampl
 
 ![Web app: JSON editor with inline diagnostics, live SVG preview, export](docs/img/web-app.png)
 
-Edit JSON on the left, and the preview updates as you type. Errors are underlined in the editor and listed below it, with their JSON Pointer. The preview keeps the last valid diagram until the errors are fixed. **Export SVG** downloads exactly what the API would return for the same source. The example picker loads every registered example. Rendering happens in the browser with the same core library the API uses.
+Edit JSON on the left, and the preview updates as you type. Rendering happens in the browser with the same core library the API uses.
+
+- **Autocomplete** (Ctrl+Space) offers the fields and allowed values of the document's `type`.
+- **Errors** are underlined in the editor and listed below it, with their JSON Pointer. The preview keeps the last valid diagram until they are fixed.
+- **Preview:** scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click a node, edge, lane or container to select its source. Hover a generated element to see the quote it came from.
+- **Export SVG** downloads exactly what the API would return for the same source. **Export PNG** rasterises it at 2× in the browser.
+- **Share link** copies a URL that carries the source itself (compressed into the `#fragment`, never sent to the server). The editor also restores your last session.
+- The example picker loads every registered example.
 
 ### Library
 
@@ -688,6 +695,8 @@ curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data
 - Material and results are not logged or stored.
 - Closing the request (or **Cancel** in the web app) aborts the Claude call.
 
+In the web app, the generate panel shows each stage as it happens, and its **Refine** box applies an instruction to whatever is in the editor.
+
 **Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; its first run (2026-11-11, `claude-opus-5-5`) passed all three, each valid on the first attempt, with the cached prefix read on repeat calls. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
 
 ## Architecture
@@ -745,6 +754,8 @@ Every change cites URS IDs and includes an impact assessment in the commit body 
 3. Run `pnpm docs:build`.
 
 Nothing else changes. The test-only `checklist` type (`packages/core/test/fixture-type.ts`) proves it.
+
+To ship types from a separate package instead, point `REGISTRY_MODULE` at a module that exports `createRegistry()`. The API reads it at startup; the web app reads it when built (`REGISTRY_MODULE=@acme/diagrams pnpm --filter @jtd/web build`).
 
 ## Licence
 
