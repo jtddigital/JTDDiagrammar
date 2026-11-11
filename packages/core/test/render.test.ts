@@ -15,8 +15,8 @@ const ALLOWED: Record<string, string[]> = {
   marker: ['id', 'viewBox', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'orient'],
   path: ['d', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'marker-end'],
   rect: ['x', 'y', 'width', 'height', 'rx', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray'],
-  g: ['id', 'class', 'transform', 'font-family', 'font-size', 'fill', 'style'],
-  text: ['x', 'y', 'text-anchor', 'font-size', 'font-weight', 'fill', 'class'],
+  g: ['id', 'class', 'transform', 'font-family', 'font-size', 'fill', 'style', 'opacity'],
+  text: ['x', 'y', 'text-anchor', 'font-size', 'font-weight', 'font-style', 'fill', 'class'],
 };
 
 describe('SVG output', () => {

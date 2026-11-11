@@ -121,7 +121,7 @@ export const stateAi: AiAssets<StateDiagram> = {
     const restyle = (ss: State[]): State[] => ss.map((s) => ({ ...s, ...pick(states.get(s.id) ?? ({} as State), 'style'), ...(s.states && { states: restyle(s.states) }) }));
     return {
       ...next,
-      ...pick(prev, 'theme'),
+      ...pick(prev, 'theme', 'styles'),
       states: restyle(next.states),
       ...(next.transitions && {
         transitions: next.transitions.map((t) => {

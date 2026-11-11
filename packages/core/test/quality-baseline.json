@@ -1,4 +1,12 @@
 {
+  "callouts-tb": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "cff-lanes": {
     "crossings": 0,
     "overlaps": 0,
@@ -71,6 +79,14 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0
   },
+  "state-callouts": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "state-dark": {
     "crossings": 0,
     "overlaps": 0,
@@ -120,6 +136,14 @@
     "edgeThroughLabel": 0
   },
   "flowchart-cross-functional": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
+  "flowchart-styled-callouts": {
     "crossings": 0,
     "overlaps": 0,
     "edgeThroughNode": 0,

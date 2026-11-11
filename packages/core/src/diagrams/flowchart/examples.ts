@@ -62,4 +62,40 @@ export const examples: [Example, ...Example[]] = [
       ],
     },
   },
+  {
+    name: 'styled-callouts',
+    title: 'Section styles and callout labels',
+    description: 'Defaults per section in `styles`, overridden per item. Nodes keep a standard size; labels that do not fit go into callouts (`label: auto`).',
+    source: {
+      version: '1',
+      type: 'flowchart',
+      title: 'Expense claims',
+      styles: {
+        nodes: { label: 'auto', fill: '#eff6ff', stroke: '#1d4ed8' },
+        edges: { stroke: '#475569', arrowhead: 'open' },
+        lanes: { fill: '#f1f5f9' },
+      },
+      lanes: [
+        { id: 'emp', label: 'Employee' },
+        { id: 'mgr', label: 'Manager', style: { fill: '#fef3c7' } },
+        { id: 'fin', label: 'Finance' },
+      ],
+      nodes: [
+        { id: 'start', shape: 'terminator', label: 'Start', lane: 'emp' },
+        { id: 'submit', label: 'Submit claim with receipts and a short business justification', lane: 'emp' },
+        { id: 'check', shape: 'decision', label: 'Within policy and budget for this quarter?', lane: 'mgr' },
+        { id: 'return', label: 'Return for changes', lane: 'emp', style: { italic: true } },
+        { id: 'pay', label: 'Reimburse within five working days', lane: 'fin', style: { bold: true, fill: '#dcfce7', stroke: '#15803d' } },
+        { id: 'end', shape: 'terminator', label: 'End', lane: 'fin' },
+      ],
+      edges: [
+        { from: 'start', to: 'submit' },
+        { from: 'submit', to: 'check' },
+        { from: 'check', to: 'pay', label: 'Yes', style: { stroke: '#15803d', labelFill: '#dcfce7' } },
+        { from: 'check', to: 'return', label: 'No', style: { stroke: '#b91c1c', dash: 'dashed', arrowhead: 'diamond' } },
+        { from: 'return', to: 'submit', style: { opacity: 0.5 } },
+        { from: 'pay', to: 'end', style: { arrowhead: 'circle', lineWidth: 2 } },
+      ],
+    },
+  },
 ];

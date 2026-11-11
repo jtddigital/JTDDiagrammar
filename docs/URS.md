@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.20 (draft) |
+| Version | 0.21 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -72,6 +72,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Verified |
 | URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Verified |
 | URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Verified |
+| URS-DM-015 | S | Section defaults: a top-level `styles` object sets a default style per section (a type's top-level lists, e.g. `nodes`, `edges`, `lanes`, `phases`). An item's own `style` overrides it field by field. | Defaults and overrides applied for every type; unknown sections rejected; kept through XML and AI refine. | T | Verified |
+| URS-DM-016 | S | More style options: font size, bold, italic, opacity, arrowhead shape (triangle, open, diamond, circle, none) and edge-label background. Layout measures styled text. | Each option rendered; nodes and headers resize for font size; out-of-range values rejected. | T | Verified |
+| URS-DM-017 | S | Standard-size nodes: `label: callout | auto` (or a fixed `width`/`height`) keeps nodes at a standard size. Labels that do not fit go into a callout beside the node, joined by a leader line. The layout reserves room for it in the node's lane, phase and container. | Same size per shape; callouts clear of nodes and labels, inside their lane or container, in LR and TB; pseudostates unchanged. | T | Verified |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
 | URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
 | URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Verified |
@@ -230,6 +233,9 @@ Updated with each change. `—` = not started.
 | TYP-006 | core/src/diagrams/orgchart/* | core/test/sweep-c.test.ts, README example | Rescoped to org chart in v0.15; sequence and ER moved to TYP-007. |
 | TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022 | — | — | Won't (this release), v0.15. TYP-007: sequence diagrams need a new layout engine (lifelines, time axis); ER needs a crow's-foot marker set. IN-008: JSON/XML/YAML plus AI drafting cover authoring; a DSL adds a parser and a second syntax to maintain. DM-011: sub-lanes need nested band layout. RN-008: .vsdx is a large OPC/XML format. RN-009: browsers print SVG to PDF; a server PDF needs a renderer dependency. AI-022: no bulk use case under D-001. |
 | DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
+| DM-015 | schema/fragments.ts (`sectionStyles`), diagrams/section-styles.ts, each type's schema and toIR, ai.ts merges | core/test/style-sections.test.ts | Merge is shallow per field; per-item `style` wins. |
+| DM-016 | style.ts (`fontOf`), layout/layered/{build,route,index,compound}.ts, render/svg/* | core/test/style-sections.test.ts, golden/state-callouts | Italic is measured with upright widths (within ~1 %). Container header height now travels in geometry (`head`). |
+| DM-017 | shapes (`inner`), layout/layered/{build,graph,place,route,compound}.ts (`after`/`reach` reserve room), layout/labels.ts (callout placement), render/svg/index.ts | core/test/style-sections.test.ts, golden/callouts-tb, golden/state-callouts, README example | Callouts start in the reserved spot; the placer moves them only if blocked. |
 | DM-014 | schema/fragments.ts (`lineWidth`), render/svg/{index,bands,containers}.ts, web/src/preview/sanitize.ts | core/test/styles.test.ts (line thickness), golden/styled | One marker per colour and size; the sanitiser pattern-checks `stroke-width` and marker sizes. |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts (well-formed; SVG 1.1 element and attribute allowlist), web/e2e/svg.spec.ts (Chromium and Firefox) | `data-*` attributes removed (not SVG 1.1). No DTD check: the W3C DTD is unreachable from CI. |
@@ -294,6 +300,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.21 | 2026-11-11 | Added DM-015 (section defaults), DM-016 (more style options), DM-017 (standard-size nodes, callouts); all verified. |
 | 0.20 | 2026-11-11 | Added DM-014 (line thickness, `style.lineWidth`); verified. |
 | 0.19 | 2026-11-11 | Fix: a release made on the releases page made the Release workflow fail (`release already exists`), so no app bundle was attached. The workflow now attaches to an existing release and can be re-run for a tag; installers say what is missing. |
 | 0.18 | 2026-11-11 | Fix: Windows PowerShell 5.1 strips quotes from native arguments, so the installer's `node -e` version check failed on Windows (user report). Version now compared in PowerShell; static test plus a CI job emulating 5.1 argument passing. |

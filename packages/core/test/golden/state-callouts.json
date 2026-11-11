@@ -1,0 +1,82 @@
+{
+  "version": "1",
+  "type": "state",
+  "title": "State with callouts",
+  "theme": "dark",
+  "styles": {
+    "states": {
+      "label": "callout",
+      "width": 90,
+      "height": 36
+    },
+    "transitions": {
+      "arrowhead": "open",
+      "fontSize": 11
+    }
+  },
+  "states": [
+    {
+      "id": "i",
+      "kind": "initial"
+    },
+    {
+      "id": "idle",
+      "label": "Waiting for the customer to pick a plan"
+    },
+    {
+      "id": "active",
+      "label": "Subscription active",
+      "style": {
+        "bold": true
+      },
+      "states": [
+        {
+          "id": "a1",
+          "kind": "initial"
+        },
+        {
+          "id": "billing",
+          "label": "Billing cycle running normally"
+        },
+        {
+          "id": "dunning",
+          "label": "Retrying a failed payment"
+        }
+      ]
+    },
+    {
+      "id": "f",
+      "kind": "final"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "i",
+      "to": "idle"
+    },
+    {
+      "from": "idle",
+      "to": "active",
+      "event": "subscribe"
+    },
+    {
+      "from": "a1",
+      "to": "billing"
+    },
+    {
+      "from": "billing",
+      "to": "dunning",
+      "event": "payment failed"
+    },
+    {
+      "from": "dunning",
+      "to": "billing",
+      "event": "paid"
+    },
+    {
+      "from": "active",
+      "to": "f",
+      "event": "cancel"
+    }
+  ]
+}

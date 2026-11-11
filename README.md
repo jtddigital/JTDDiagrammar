@@ -205,6 +205,142 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Section styles and callout labels
+
+`type: flowchart` · Defaults per section in `styles`, overridden per item. Nodes keep a standard size; labels that do not fit go into callouts (`label: auto`).
+
+![Section styles and callout labels](docs/img/flowchart-styled-callouts.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "Expense claims",
+  "styles": {
+    "nodes": {
+      "label": "auto",
+      "fill": "#eff6ff",
+      "stroke": "#1d4ed8"
+    },
+    "edges": {
+      "stroke": "#475569",
+      "arrowhead": "open"
+    },
+    "lanes": {
+      "fill": "#f1f5f9"
+    }
+  },
+  "lanes": [
+    {
+      "id": "emp",
+      "label": "Employee"
+    },
+    {
+      "id": "mgr",
+      "label": "Manager",
+      "style": {
+        "fill": "#fef3c7"
+      }
+    },
+    {
+      "id": "fin",
+      "label": "Finance"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start",
+      "shape": "terminator",
+      "label": "Start",
+      "lane": "emp"
+    },
+    {
+      "id": "submit",
+      "label": "Submit claim with receipts and a short business justification",
+      "lane": "emp"
+    },
+    {
+      "id": "check",
+      "shape": "decision",
+      "label": "Within policy and budget for this quarter?",
+      "lane": "mgr"
+    },
+    {
+      "id": "return",
+      "label": "Return for changes",
+      "lane": "emp",
+      "style": {
+        "italic": true
+      }
+    },
+    {
+      "id": "pay",
+      "label": "Reimburse within five working days",
+      "lane": "fin",
+      "style": {
+        "bold": true,
+        "fill": "#dcfce7",
+        "stroke": "#15803d"
+      }
+    },
+    {
+      "id": "end",
+      "shape": "terminator",
+      "label": "End",
+      "lane": "fin"
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "submit"
+    },
+    {
+      "from": "submit",
+      "to": "check"
+    },
+    {
+      "from": "check",
+      "to": "pay",
+      "label": "Yes",
+      "style": {
+        "stroke": "#15803d",
+        "labelFill": "#dcfce7"
+      }
+    },
+    {
+      "from": "check",
+      "to": "return",
+      "label": "No",
+      "style": {
+        "stroke": "#b91c1c",
+        "dash": "dashed",
+        "arrowhead": "diamond"
+      }
+    },
+    {
+      "from": "return",
+      "to": "submit",
+      "style": {
+        "opacity": 0.5
+      }
+    },
+    {
+      "from": "pay",
+      "to": "end",
+      "style": {
+        "arrowhead": "circle",
+        "lineWidth": 2
+      }
+    }
+  ]
+}
+```
+
+</details>
+
 ### State diagram
 
 `type: state` · States, pseudostates and transitions labelled `event [guard] / action`.
@@ -452,14 +588,90 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
+| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
+| `styles.lanes` | object |  | Default style for every item in `lanes`. |
+| `styles.lanes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lanes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lanes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lanes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.lanes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.lanes.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.lanes.bold` | boolean |  | Bold text. |
+| `styles.lanes.italic` | boolean |  | Italic text. |
+| `styles.lanes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.lanes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.lanes.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.lanes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.lanes.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.lanes.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.phases` | object |  | Default style for every item in `phases`. |
+| `styles.phases.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.phases.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.phases.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.phases.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.phases.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.phases.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.phases.bold` | boolean |  | Bold text. |
+| `styles.phases.italic` | boolean |  | Italic text. |
+| `styles.phases.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.phases.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.phases.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.phases.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.phases.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.phases.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.nodes` | object |  | Default style for every item in `nodes`. |
+| `styles.nodes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.nodes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.nodes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.nodes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.nodes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.nodes.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.nodes.bold` | boolean |  | Bold text. |
+| `styles.nodes.italic` | boolean |  | Italic text. |
+| `styles.nodes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.nodes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.nodes.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.nodes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.nodes.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.nodes.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.edges` | object |  | Default style for every item in `edges`. |
+| `styles.edges.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.edges.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.edges.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.edges.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.edges.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.edges.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.edges.bold` | boolean |  | Bold text. |
+| `styles.edges.italic` | boolean |  | Italic text. |
+| `styles.edges.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.edges.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.edges.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.edges.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.edges.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.edges.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.notes` | object |  | Default style for every item in `notes`. |
+| `styles.notes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.notes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.notes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.notes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.notes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.notes.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.notes.bold` | boolean |  | Bold text. |
+| `styles.notes.italic` | boolean |  | Italic text. |
+| `styles.notes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.notes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.notes.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.notes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.notes.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.notes.height` | number |  | Nodes: fixed height in pixels. |
 | `lanes` | list of objects |  | Functional bands (rows for `LR`). Present → cross-functional flowchart. |
 | `lanes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `lanes[].label` | string | yes | Header text. |
-| `lanes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `lanes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 | `phases` | list of objects |  | Stages across the lanes. Require lanes. |
 | `phases[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `phases[].label` | string | yes | Header text. |
-| `phases[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `phases[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 | `nodes` | list of objects | yes | Steps, decisions and other shapes. |
 | `nodes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `nodes[].shape` | `process` \| `decision` \| `terminator` \| `document` \| `data` \| `subprocess` \| `connector` |  | Default `process`. |
@@ -468,7 +680,7 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `nodes[].phase` | string |  | Phase id; required when the diagram has phases. |
 | `nodes[].order` | integer |  | Hint: nodes in the same column and lane are placed in ascending order. |
 | `nodes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `nodes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `nodes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 | `edges` | list of objects |  | Directed connections. |
 | `edges[].id` | string |  | Optional; generated when absent. |
 | `edges[].from` | string | yes | Source node id. |
@@ -477,14 +689,14 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | `edges[].fromSide` | `N` \| `E` \| `S` \| `W` |  | Side to leave the source by (N, E, S, W); default follows the flow. |
 | `edges[].toSide` | `N` \| `E` \| `S` \| `W` |  | Side to enter the target by; default follows the flow. |
 | `edges[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `edges[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `edges[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 | `notes` | list of objects |  | Annotations, drawn as folded-corner notes. |
 | `notes[].id` | string |  | Optional; generated when absent. |
 | `notes[].text` | string | yes | Note text; `\n` breaks lines. |
 | `notes[].for` | string |  | Node the note is attached to (dotted line, no arrow). |
 | `notes[].lane` | string |  | Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s. |
 | `notes[].phase` | string |  | Phase, likewise. |
-| `notes[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `notes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 
 ### `state`
 
@@ -493,13 +705,44 @@ States and the transitions between them, with composite (nested) states. For lif
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
+| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
+| `styles.states` | object |  | Default style for every item in `states`. |
+| `styles.states.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.states.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.states.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.states.bold` | boolean |  | Bold text. |
+| `styles.states.italic` | boolean |  | Italic text. |
+| `styles.states.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.states.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.states.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.states.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.states.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.states.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.transitions` | object |  | Default style for every item in `transitions`. |
+| `styles.transitions.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.transitions.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.transitions.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.transitions.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.transitions.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.transitions.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.transitions.bold` | boolean |  | Bold text. |
+| `styles.transitions.italic` | boolean |  | Italic text. |
+| `styles.transitions.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.transitions.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.transitions.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.transitions.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.transitions.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.transitions.height` | number |  | Nodes: fixed height in pixels. |
 | `states` | list of objects | yes | Top-level states. |
 | `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `states[].kind` | `state` \| `initial` \| `final` \| `choice` |  | `state` (default) or a pseudostate; pseudostates draw no label and cannot contain states. |
 | `states[].label` | string |  | Defaults to the id for ordinary states. |
 | `states[].states` | list of objects |  | Nested states make this a composite state. Same fields as `states[]`. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `states[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 | `transitions` | list of objects |  | Drawn as `event [guard] / action`; endpoints may be any state, composite or nested. |
 | `transitions[].id` | string |  | Optional; generated when absent. |
 | `transitions[].from` | string | yes | Source state id. |
@@ -508,7 +751,7 @@ States and the transitions between them, with composite (nested) states. For lif
 | `transitions[].guard` | string |  | Condition, shown in brackets. |
 | `transitions[].action` | string |  | Effect, shown after a slash. |
 | `transitions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `transitions[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `transitions[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 
 ### `orgchart`
 
@@ -517,13 +760,44 @@ People and who they report to. For teams and organisations.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
+| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
+| `styles.people` | object |  | Default style for every item in `people`. |
+| `styles.people.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.people.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.people.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.people.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.people.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.people.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.people.bold` | boolean |  | Bold text. |
+| `styles.people.italic` | boolean |  | Italic text. |
+| `styles.people.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.people.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.people.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.people.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.people.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.people.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.lines` | object |  | Default style for every item in `lines`. |
+| `styles.lines.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lines.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lines.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.lines.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.lines.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.lines.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.lines.bold` | boolean |  | Bold text. |
+| `styles.lines.italic` | boolean |  | Italic text. |
+| `styles.lines.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.lines.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.lines.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.lines.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.lines.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.lines.height` | number |  | Nodes: fixed height in pixels. |
 | `people` | list of objects | yes | Everyone in the chart. |
 | `people[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `people[].name` | string | yes | Shown first, on its own line. |
 | `people[].title` | string |  | Role, shown under the name. |
 | `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
 | `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `people[].style` | object |  | Colour, dash and line-thickness overrides (see Styling). |
+| `people[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 
 <!-- END GENERATED: reference -->
 
@@ -546,13 +820,45 @@ Flowchart rules: with lanes, every node needs a `lane`; with phases, every node 
 
 ### Styling
 
-Any node, edge, lane, phase, state or transition can take a `style`:
+Every node, edge, lane, phase, note, state, transition and person can take a `style`:
 
 ```json
-{ "fill": "#dcfce7", "stroke": "#14532d", "text": "#14532d", "dash": "dashed", "lineWidth": 3 }
+{ "fill": "#dcfce7", "stroke": "#14532d", "text": "#14532d", "dash": "dashed", "lineWidth": 2, "fontSize": 13, "bold": true }
 ```
 
-Colours are hex (`#rgb` or `#rrggbb`); `dash` is `solid`, `dashed` or `dotted`; `lineWidth` is the line thickness in pixels, from 0.5 to 8 (default 1.5 for nodes and edges, 1 for lane and phase borders). On edges, `stroke` also colours the arrowhead, and arrowheads grow with lines thicker than the default. Containers (composite states) take the same `style`. Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
+| Field | Values | Applies to |
+|-------|--------|------------|
+| `fill`, `stroke`, `text` | hex colour (`#rgb` or `#rrggbb`) | all; `fill` colours lane and phase headers |
+| `dash` | `solid`, `dashed`, `dotted` | outlines and lines |
+| `lineWidth` | 0.5–8 px (default 1.5; 1 for lane and phase borders) | outlines and lines; arrowheads grow with thicker lines |
+| `fontSize` | 8–32 px | text; nodes and headers resize to fit |
+| `bold`, `italic` | `true` / `false` | text |
+| `opacity` | 0.1–1 | the whole element |
+| `arrowhead` | `triangle` (default), `open`, `diamond`, `circle`, `none` | edges |
+| `labelFill` | hex colour | edge label and callout backgrounds |
+| `label` | `inside` (default), `callout`, `auto` | nodes, see below |
+| `width`, `height` | px | nodes: a fixed size |
+
+**Section defaults.** A top-level `styles` object sets a default for a whole section. An item's own `style` overrides it field by field:
+
+```json
+"styles": {
+  "nodes": { "fill": "#eff6ff", "stroke": "#1d4ed8", "label": "auto" },
+  "edges": { "stroke": "#475569", "arrowhead": "open" },
+  "lanes": { "fill": "#f1f5f9" }
+}
+```
+
+Sections are the diagram's lists: `lanes`, `phases`, `nodes`, `edges` and `notes` for flowcharts; `states` and `transitions` for state diagrams; `people` and `lines` (reporting lines) for org charts.
+
+**Standard-size nodes and callouts.** By default a node grows to fit its label. To keep nodes the same size, set `label`:
+
+- `callout`: the node keeps its shape's standard size (or `width`/`height`), and the label sits in a callout beside it, joined by a short leader line.
+- `auto`: the label goes inside if it fits the standard size, otherwise into a callout.
+
+The layout reserves room for each callout, below the node in `LR` diagrams and beside it in `TB` diagrams, within the node's lane, phase and composite state. If that spot is blocked, the callout moves to the clearest nearby spot. `inside` with a fixed `width`/`height` wraps the label to fit. Initial, final and choice pseudostates always keep their own size.
+
+Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
 
 ### Diagnostics
 

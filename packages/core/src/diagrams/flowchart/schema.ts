@@ -1,4 +1,4 @@
-import { band, direction, envelope, id, ref, style } from '../../schema/fragments.ts';
+import { band, direction, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
 const node = {
@@ -58,6 +58,7 @@ export const flowchartSchema = {
   properties: {
     ...envelope('flowchart'),
     direction,
+    styles: sectionStyles(['lanes', 'phases', 'nodes', 'edges', 'notes']),
     lanes: { type: 'array', minItems: 1, items: band, description: 'Functional bands (rows for `LR`). Present → cross-functional flowchart.' },
     phases: { type: 'array', minItems: 1, items: band, description: 'Stages across the lanes. Require lanes.' },
     nodes: { type: 'array', items: node, description: 'Steps, decisions and other shapes.' },

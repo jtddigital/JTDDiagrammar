@@ -1,5 +1,5 @@
 import { min, max } from '../math.ts';
-import type { Box, Geometry } from '../geometry.ts';
+import type { Box, Geometry, Point } from '../geometry.ts';
 
 type Content = Omit<Geometry, 'width' | 'height'>;
 
@@ -9,6 +9,7 @@ export function normalize(g: Content): Geometry {
     ...g.bands,
     ...g.containers,
     ...g.nodes,
+    ...g.nodes.flatMap((n) => (n.callout ? [n.callout] : [])),
     ...g.edges.flatMap((e) => [...e.points.map((p) => ({ ...p, w: 0, h: 0 })), ...(e.label ? [e.label] : [])]),
   ];
   if (!boxes.length) return { width: 0, height: 0, ...g };
@@ -21,7 +22,7 @@ export function normalize(g: Content): Geometry {
     bands: g.bands.map((b) => ({ ...shift(b), header: shift(b.header) })),
     ...(g.corner && { corner: shift(g.corner) }),
     containers: g.containers.map(shift),
-    nodes: g.nodes.map(shift),
+    nodes: g.nodes.map((n) => ({ ...shift(n), ...(n.callout && { callout: { ...shift(n.callout), leader: [shift(n.callout.leader[0]), shift(n.callout.leader[1])] as [Point, Point] } }) })),
     edges: g.edges.map((e) => ({ ...e, points: e.points.map(shift), ...(e.label && { label: shift(e.label) }) })),
   };
 }

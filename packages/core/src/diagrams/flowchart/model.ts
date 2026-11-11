@@ -48,6 +48,8 @@ export interface Flowchart {
   title?: string;
   theme?: Theme;
   direction?: Direction;
+  /** Default style per section (URS-DM-015). */
+  styles?: Partial<Record<'lanes' | 'phases' | 'nodes' | 'edges' | 'notes', Style>>;
   lanes?: FlowBand[];
   phases?: FlowBand[];
   nodes: FlowNode[];

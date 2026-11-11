@@ -5,6 +5,8 @@ import { FONT } from './font-metrics.ts';
 export interface Font {
   size: number;
   bold?: boolean;
+  /** Drawn italic; measured with the upright widths (Liberation Sans italic advances are within ~1 %). */
+  italic?: boolean;
 }
 
 export const FONT_FAMILY = FONT.family;

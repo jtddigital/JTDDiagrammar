@@ -108,7 +108,7 @@ export const flowchartAi: AiAssets<Flowchart> = {
     const notes = (prev.notes ?? []).filter((n) => n.for === undefined || kept.has(n.for));
     return {
       ...next,
-      ...pick(prev, 'theme'),
+      ...pick(prev, 'theme', 'styles'),
       ...(next.lanes && { lanes: next.lanes.map(band) }),
       ...(next.phases && { phases: next.phases.map(band) }),
       nodes: next.nodes.map((n) => ({ ...n, ...pick(nodes.get(n.id) ?? ({} as FlowNode), 'order', 'style') })),

@@ -13,12 +13,20 @@ export interface Box {
   h: number;
 }
 
+/** A node label drawn beside a fixed-size node, joined to it by a leader line (URS-DM-017). */
+export interface Callout extends Box {
+  lines: string[];
+  /** Leader line from the node's outline to the callout. */
+  leader: [Point, Point];
+}
+
 export interface PlacedNode extends Box {
   id: string;
   style?: Style;
   quote?: string;
   shape: string;
   lines: string[];
+  callout?: Callout;
 }
 
 export interface RoutedEdge {
@@ -46,6 +54,8 @@ export interface PlacedContainer extends Box {
   id: string;
   style?: Style;
   lines: string[];
+  /** Height of the label strip at the top. */
+  head: number;
   depth: number;
 }
 

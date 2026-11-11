@@ -1,4 +1,4 @@
-import { direction, envelope, id, ref, style } from '../../schema/fragments.ts';
+import { direction, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
 import { STATE_KINDS } from './model.ts';
 
 export const stateSchema = {
@@ -10,6 +10,7 @@ export const stateSchema = {
   properties: {
     ...envelope('state'),
     direction,
+    styles: sectionStyles(['states', 'transitions']),
     states: { type: 'array', items: { $ref: '#/$defs/state' }, description: 'Top-level states.' },
     transitions: {
       type: 'array',

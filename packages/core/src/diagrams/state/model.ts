@@ -30,6 +30,8 @@ export interface StateDiagram {
   type: 'state';
   title?: string;
   theme?: Theme;
+  /** Default style per section (URS-DM-015). */
+  styles?: Partial<Record<'states' | 'transitions', Style>>;
   direction?: Direction;
   states: State[];
   transitions?: Transition[];

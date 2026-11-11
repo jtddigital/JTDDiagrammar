@@ -4,7 +4,7 @@ import type { GraphIR, IREdge } from '../../ir/types.ts';
 import { max, min } from '../../math.ts';
 import { textBlock, type TextBlock } from '../../measure/text.ts';
 import type { LayoutResult } from '../../registry/layout-engine.ts';
-import { CONTAINER_FONT, CONTAINER_HEAD_PAD as HEAD_PAD, CONTAINER_TEXT_MAX } from '../../style.ts';
+import { CONTAINER_FONT, CONTAINER_HEAD_PAD as HEAD_PAD, CONTAINER_TEXT_MAX, fontOf } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
 import { normalize } from '../normalize.ts';
@@ -44,6 +44,7 @@ interface Placed {
   w: number;
   h: number;
   label?: TextBlock;
+  head?: number;
   /** Border attachment per crossing edge, in this container's local flow coordinates. */
   ports: Map<number, MC>;
   nodes: PlacedNode[];
@@ -178,8 +179,8 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     if (s !== null) {
       // Size the container around its content; the label sits at the top.
       const c = containerById.get(s)!;
-      label = textBlock(c.label ?? '', CONTAINER_TEXT_MAX, CONTAINER_FONT);
-      const boxes: Box[] = [...routed.nodes, ...[...pieces.values()].flatMap((p) => [...p.points.map((q) => ({ ...q, w: 0, h: 0 })), ...(p.label ? [p.label] : [])])];
+      label = textBlock(c.label ?? '', CONTAINER_TEXT_MAX, fontOf(CONTAINER_FONT, c.style));
+      const boxes: Box[] = [...routed.nodes, ...routed.nodes.flatMap((n) => (n.callout ? [n.callout] : [])), ...[...pieces.values()].flatMap((p) => [...p.points.map((q) => ({ ...q, w: 0, h: 0 })), ...(p.label ? [p.label] : [])])];
       const [x0, y0] = [min(boxes.map((b) => b.x)), min(boxes.map((b) => b.y))];
       const [cw, ch] = [max(boxes.map((b) => b.x + b.w)) - x0, max(boxes.map((b) => b.y + b.h)) - y0];
       const top = label.height + 2 * HEAD_PAD;
@@ -188,7 +189,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
       dx = (w - cw) / 2 - x0;
       dy = top - y0;
     }
-    const nodesOut = level.items.flatMap((it) => (it.kind === 'node' ? [{ ...at.get(it.id)!, x: at.get(it.id)!.x + dx, y: at.get(it.id)!.y + dy }] : []));
+    const nodesOut = level.items.flatMap((it) => (it.kind === 'node' ? [moveNode(at.get(it.id)!, dx, dy)] : []));
     const containers = new Map(level.items.flatMap((it) => (it.kind === 'container' ? [[it.id, { ...at.get(it.id)!, x: at.get(it.id)!.x + dx, y: at.get(it.id)!.y + dy }] as const] : [])));
     for (const [e, p] of pieces) pieces.set(e, { points: p.points.map((q) => translate(q, dx, dy)), ...(p.label && { label: { ...p.label, x: p.label.x + dx, y: p.label.y + dy } }) });
 
@@ -204,7 +205,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
       const outgoing = plans.find((pl) => pl.edge === it.edge)!.upFrom.includes(s as string);
       piece.points = outgoing ? [...piece.points, border] : [border, ...piece.points];
     }
-    placed.set(s, { w, h, ...(label && { label }), ports, nodes: nodesOut, containers, pieces });
+    placed.set(s, { w, h, ...(label && { label, head: label.height + 2 * HEAD_PAD }), ports, nodes: nodesOut, containers, pieces });
   }
 
   // 3. Absolute positions, top-down.
@@ -214,11 +215,12 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
   for (const s of scopes) {
     const o = offset.get(s)!;
     const p = placed.get(s)!;
-    nodes.push(...p.nodes.map((n) => ({ ...n, ...translate(n, o.x, o.y) })));
+    nodes.push(...p.nodes.map((n) => moveNode(n, o.x, o.y)));
     for (const [id, b] of p.containers) {
       const abs = translate(b, o.x, o.y);
       offset.set(id, abs);
-      containers.push({ id, lines: placed.get(id)!.label?.lines ?? [], ...abs, w: b.w, h: b.h, depth: depth.get(id)! });
+      const inner = placed.get(id)!;
+      containers.push({ id, lines: inner.label?.lines ?? [], head: inner.head ?? 2 * HEAD_PAD, ...abs, w: b.w, h: b.h, depth: depth.get(id)! });
     }
   }
   const piece = (s: Scope, edge: number) => {
@@ -243,3 +245,11 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
   const edges = [...drawn.entries()].sort(([a], [b]) => a - b).map(([, e]) => e);
   return { geometry: normalize(placeLabels({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges })), diagnostics };
 }
+
+/** A placed node moved by (dx, dy), its callout with it. */
+const moveNode = (n: PlacedNode, dx: number, dy: number): PlacedNode => ({
+  ...n,
+  x: n.x + dx,
+  y: n.y + dy,
+  ...(n.callout && { callout: { ...n.callout, x: n.callout.x + dx, y: n.callout.y + dy, leader: [translate(n.callout.leader[0], dx, dy), translate(n.callout.leader[1], dx, dy)] } }),
+});

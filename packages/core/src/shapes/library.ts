@@ -11,6 +11,7 @@ const terminator: Shape = {
     const { h } = boxSize()(tw, th);
     return { w: Math.max(h * 2, tw + h), h };
   },
+  inner: (w, h) => ({ w: w - h, h: h - 2 * PAD_Y }),
   outline: (w, h) => {
     const r = h / 2;
     return `M${n(r)} 0H${n(w - r)}A${n(r)} ${n(r)} 0 0 1 ${n(w - r)} ${n(h)}H${n(r)}A${n(r)} ${n(r)} 0 0 1 ${n(r)} 0Z`;
@@ -28,6 +29,8 @@ const decision: Shape = {
     const h = Math.max(56, 2 * (th + PAD_Y));
     return { w: Math.max(112, (tw + PAD_X) / (1 - (th + PAD_Y) / h)), h };
   },
+  // The largest rectangle inside a diamond is half its width by half its height.
+  inner: (w, h) => ({ w: w / 2 - PAD_X / 2, h: h / 2 - PAD_Y / 2 }),
   outline: (w, h) => `M${n(w / 2)} 0L${n(w)} ${n(h / 2)}L${n(w / 2)} ${n(h)}L0 ${n(h / 2)}Z`,
   // Branches use separate vertices: t < 0 → the lower-coordinate side vertex, t > 0 → the higher one.
   port: (side, w, h, t) => {
@@ -50,6 +53,7 @@ const document: Shape = {
     return `M0 0H${n(w)}V${n(h - a)}C${n(w / 2)} ${n(h - 3 * a)} ${n(w / 2)} ${n(h + a)} 0 ${n(h - a)}Z`;
   },
   labelDy: (_w, h) => -wave(h) / 2,
+  inner: (w, h) => ({ w: w - 2 * PAD_X, h: h - wave(h) - 2 * PAD_Y }),
   port: boxPort((side, _w, h) => (side === 'S' ? wave(h) : 0)),
 };
 
@@ -60,6 +64,7 @@ const data: Shape = {
     const { h } = boxSize()(tw, th);
     return { w: Math.max(96, tw + 2 * PAD_X + 2 * skew(h)), h };
   },
+  inner: (w, h) => ({ w: w - 2 * skew(h) - 2 * PAD_X, h: h - 2 * PAD_Y }),
   outline: (w, h) => `M${n(skew(h))} 0H${n(w)}L${n(w - skew(h))} ${n(h)}H0Z`,
   port: (side, w, h, t) =>
     side === 'N' || side === 'S'
@@ -73,6 +78,7 @@ const subprocess: Shape = {
   size: boxSize(2 * BAR),
   outline: rect,
   detail: (w, h) => `M${BAR} 0V${n(h)}M${n(w - BAR)} 0V${n(h)}`,
+  inner: (w, h) => ({ w: w - 2 * BAR - 2 * PAD_X, h: h - 2 * PAD_Y }),
   port: boxPort(),
 };
 
@@ -82,6 +88,7 @@ const connector: Shape = {
     const d = Math.max(32, Math.hypot(tw, th) + PAD_Y);
     return { w: d, h: d };
   },
+  inner: (w, h) => ({ w: Math.min(w, h) * 0.7 - PAD_Y, h: Math.min(w, h) * 0.7 - PAD_Y }),
   outline: (w) => {
     const r = n(w / 2);
     return `M0 ${r}A${r} ${r} 0 1 1 ${n(w)} ${r}A${r} ${r} 0 1 1 0 ${r}Z`;
@@ -120,6 +127,7 @@ const note: Shape = {
   id: 'note',
   paint: 'noteFill',
   size: boxSize(FOLD),
+  inner: (w, h) => ({ w: w - FOLD - 2 * PAD_X, h: h - 2 * PAD_Y }),
   outline: (w, h) => `M0 0H${n(w - FOLD)}L${n(w)} ${FOLD}V${n(h)}H0Z`,
   detail: (w) => `M${n(w - FOLD)} 0V${FOLD}H${n(w)}`,
   port: boxPort(),
