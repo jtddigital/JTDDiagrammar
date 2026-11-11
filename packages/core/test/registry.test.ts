@@ -5,6 +5,7 @@ import { checklist } from './fixture-type.ts';
 describe('Registry (URS-EXT-001, URS-EXT-005)', () => {
   it('lists built-in types', () => {
     expect(createRegistry().types().map((t) => t.id)).toEqual(['flowchart']);
+    expect(createRegistry().engine('layered')).toBeDefined();
   });
 
   it('rejects duplicate types and schemas without $id', () => {
@@ -14,7 +15,7 @@ describe('Registry (URS-EXT-001, URS-EXT-005)', () => {
   });
 
   it('registers and resolves layout engines', () => {
-    const engine = { id: 'fake', layout: () => ({}) };
+    const engine = { id: 'fake', layout: () => ({ geometry: { width: 0, height: 0, nodes: [], edges: [] }, diagnostics: [] }) };
     const reg = new Registry().registerEngine(engine);
     expect(reg.engine('fake')).toBe(engine);
     expect(reg.engine('none')).toBeUndefined();

@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "nodes": [
+    { "id": "a", "label": "A" },
+    { "id": "b", "label": "B" },
+    { "id": "c", "label": "C" },
+    { "id": "d", "label": "D" },
+    { "id": "e", "label": "E" }
+  ],
+  "edges": [
+    { "from": "a", "to": "b" },
+    { "from": "b", "to": "c" },
+    { "from": "c", "to": "d" },
+    { "from": "a", "to": "d", "label": "skip" },
+    { "from": "a", "to": "e" },
+    { "from": "e", "to": "d" },
+    { "from": "b", "to": "d" }
+  ]
+}

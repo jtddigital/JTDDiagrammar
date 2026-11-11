@@ -15,3 +15,5 @@ const escape = (s: string | number): string => String(s).replace(/~/g, '~0').rep
 /** Build a JSON Pointer (RFC 6901), optionally extending `base`. */
 export const pointer = (...segments: (string | number)[]): string => segments.map((s) => `/${escape(s)}`).join('');
 export const child = (base: string, ...segments: (string | number)[]): string => base + pointer(...segments);
+
+export const warning = (code: string, message: string, path = ''): Diagnostic => ({ severity: 'warning', code, message, path });

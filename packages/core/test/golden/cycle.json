@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "Retry loop",
+  "nodes": [
+    { "id": "start", "shape": "terminator", "label": "Start" },
+    { "id": "try", "label": "Attempt upload" },
+    { "id": "ok", "shape": "decision", "label": "Succeeded?" },
+    { "id": "wait", "label": "Back off" },
+    { "id": "end", "shape": "terminator", "label": "Done" }
+  ],
+  "edges": [
+    { "from": "start", "to": "try" },
+    { "from": "try", "to": "ok" },
+    { "from": "ok", "to": "end", "label": "Yes" },
+    { "from": "ok", "to": "wait", "label": "No" },
+    { "from": "wait", "to": "try", "label": "retry" },
+    { "from": "wait", "to": "wait", "label": "tick" }
+  ]
+}

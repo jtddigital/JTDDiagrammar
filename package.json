@@ -1,6 +1,7 @@
 {
   "name": "jtddiagrammar",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
   "engines": {
@@ -12,15 +13,18 @@
     "test": "vitest run",
     "docs:build": "tsx scripts/docs/cli.ts build",
     "docs:check": "tsx scripts/docs/cli.ts check",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check",
+    "fonts:metrics": "tsx scripts/fonts/metrics.ts"
   },
   "devDependencies": {
+    "@jtd/core": "workspace:*",
     "@types/node": "^22.20.5",
     "eslint": "^10.14.0",
+    "fast-xml-parser": "^5.12.0",
+    "opentype.js": "^2.0.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.2",
-    "vitest": "^5.1.0",
-    "@jtd/core": "workspace:*"
+    "vitest": "^5.1.0"
   }
 }

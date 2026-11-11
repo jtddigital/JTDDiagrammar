@@ -11,7 +11,7 @@ export function flowchartToIR(m: Flowchart): GraphIR {
   });
   // Generated ids contain ':' so they cannot collide with user ids (see schema `id` pattern).
   const edges = (m.edges ?? []).map((e, i): IREdge => ({ ...e, id: e.id ?? `edge:${i}`, src: pointer('edges', i) }));
-  const ir: GraphIR = { direction: m.direction ?? 'LR', nodes, edges, containers: [] };
+  const ir: GraphIR = { ...(m.title !== undefined && { title: m.title }), direction: m.direction ?? 'LR', nodes, edges, containers: [] };
   if (m.lanes) ir.partitions = { lanes: bands('lanes', m.lanes), ...(m.phases && { phases: bands('phases', m.phases) }) };
   return ir;
 }

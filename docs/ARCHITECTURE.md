@@ -66,14 +66,20 @@ packages/
     diagrams/                 index.ts (createRegistry)
       flowchart/              schema.ts, model.ts, to-ir.ts, validate.ts, examples.ts, index.ts
       state/                  (P5)
-    shapes/                   registry.ts, process.ts, decision.ts, terminator.ts, state.ts, initial.ts, final.ts, …
+    shapes/                   shape.ts (contract, port helpers), library.ts (7 flowchart shapes; state shapes P5)
+    builtins.ts               createRegistry(): built-in types + engines
+    render.ts                 compile → engine.layout → renderSvg
+    geometry.ts               engine output, renderer input
+    style.ts                  typography shared by layout and render
+    num.ts                    stable number formatting
     measure/                  font-metrics.ts (generated), text.ts
     layout/
-      layered/                cycles.ts, rank.ts, order.ts, place.ts, index.ts
-      constraints/            partitions.ts, containers.ts
-      route/                  channels.ts, astar.ts, self-loop.ts, ports.ts
-      labels.ts
-    render/svg/               document.ts, nodes.ts, edges.ts, bands.ts, containers.ts, markers.ts, escape.ts
+      flow.ts                 (main, cross) ↔ (x, y) per direction
+      pack.ts                 ordered packing (isotonic regression)
+      simplify.ts, normalize.ts
+      layered/                graph.ts, cycles.ts, rank.ts, order.ts, place.ts, route.ts, index.ts
+      constraints/            partitions.ts (P3), containers.ts (P5)
+    render/svg/               index.ts, text.ts, escape.ts, theme.ts; bands/containers in P3/P5
     index.ts                  render(src) → { svg, diagnostics }
   ai/src/                     Node only; core never imports it (URS-NF-009)
     client/                   claude.ts (Anthropic SDK), mock.ts, types.ts   (URS-AI-020)
@@ -147,7 +153,9 @@ One engine at first, `layered` (Sugiyama-style), with optional constraint module
 
 Future types that don't fit a layered layout (sequence, ER) add a new engine and change nothing else.
 
-**Text measurement** (URS-LY-009): bundle one OFL font, generate a table of its character widths at build time, and embed a subset of the font in the SVG. The result is deterministic in Node and in every browser.
+**Text measurement** (URS-LY-009), as built in P1: `scripts/fonts/metrics.ts` generates a table of advance widths (code points 32–255, regular and bold) from **Liberation Sans** (OFL), committed as `measure/font-metrics.ts`. Liberation Sans is metric-compatible with Arial, and Arial is close to Helvetica. The SVG declares `Arial, 'Liberation Sans', Helvetica, sans-serif` with kerning and ligatures off, so text measures the same everywhere **without embedding a font**. Chromium measurements match the table to within 0.02 px. Characters outside the table count as 1 em, which over-estimates and is safe. Embedding a font remains an option (URS-RN-006) if a non-Arial font is ever wanted.
+
+**P1 implementation notes.** Ranks come from longest-path layering; sources are then pulled next to their earliest successor. Crossings are reduced with 8 barycenter sweeps, keeping the best result. Cross-axis placement uses neighbour-mean targets packed with isotonic regression (`layout/pack.ts`), which gives no overlaps and least-squares alignment. Routing is orthogonal through the gaps between layers: jogs are assigned to tracks by interval colouring, ports spread along each side, and diamonds use their side tips for branches. Each edge label sits in its edge's first gap. Not yet done: obstacle avoidance beyond the layer grid, label collision handling, and partitions or containers (warnings are emitted).
 
 ## 7. API (Fastify)
 | Method | Path | Out |
@@ -205,7 +213,7 @@ P1 → P2 gets a working end-to-end slice early. AI generation (P4) comes after 
 |------|------------|
 | The IR is shaped around flowcharts and doesn't fit later types | Build P3 (partitions) and P4 (containers) before stabilising the IR. Add new engines rather than bending `layered`. |
 | Edge routing quality makes or breaks the product | Keep it isolated behind the `route/` interface; maintain a fixture suite of hard cases. |
-| Font metrics drift between runtimes | Use a single bundled font and a generated width table; never measure through the DOM. |
+| Font metrics drift between runtimes | Generated width table for an Arial-compatible font; never measure through the DOM. Residual risk: a viewer with no Arial or Liberation Sans falls back to Helvetica or another sans-serif (small width differences). |
 | Schema churn breaks users | `version` field per document, plus adapters from older major versions. |
 | Generated diagrams are schema-valid but semantically wrong (missed steps, wrong lane) | Run the eval corpus with recall and lane-accuracy metrics; the user reviews in the editor before export; provenance quotes. |
 | The generation schema drifts from the authoring schema | A property test proves that every generated output converts to an authoring-valid source shape (URS-AI-004). |

@@ -41,6 +41,7 @@ export interface Partitions {
 }
 
 export interface GraphIR {
+  title?: string;
   direction: Direction;
   nodes: IRNode[];
   edges: IREdge[];

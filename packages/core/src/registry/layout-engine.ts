@@ -1,9 +1,13 @@
+import type { Diagnostic } from '../diagnostics.ts';
+import type { Geometry } from '../geometry.ts';
 import type { GraphIR } from '../ir/types.ts';
 
-/** Positioned output of a layout engine. Defined concretely in P1 (URS-LY-*). */
-export type Geometry = unknown;
+export interface LayoutResult {
+  geometry: Geometry;
+  diagnostics: Diagnostic[];
+}
 
 export interface LayoutEngine {
   id: string;
-  layout(ir: GraphIR): Geometry;
+  layout(ir: GraphIR): LayoutResult;
 }

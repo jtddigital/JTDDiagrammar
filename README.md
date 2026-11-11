@@ -9,24 +9,28 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | Phase | Scope | State |
 |-------|-------|-------|
 | P0 | Monorepo, CI, type registry, Graph IR, schemas, validation, README pipeline | **Done** |
-| P1 | Flowchart layout + SVG rendering, README images | Next |
-| P2 | REST API + web app (editor, live preview, SVG export) | Planned |
+| P1 | Flowchart layout + SVG rendering, README images | **Done** |
+| P2 | REST API + web app (editor, live preview, SVG export) | Next |
 | P3 | Cross-functional layout (lanes × phases) | Planned |
 | P4 | AI generation from documents (Claude) | Planned |
 | P5 | State diagrams | Planned |
 | P6–P7 | Layout quality, extras | Planned |
 
-Today the core **parses and validates** diagram source and compiles it to the Graph IR. Nothing renders yet; images arrive in P1.
+Today the core library **validates and renders flowcharts to SVG**. Lanes and phases are validated but not laid out until P3. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
 
 ## Diagram types
 
-The examples below are generated from the registered types (`pnpm docs:build`), and CI fails if they go stale. Each one also has to pass validation.
+The examples and images below are generated from the registered types (`pnpm docs:build`) by the same renderer the API will use. CI fails if any of them go stale, and each example also has to pass validation.
 
 <!-- BEGIN GENERATED: examples (pnpm docs:build) -->
 
 ### Flowchart
 
 `type: flowchart` · A plain flowchart: nodes and directed edges.
+
+![Flowchart](docs/img/flowchart-basic.svg)
+
+<details><summary>Source</summary>
 
 ```json
 {
@@ -86,9 +90,17 @@ The examples below are generated from the registered types (`pnpm docs:build`), 
 }
 ```
 
+</details>
+
 ### Cross-functional flowchart
 
 `type: flowchart` · The same flowchart type with `lanes` (functions) and `phases`.
+
+![Cross-functional flowchart](docs/img/flowchart-cross-functional.svg)
+
+> **Not yet supported:** lanes and phases are not laid out yet; nodes are drawn without them.
+
+<details><summary>Source</summary>
 
 ```json
 {
@@ -192,6 +204,8 @@ The examples below are generated from the registered types (`pnpm docs:build`), 
 }
 ```
 
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -238,11 +252,13 @@ pnpm check
 ```
 
 ```ts
-import { compile, createRegistry, parseJson } from '@jtd/core';
+import { createRegistry, parseJson, render } from '@jtd/core';
 
 const { value } = parseJson(text);
-const { ir, diagnostics } = compile(value, createRegistry());
+const { svg, diagnostics } = render(value, createRegistry()); // svg is undefined if there are errors
 ```
+
+Output is standalone SVG 1.1. Text uses `Arial, Liberation Sans, Helvetica, sans-serif`; the first two have identical metrics, so text fits its boxes without embedding a font. Elements carry ids and classes for styling and scripting: `n-<id>` / `jtd-node jtd-shape-<shape>` for nodes, and `e-<id>` / `jtd-edge` for edges.
 
 ## API (planned, P2)
 
@@ -268,10 +284,15 @@ packages/core/src
   schema/       shared schema fragments, combined schema
   validate/     envelope, JSON Schema (Ajv), common IR rules
   adapters/     source formats (JSON)
+  measure/      text metrics from a generated font table (no DOM)
+  shapes/       shape library: size, outline, ports
+  layout/       layered engine: cycles → rank → order → place → route
+  render/svg/   geometry → SVG string
 scripts/docs/   README generation + checks
+scripts/fonts/  font metrics generator
 ```
 
-Pipeline: `parse → envelope → type schema → type rules + IR + common rules → (P1) layout → SVG`.
+Pipeline: `parse → envelope → type schema → type rules + IR + common rules → layout engine → geometry → SVG`.
 
 Enforced boundaries (lint + tests):
 - `core` has no DOM and no Node built-ins, so it runs in the browser and on the server.
@@ -285,19 +306,21 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/U
 | Script | Does |
 |--------|------|
 | `pnpm check` | lint + typecheck + tests + docs check (what CI runs) |
-| `pnpm test` | Vitest |
-| `pnpm docs:build` | Regenerate README examples |
+| `pnpm test` | Vitest (unit, layout invariants, golden SVGs) |
+| `pnpm test -u` | Accept changed golden SVGs. Review the diff first. |
+| `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
+| `pnpm fonts:metrics` | Regenerate `measure/font-metrics.ts` from Liberation Sans |
 
 Every change cites URS IDs and includes an impact assessment in the commit body ([URS §5](docs/URS.md)).
 
 ### Adding a diagram type
 
 1. Create `packages/core/src/diagrams/<type>/` with a schema (unique `$id`), model, `toIR`, optional `validate`, and ≥ 1 example.
-2. Register it in `packages/core/src/diagrams/index.ts`.
+2. Register it in `packages/core/src/builtins.ts`.
 3. Run `pnpm docs:build`.
 
 Nothing else changes. The test-only `checklist` type (`packages/core/test/fixture-type.ts`) proves it.
 
 ## Licence
 
-Not yet chosen.
+[MIT](LICENSE). Font metrics are derived from Liberation Sans (SIL Open Font License 1.1); no font files are distributed.
