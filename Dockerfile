@@ -1,4 +1,5 @@
 # API + web app in one image (URS-NF-006). Node runs the TypeScript sources directly (type stripping).
+# AI generation is enabled by passing credentials at run time: docker run -e ANTHROPIC_API_KEY=... (never baked in).
 FROM node:22-slim AS web
 WORKDIR /app
 RUN corepack enable
@@ -12,6 +13,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/core packages/core
 COPY packages/api packages/api
+COPY packages/ai packages/ai
 COPY packages/web/package.json packages/web/package.json
 COPY --from=web /app/packages/web/dist packages/web/dist
 RUN pnpm install --frozen-lockfile --prod --filter "@jtd/api..." && pnpm store prune

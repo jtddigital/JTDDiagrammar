@@ -20,6 +20,18 @@ describe('module boundaries', () => {
     expect(await errors('packages/core/src/render/svg/x.ts', "import type { GraphIR } from '../../ir/types.ts';\nexport type T = GraphIR;")).toHaveLength(0);
   });
 
+  it('only packages/ai may import the Anthropic SDK (URS-NF-009)', async () => {
+    expect(await errors('packages/api/src/x.ts', "import A from '@anthropic-ai/sdk';\nA;")).toHaveLength(1);
+    expect(await errors('scripts/x.ts', "import A from '@anthropic-ai/sdk';\nA;")).toHaveLength(1);
+    expect(await errors('packages/ai/src/x.ts', "import A from '@anthropic-ai/sdk';\nA;")).toHaveLength(0);
+  });
+
+  it('the web app never imports AI code (URS-AI-010)', async () => {
+    expect(await errors('packages/web/src/x.tsx', "import { generate } from '@jtd/ai';\ngenerate;")).toHaveLength(1);
+    expect(await errors('packages/web/src/x.ts', "import A from '@anthropic-ai/sdk';\nA;")).toHaveLength(1);
+    expect(await errors('packages/api/src/x.ts', "import { generate } from '@jtd/ai';\ngenerate;")).toHaveLength(0);
+  });
+
   it('code outside core may use Node built-ins', async () => {
     expect(await errors('scripts/x.ts', "import { readFileSync } from 'node:fs';\nreadFileSync;")).toHaveLength(0);
   });

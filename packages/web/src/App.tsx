@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { downloadSvg } from './download.ts';
 import { Editor } from './editor/Editor.tsx';
+import { GeneratePanel } from './generate/GeneratePanel.tsx';
 import { Preview } from './preview/Preview.tsx';
 import { examples, pretty } from './registry.ts';
 import { useDiagram } from './useDiagram.ts';
 
 export function App() {
   const [text, setText] = useState(() => pretty(examples[0]!.source));
+  const [generating, setGenerating] = useState(false);
   const d = useDiagram(text);
   const errors = d.diagnostics.filter((x) => x.severity === 'error').length;
   // The render lags the editor by the debounce; never show or export a stale result as current.
@@ -26,6 +28,9 @@ export function App() {
             </option>
           ))}
         </select>
+        <button type="button" aria-expanded={generating} onClick={() => setGenerating(!generating)}>
+          Generate with AI
+        </button>
         <span className={errors && !pending ? 'status error' : 'status'} role="status">
           {pending ? 'Updating…' : errors ? `${errors} error${errors > 1 ? 's' : ''}` : 'Valid'}
         </span>
@@ -33,6 +38,7 @@ export function App() {
           Export SVG
         </button>
       </header>
+      {generating && <GeneratePanel onSource={(source) => setText(pretty(source))} />}
       <main>
         <section className="source">
           <Editor value={text} onChange={setText} diagnostics={d.diagnostics} source={d.source} />

@@ -32,4 +32,15 @@ export const checklist: DiagramType<Checklist> = {
     containers: [],
   }),
   examples: [{ name: 'basic', title: 'Checklist', source: { version: '1', type: 'checklist', items: [{ id: 'a', label: 'A' }] } }],
+  ai: {
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['items'],
+      properties: { items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'label'], properties: { id: { type: 'string' }, label: { type: 'string' } } } } },
+    },
+    fromGenerated: (g) => ({ version: '1', type: 'checklist', items: (g as Checklist).items }) as unknown as Checklist,
+    guide: 'Diagram type: checklist. One item per step.',
+    examples: [{ input: 'Do A.', output: { items: [{ id: 'a', label: 'A' }] } }],
+  },
 };

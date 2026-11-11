@@ -9,7 +9,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc -p packages/core && tsc -p packages/api && tsc -p packages/web && tsc -p .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/ai && tsc -p packages/api && tsc -p packages/web && tsc -p .",
     "test": "vitest run",
     "docs:build": "tsx scripts/docs/cli.ts build",
     "docs:check": "tsx scripts/docs/cli.ts check",

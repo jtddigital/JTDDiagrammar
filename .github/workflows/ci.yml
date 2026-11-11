@@ -46,6 +46,7 @@ jobs:
           curl -sf localhost:8080/ | grep -q '<div id="root">'
           curl -sf -X POST -H 'content-type: application/json' \
             --data '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' localhost:8080/v1/render | grep -q '<svg'
+          curl -sf localhost:8080/v1/ai | grep -q '"enabled":false'
 
   secrets:
     # URS-NF-008

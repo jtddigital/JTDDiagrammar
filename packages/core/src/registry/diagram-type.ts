@@ -10,7 +10,21 @@ export interface Example {
   source: unknown;
 }
 
-/** A diagram type plugin (URS-EXT-001). AI assets (URS-EXT-009) are added in P4. */
+/**
+ * What a type contributes to AI generation (URS-EXT-009). `schema` uses only the JSON Schema subset
+ * that structured outputs support (URS-AI-004); `fromGenerated` maps its output to authoring source,
+ * which then goes through full validation.
+ */
+export interface AiAssets<M = unknown> {
+  schema: JsonSchema;
+  fromGenerated(generated: unknown): M;
+  /** Type-specific instructions appended to the system prompt. */
+  guide: string;
+  /** Few-shot pairs: material → generation-schema output. */
+  examples: readonly { input: string; output: unknown }[];
+}
+
+/** A diagram type plugin (URS-EXT-001). */
 export interface DiagramType<M = unknown> {
   id: string;
   title: string;
@@ -24,4 +38,5 @@ export interface DiagramType<M = unknown> {
   toIR(model: M): GraphIR;
   /** At least one; all are shown in the README (URS-EXT-010, URS-DOC-002). */
   examples: readonly [Example, ...Example[]];
+  ai: AiAssets<M>;
 }

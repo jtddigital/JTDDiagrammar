@@ -11,6 +11,7 @@ export function openapi(routes: readonly Route[], reg: Registry): object {
       summary: r.summary,
       ...(params.length && { parameters: params }),
       ...(r.body && { requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Diagram' } } } } }),
+      ...(r.requestBody && { requestBody: r.requestBody }),
       responses: Object.fromEntries(Object.entries(r.responses).map(([code, description]) => [code, { description }])),
     };
   }

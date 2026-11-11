@@ -1,4 +1,5 @@
 import type { DiagramType } from '../../registry/diagram-type.ts';
+import { flowchartAi } from './ai.ts';
 import { examples } from './examples.ts';
 import type { Flowchart } from './model.ts';
 import { flowchartSchema } from './schema.ts';
@@ -14,4 +15,5 @@ export const flowchart: DiagramType<Flowchart> = {
   validate: validateFlowchart,
   toIR: flowchartToIR,
   examples,
+  ai: flowchartAi,
 };

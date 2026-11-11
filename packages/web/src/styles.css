@@ -20,3 +20,9 @@ main { flex: 1; display: grid; grid-template-columns: minmax(320px, 40%) 1fr; mi
 .preview img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 .stale { position: absolute; top: 8px; right: 16px; margin: 0; padding: 4px 8px; font-size: 12px; background: #fef3c7; border: 1px solid #fcd34d; }
 .empty { color: #64748b; }
+.generate { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #e2e8f0; }
+.generate textarea { font: inherit; font-size: 14px; padding: 8px; resize: vertical; }
+.generate .row { display: flex; align-items: center; gap: 12px; }
+.generate select, .generate button { font: inherit; font-size: 14px; padding: 4px 10px; }
+.note { margin: 0; font-size: 13px; color: #334155; }
+.note.error { color: #b91c1c; }
