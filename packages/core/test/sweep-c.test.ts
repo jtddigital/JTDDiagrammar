@@ -4,7 +4,7 @@ import { compile, createRegistry, render } from '../src/index.ts';
 const reg = createRegistry();
 
 describe('port side hints (URS-DM-009)', () => {
-  const flow = (edge: object, direction = 'LR') => ({ version: '1', type: 'flowchart', direction, nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ from: 'a', to: 'b', ...edge }] });
+  const flow = (link: object, direction = 'LR') => ({ version: '1', type: 'flowchart', direction, nodes: [{ id: 'a', to: [{ node: 'b', ...link }] }, { id: 'b' }] });
   const ends = (d: unknown) => {
     const g = render(d, reg).geometry!;
     const [a, b] = [g.nodes.find((n) => n.id === 'a')!, g.nodes.find((n) => n.id === 'b')!];
@@ -17,21 +17,21 @@ describe('port side hints (URS-DM-009)', () => {
     ['S', (p: { y: number }, n: { y: number; h: number }) => p.y === n.y + n.h],
     ['W', (p: { x: number }, n: { x: number }) => p.x === n.x],
   ] as const)('leaves by the hinted side %s', (side, onSide) => {
-    const { a, first } = ends(flow({ fromSide: side }));
+    const { a, first } = ends(flow({ exitSide: side }));
     expect(onSide(first as never, a as never)).toBe(true);
   });
 
   it('enters by the hinted side', () => {
-    const { b, last } = ends(flow({ toSide: 'S' }));
+    const { b, last } = ends(flow({ entrySide: 'S' }));
     expect(last.y).toBe(b.y + b.h);
   });
 
   it('a hint matching the flow changes nothing', () => {
-    expect(render(flow({ fromSide: 'E', toSide: 'W' }), reg).svg).toBe(render(flow({}), reg).svg);
+    expect(render(flow({ exitSide: 'E', entrySide: 'W' }), reg).svg).toBe(render(flow({}), reg).svg);
   });
 
   it('rejects unknown sides', () => {
-    expect(compile(flow({ fromSide: 'up' }), reg).diagnostics.map((d) => d.code)).toEqual(['schema.enum']);
+    expect(compile(flow({ exitSide: 'up' }), reg).diagnostics.map((d) => d.code)).toEqual(['schema.enum']);
   });
 });
 

@@ -4,15 +4,66 @@
   "title": "Dark theme",
   "theme": "dark",
   "states": [
-    { "id": "i", "kind": "initial" },
-    { "id": "on", "label": "On", "states": [{ "id": "i2", "kind": "initial" }, { "id": "warm", "label": "Warming up" }, { "id": "ready", "label": "Ready", "style": { "stroke": "#4ade80" } }] },
-    { "id": "off", "label": "Off" }
-  ],
-  "transitions": [
-    { "from": "i", "to": "off" },
-    { "from": "off", "to": "on", "event": "power" },
-    { "from": "i2", "to": "warm" },
-    { "from": "warm", "to": "ready", "event": "heated" },
-    { "from": "on", "to": "off", "event": "power", "style": { "stroke": "#f87171", "dash": "dashed" } }
+    {
+      "id": "i",
+      "kind": "initial",
+      "to": [
+        {
+          "state": "off"
+        }
+      ]
+    },
+    {
+      "id": "on",
+      "label": "On",
+      "states": [
+        {
+          "id": "i2",
+          "kind": "initial",
+          "to": [
+            {
+              "state": "warm"
+            }
+          ]
+        },
+        {
+          "id": "warm",
+          "label": "Warming up",
+          "to": [
+            {
+              "state": "ready",
+              "event": "heated"
+            }
+          ]
+        },
+        {
+          "id": "ready",
+          "label": "Ready",
+          "style": {
+            "stroke": "#4ade80"
+          }
+        }
+      ],
+      "to": [
+        {
+          "state": "off",
+          "event": "power",
+          "style": {
+            "stroke": "#f87171",
+            "dash": "dashed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "off",
+      "label": "Off",
+      "to": [
+        {
+          "state": "on",
+          "event": "power"
+        }
+      ]
+    }
   ]
 }

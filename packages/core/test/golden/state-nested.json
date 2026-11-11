@@ -3,37 +3,104 @@
   "type": "state",
   "title": "Two levels of nesting",
   "states": [
-    { "id": "start", "kind": "initial" },
-    { "id": "off", "label": "Off" },
+    {
+      "id": "start",
+      "kind": "initial",
+      "to": [
+        {
+          "state": "off"
+        }
+      ]
+    },
+    {
+      "id": "off",
+      "label": "Off",
+      "to": [
+        {
+          "state": "machine",
+          "event": "power on"
+        }
+      ]
+    },
     {
       "id": "machine",
       "label": "Machine",
       "states": [
-        { "id": "m0", "kind": "initial" },
-        { "id": "idle", "label": "Idle" },
+        {
+          "id": "m0",
+          "kind": "initial",
+          "to": [
+            {
+              "state": "idle"
+            }
+          ]
+        },
+        {
+          "id": "idle",
+          "label": "Idle",
+          "to": [
+            {
+              "state": "running",
+              "event": "start"
+            }
+          ]
+        },
         {
           "id": "running",
           "label": "Running",
           "states": [
-            { "id": "r0", "kind": "initial" },
-            { "id": "slow", "label": "Slow" },
-            { "id": "fast", "label": "Fast" }
+            {
+              "id": "r0",
+              "kind": "initial",
+              "to": [
+                {
+                  "state": "slow"
+                }
+              ]
+            },
+            {
+              "id": "slow",
+              "label": "Slow",
+              "to": [
+                {
+                  "state": "fast",
+                  "event": "boost"
+                }
+              ]
+            },
+            {
+              "id": "fast",
+              "label": "Fast",
+              "to": [
+                {
+                  "state": "slow",
+                  "event": "ease"
+                },
+                {
+                  "state": "fault",
+                  "event": "overheat"
+                }
+              ]
+            }
           ]
+        }
+      ],
+      "to": [
+        {
+          "state": "off",
+          "event": "power off"
         }
       ]
     },
-    { "id": "fault", "label": "Fault" }
-  ],
-  "transitions": [
-    { "from": "start", "to": "off" },
-    { "from": "off", "to": "machine", "event": "power on" },
-    { "from": "m0", "to": "idle" },
-    { "from": "idle", "to": "running", "event": "start" },
-    { "from": "r0", "to": "slow" },
-    { "from": "slow", "to": "fast", "event": "boost" },
-    { "from": "fast", "to": "slow", "event": "ease" },
-    { "from": "fast", "to": "fault", "event": "overheat" },
-    { "from": "fault", "to": "idle", "event": "reset" },
-    { "from": "machine", "to": "off", "event": "power off" }
+    {
+      "id": "fault",
+      "label": "Fault",
+      "to": [
+        {
+          "state": "idle",
+          "event": "reset"
+        }
+      ]
+    }
   ]
 }

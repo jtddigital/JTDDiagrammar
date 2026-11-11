@@ -17,8 +17,7 @@ describe('evaluation metrics (URS-AI-018)', () => {
       version: '1',
       type: 'flowchart',
       lanes: [{ id: 'e', label: 'Employee' }, { id: 'f', label: 'Finance' }],
-      nodes: [{ id: 'a', label: 'Submit claim', lane: 'e' }, { id: 'b', label: 'Reimburse claim', lane: 'e' }],
-      edges: [{ from: 'a', to: 'b' }],
+      nodes: [{ id: 'a', label: 'Submit claim', lane: 'e', to: [{ node: 'b' }] }, { id: 'b', label: 'Reimburse claim', lane: 'e' }],
     };
     expect(score(src, { nodes: ['Submit claim', 'Reimburse', 'Approve'], edges: [['Submit claim', 'Reimburse'], ['Approve', 'Reimburse']], lanes: { 'Submit claim': 'Employee', Reimburse: 'Finance' } }, reg)).toEqual({
       nodeRecall: 2 / 3,

@@ -1,5 +1,5 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
-import type { FlowBand, FlowEdge, Flowchart, FlowNode } from './model.ts';
+import type { FlowBand, Flowchart, FlowLink, FlowNode } from './model.ts';
 import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
@@ -44,14 +44,33 @@ const schema = {
   },
 } as const;
 
+/** Generation stays flat (from, to): simpler for the model to produce reliably; nested on the way in. */
+interface GeneratedEdge {
+  from: string;
+  to: string;
+  label?: string;
+  quote?: string;
+}
+
 interface Generated {
   title: string;
   direction: 'LR' | 'TB';
   lanes?: FlowBand[];
   phases?: FlowBand[];
-  nodes: FlowNode[];
-  edges: FlowEdge[];
+  nodes: Omit<FlowNode, 'to'>[];
+  edges: GeneratedEdge[];
 }
+
+/** Nest flat edges under their source nodes; edges from unknown nodes are dropped. */
+function nestEdges(nodes: readonly Omit<FlowNode, 'to'>[], edges: readonly (GeneratedEdge & Partial<FlowLink>)[]): FlowNode[] {
+  return nodes.map((n) => {
+    const to = edges.filter((e) => e.from === n.id).map(({ from: _from, to, node: _node, ...rest }) => ({ node: to, ...rest }));
+    return { ...n, ...(to.length && { to }) };
+  });
+}
+
+/** Connections as flat edges, keeping only ids the author set. */
+const flatEdges = (m: Pick<Flowchart, 'nodes'>) => m.nodes.flatMap((n) => (n.to ?? []).map((l) => ({ ...l, from: n.id, to: l.node })));
 
 const guide = `Diagram type: flowchart.
 - Nodes: "terminator" for start and end, "process" for steps, "decision" for questions (label as a question; label each outgoing edge with its answer), "document" for documents produced or used, "data" for inputs and outputs, "subprocess" for steps that are processes of their own, "connector" only to link distant parts.
@@ -96,28 +115,28 @@ export const flowchartAi: AiAssets<Flowchart> = {
     ...(m.lanes && { lanes: m.lanes.map((b) => pick(b, 'id', 'label')) }),
     ...(m.phases && { phases: m.phases.map((b) => pick(b, 'id', 'label')) }),
     nodes: m.nodes.map((n) => ({ id: n.id, shape: n.shape ?? 'process', label: n.label ?? n.id, ...pick(n, 'lane', 'phase', 'quote') })),
-    edges: (m.edges ?? []).map((e) => pick(e, 'from', 'to', 'label', 'quote')),
+    edges: flatEdges(m).map((e) => pick(e, 'from', 'to', 'label', 'quote')),
   }),
   // Restore what generation cannot express: theme, styles, order and side hints, edge ids, notes on surviving nodes.
   merge: (prev, next) => {
     const nodes = byId(prev.nodes);
     const bands = byId([...(prev.lanes ?? []), ...(prev.phases ?? [])]);
-    const match = edgeMatcher(prev.edges ?? [], (e) => e.label);
+    const match = edgeMatcher(flatEdges(prev), (e) => e.label);
     const band = (b: FlowBand) => ({ ...b, ...pick(bands.get(b.id) ?? ({} as FlowBand), 'style') });
     const kept = new Set(next.nodes.map((n) => n.id));
     const notes = (prev.notes ?? []).filter((n) => n.for === undefined || kept.has(n.for));
     return {
       ...next,
-      ...pick(prev, 'theme', 'styles'),
+      ...pick(prev, 'theme', 'styles', 'edgeStyle'),
       ...(next.lanes && { lanes: next.lanes.map(band) }),
       ...(next.phases && { phases: next.phases.map(band) }),
-      nodes: next.nodes.map((n) => ({ ...n, ...pick(nodes.get(n.id) ?? ({} as FlowNode), 'order', 'style') })),
-      ...(next.edges && {
-        edges: next.edges.map((e) => {
-          const p = match(e) ?? ({} as FlowEdge);
-          return { ...pick(p, 'id'), ...e, ...pick(p, 'fromSide', 'toSide', 'style') };
+      nodes: nestEdges(
+        next.nodes.map(({ to: _to, ...n }) => ({ ...n, ...pick(nodes.get(n.id) ?? ({} as FlowNode), 'order', 'style') })),
+        flatEdges(next).map((e) => {
+          const p = match(e);
+          return { from: e.from, to: e.to, ...pick(e, 'label', 'quote'), ...(p && pick(p, 'id', 'exitSide', 'entrySide', 'style')) };
         }),
-      }),
+      ),
       ...(notes.length && { notes }),
     };
   },
@@ -131,8 +150,7 @@ export const flowchartAi: AiAssets<Flowchart> = {
       direction: g.direction,
       ...(g.lanes?.length ? { lanes: g.lanes } : {}),
       ...(g.phases?.length ? { phases: g.phases } : {}),
-      nodes: g.nodes,
-      edges: g.edges,
+      nodes: nestEdges(g.nodes, g.edges),
     };
   },
 };

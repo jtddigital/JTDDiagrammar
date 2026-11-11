@@ -4,12 +4,29 @@
   "title": "Escaping <script>alert('x')</script> & \"quotes\"",
   "direction": "TB",
   "nodes": [
-    { "id": "multi", "label": "Explicit\nline breaks" },
-    { "id": "wrap", "label": "A long label that has to wrap across several lines inside its node" },
-    { "id": "xss", "label": "<b>not bold</b> & 'single' \"double\"" }
-  ],
-  "edges": [
-    { "from": "multi", "to": "wrap", "label": "a long edge label that wraps" },
-    { "from": "wrap", "to": "xss", "label": "</text><script>" }
+    {
+      "id": "multi",
+      "label": "Explicit\nline breaks",
+      "to": [
+        {
+          "node": "wrap",
+          "label": "a long edge label that wraps"
+        }
+      ]
+    },
+    {
+      "id": "wrap",
+      "label": "A long label that has to wrap across several lines inside its node",
+      "to": [
+        {
+          "node": "xss",
+          "label": "</text><script>"
+        }
+      ]
+    },
+    {
+      "id": "xss",
+      "label": "<b>not bold</b> & 'single' \"double\""
+    }
   ]
 }

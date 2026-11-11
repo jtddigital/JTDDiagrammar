@@ -10,14 +10,14 @@ describe('flowchart (URS-TYP-001, URS-TYP-002)', () => {
   });
 
   it('applies defaults and source pointers in the IR', () => {
-    const { ir } = compile(fc({ nodes: [{ id: 'a' }, { id: 'b', shape: 'decision', label: 'B?' }], edges: [{ from: 'a', to: 'b' }] }), reg);
+    const { ir } = compile(fc({ nodes: [{ id: 'a', to: [{ node: 'b' }] }, { id: 'b', shape: 'decision', label: 'B?' }] }), reg);
     expect(ir).toEqual({
       direction: 'LR',
       nodes: [
         { id: 'a', shape: 'process', label: 'a', src: '/nodes/0' },
         { id: 'b', shape: 'decision', label: 'B?', src: '/nodes/1' },
       ],
-      edges: [{ id: 'edge:0', from: 'a', to: 'b', src: '/edges/0' }],
+      edges: [{ id: 'edge:a:0', from: 'a', to: 'b', src: '/nodes/0/to/0' }],
       containers: [],
     });
   });

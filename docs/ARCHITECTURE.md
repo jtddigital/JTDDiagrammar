@@ -99,20 +99,18 @@ README.md
 ## 5. Source formats (schema v1, drafts)
 Each type picks the source structure that fits it best; the IR is what they share (URS-IN-003).
 
-**Flowchart, with lanes = cross-functional** (URS-TYP-001/002). The format is flat with ID references: edges cross lanes, and diffs stay small.
+**Flowchart, with lanes = cross-functional** (URS-TYP-001/002). Nodes are a flat list with ID references, so edges can cross lanes and diffs stay small. Since v0.22 each node lists its outgoing connections in `to` (URS-IN-009), so a node and where it leads read together; `edgeStyle` is the default style for all of them.
 ```json
 {
   "version": "1", "type": "flowchart", "direction": "LR",
   "lanes":  [{ "id": "cust", "label": "Customer" }, { "id": "wh", "label": "Warehouse" }],
   "phases": [{ "id": "order", "label": "Order" }, { "id": "fulfil", "label": "Fulfil" }],
   "nodes": [
-    { "id": "start", "shape": "terminator", "label": "Start",     "lane": "cust", "phase": "order" },
-    { "id": "stock", "shape": "decision",   "label": "In stock?", "lane": "wh",   "phase": "order" },
+    { "id": "start", "shape": "terminator", "label": "Start",     "lane": "cust", "phase": "order",
+      "to": [{ "node": "stock" }] },
+    { "id": "stock", "shape": "decision",   "label": "In stock?", "lane": "wh",   "phase": "order",
+      "to": [{ "node": "ship", "label": "Yes", "exitSide": "S" }] },
     { "id": "ship",  "shape": "process",    "label": "Ship",      "lane": "wh",   "phase": "fulfil" }
-  ],
-  "edges": [
-    { "from": "start", "to": "stock" },
-    { "from": "stock", "to": "ship", "label": "Yes" }
   ]
 }
 ```
@@ -123,22 +121,19 @@ Drop `lanes`/`phases` and the same file is a plain flowchart.
 {
   "version": "1", "type": "state", "direction": "LR",
   "states": [
-    { "id": "init", "kind": "initial" },
-    { "id": "idle", "label": "Idle" },
-    { "id": "active", "label": "Active", "states": [
-        { "id": "a0", "kind": "initial" }, { "id": "run", "label": "Running" }, { "id": "paused", "label": "Paused" } ] },
+    { "id": "init", "kind": "initial", "to": [{ "state": "idle" }] },
+    { "id": "idle", "label": "Idle", "to": [{ "state": "active", "event": "start", "guard": "ready", "action": "boot()" }] },
+    { "id": "active", "label": "Active", "to": [{ "state": "done", "event": "stop" }], "states": [
+        { "id": "a0", "kind": "initial", "to": [{ "state": "run" }] },
+        { "id": "run", "label": "Running", "to": [{ "state": "paused", "event": "pause" }, { "state": "run", "event": "tick" }] },
+        { "id": "paused", "label": "Paused" } ] },
     { "id": "done", "kind": "final" }
-  ],
-  "transitions": [
-    { "from": "init", "to": "idle" },
-    { "from": "idle", "to": "active", "event": "start", "guard": "ready", "action": "boot()" },
-    { "from": "run", "to": "paused", "event": "pause" },
-    { "from": "run", "to": "run", "event": "tick" },
-    { "from": "active", "to": "done", "event": "stop" }
   ]
 }
 ```
-`toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts.
+`toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts. Transitions are nested under their source state (`to`), at any depth; `transitionStyle` is their default style.
+
+Both types flatten their nested connections with one helper (`linksOf`, `transitionsOf`). Each connection keeps its source, a generated id (`edge:<source>:<n>` unless the author set `id`) and its JSON Pointer (`/nodes/2/to/0`), so diagnostics point at the right entry. AI generation keeps flat `edges`/`transitions` (`from`, `to`), which are easier for a model to produce reliably; `fromGenerated` nests them and `toGenerated` flattens them again (URS-AI-004).
 
 ## 6. Layout
 One engine at first, `layered` (Sugiyama-style), with optional constraint modules. Types turn features on by populating the IR. Engines never check the type.

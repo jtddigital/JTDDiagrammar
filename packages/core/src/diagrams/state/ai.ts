@@ -1,6 +1,6 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
 import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
-import { STATE_KINDS, walk, type State, type StateDiagram, type Transition } from './model.ts';
+import { STATE_KINDS, walk, type State, type StateDiagram, type StateLink } from './model.ts';
 
 const str = { type: 'string' } as const;
 
@@ -42,12 +42,35 @@ const schema = {
   },
 } as const;
 
+/** Generation stays flat (from, to); transitions are nested under their source states on the way in. */
+interface GeneratedTransition {
+  from: string;
+  to: string;
+  event?: string;
+  guard?: string;
+  action?: string;
+  quote?: string;
+}
+
 interface Generated {
   title: string;
   direction: 'LR' | 'TB';
   states: { id: string; kind: State['kind']; label: string; parent?: string; quote?: string }[];
-  transitions: Transition[];
+  transitions: GeneratedTransition[];
 }
+
+type Flat = GeneratedTransition & Partial<StateLink>;
+
+/** Attach flat transitions to their source states (any depth); transitions from unknown states are dropped. */
+function attach(states: State[], ts: readonly Flat[]): State[] {
+  return states.map(({ to: _to, ...s }) => {
+    const to = ts.filter((t) => t.from === s.id).map(({ from: _from, to, state: _state, ...rest }) => ({ state: to, ...rest }));
+    return { ...s, ...(s.states && { states: attach(s.states, ts) }), ...(to.length && { to }) };
+  });
+}
+
+/** Transitions as flat edges, keeping only ids the author set. */
+const flatTransitions = (states: readonly State[]): Flat[] => [...walk(states)].flatMap(({ state: s }) => (s.to ?? []).map((l) => ({ ...l, from: s.id, to: l.state })));
 
 /** Nest flat states by `parent`. Unknown or cyclic parents fall back to the top level. */
 function nest(flat: Generated['states']): State[] {
@@ -112,27 +135,21 @@ export const stateAi: AiAssets<StateDiagram> = {
       const kind = s.kind ?? 'state';
       return { id: s.id, kind, label: s.label ?? (kind === 'state' && !s.states?.length ? s.id : ''), ...(parent !== undefined && { parent }), ...pick(s, 'quote') };
     }),
-    transitions: (m.transitions ?? []).map((t) => pick(t, 'from', 'to', 'event', 'guard', 'action', 'quote')),
+    transitions: flatTransitions(m.states).map((t) => pick(t, 'from', 'to', 'event', 'guard', 'action', 'quote')),
   }),
   // Restore theme, state styles and transition ids/styles, matched by id and endpoints.
   merge: (prev, next) => {
     const states = byId([...walk(prev.states)].map((w) => w.state));
-    const match = edgeMatcher(prev.transitions ?? [], (t) => t.event);
+    const match = edgeMatcher(flatTransitions(prev.states), (t) => t.event);
     const restyle = (ss: State[]): State[] => ss.map((s) => ({ ...s, ...pick(states.get(s.id) ?? ({} as State), 'style'), ...(s.states && { states: restyle(s.states) }) }));
-    return {
-      ...next,
-      ...pick(prev, 'theme', 'styles'),
-      states: restyle(next.states),
-      ...(next.transitions && {
-        transitions: next.transitions.map((t) => {
-          const p = match(t) ?? ({} as Transition);
-          return { ...pick(p, 'id'), ...t, ...pick(p, 'style') };
-        }),
-      }),
-    };
+    const ts = flatTransitions(next.states).map((t) => {
+      const p = match(t);
+      return { from: t.from, to: t.to, ...pick(t, 'event', 'guard', 'action', 'quote'), ...(p && pick(p, 'id', 'style')) };
+    });
+    return { ...next, ...pick(prev, 'theme', 'styles', 'transitionStyle'), states: attach(restyle(next.states), ts) };
   },
   fromGenerated: (generated) => {
     const g = generated as Generated;
-    return { version: '1', type: 'state', title: g.title, direction: g.direction, states: nest(g.states), transitions: g.transitions };
+    return { version: '1', type: 'state', title: g.title, direction: g.direction, states: attach(nest(g.states), g.transitions) };
   },
 };

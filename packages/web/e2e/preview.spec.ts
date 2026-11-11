@@ -7,10 +7,9 @@ const doc = {
   type: 'flowchart',
   title: 'Preview',
   nodes: [
-    { id: 'a', label: 'Start here' },
+    { id: 'a', label: 'Start here', to: [{ node: 'b', label: 'next' }] },
     { id: 'b', label: 'Quoted', quote: 'the clerk files it' },
   ],
-  edges: [{ from: 'a', to: 'b', label: 'next' }],
 };
 
 const scale = async (page: import('@playwright/test').Page) =>

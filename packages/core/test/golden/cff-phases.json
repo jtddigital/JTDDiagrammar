@@ -3,22 +3,63 @@
   "type": "flowchart",
   "title": "Phases with an empty phase and a backward edge",
   "lanes": [
-    { "id": "ops", "label": "Operations" },
-    { "id": "qa", "label": "QA" }
+    {
+      "id": "ops",
+      "label": "Operations"
+    },
+    {
+      "id": "qa",
+      "label": "QA"
+    }
   ],
   "phases": [
-    { "id": "build", "label": "Build" },
-    { "id": "hold", "label": "Hold (no steps yet)" },
-    { "id": "release", "label": "Release" }
+    {
+      "id": "build",
+      "label": "Build"
+    },
+    {
+      "id": "hold",
+      "label": "Hold (no steps yet)"
+    },
+    {
+      "id": "release",
+      "label": "Release"
+    }
   ],
   "nodes": [
-    { "id": "build", "label": "Build artefact", "lane": "ops", "phase": "build" },
-    { "id": "test", "label": "Run tests", "lane": "qa", "phase": "release" },
-    { "id": "ship", "shape": "terminator", "label": "Ship", "lane": "ops", "phase": "release" }
-  ],
-  "edges": [
-    { "from": "build", "to": "test" },
-    { "from": "test", "to": "ship", "label": "pass" },
-    { "from": "test", "to": "build", "label": "fail" }
+    {
+      "id": "build",
+      "label": "Build artefact",
+      "lane": "ops",
+      "phase": "build",
+      "to": [
+        {
+          "node": "test"
+        }
+      ]
+    },
+    {
+      "id": "test",
+      "label": "Run tests",
+      "lane": "qa",
+      "phase": "release",
+      "to": [
+        {
+          "node": "ship",
+          "label": "pass"
+        },
+        {
+          "node": "build",
+          "label": "fail"
+        }
+      ]
+    },
+    {
+      "id": "ship",
+      "shape": "terminator",
+      "label": "Ship",
+      "lane": "ops",
+      "phase": "release"
+    }
   ]
 }

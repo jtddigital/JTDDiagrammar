@@ -13,7 +13,7 @@ const cfg = (over: Partial<Config> = {}): Config => ({
   ...over,
 }) as Config;
 
-const flow = { version: '1', type: 'flowchart', title: 'T', nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ from: 'a', to: 'b' }] };
+const flow = { version: '1', type: 'flowchart', title: 'T', nodes: [{ id: 'a', to: [{ node: 'b' }] }, { id: 'b' }] };
 const post = (app: FastifyInstance, url: string, body: unknown, headers: Record<string, string> = {}) =>
   app.inject({ method: 'POST', url, headers: { 'content-type': 'application/json', ...headers }, payload: typeof body === 'string' ? body : JSON.stringify(body) });
 
@@ -104,9 +104,8 @@ describe('limits (URS-API-006)', () => {
   it('422 when rendering exceeds the time limit, and the pool recovers', async () => {
     const slow = await buildApp(cfg({ renderTimeoutMs: 1 }));
     try {
-      const nodes = Array.from({ length: 300 }, (_, i) => ({ id: `n${i}` }));
-      const edges = nodes.slice(1).map((n, i) => ({ from: `n${i}`, to: n.id }));
-      const res = await post(slow, '/v1/render', { version: '1', type: 'flowchart', nodes, edges });
+      const nodes = Array.from({ length: 300 }, (_, i) => ({ id: `n${i}`, to: i < 299 ? [{ node: `n${i + 1}` }] : [] }));
+      const res = await post(slow, '/v1/render', { version: '1', type: 'flowchart', nodes });
       expect([res.statusCode, res.json().diagnostics[0].code]).toEqual([422, 'limit.time']);
     } finally {
       await slow.close();
@@ -118,7 +117,7 @@ describe('limits (URS-API-006)', () => {
 describe('other endpoints', () => {
   it('POST /v1/validate reports validity (URS-API-003)', async () => {
     expect((await post(app, '/v1/validate', flow)).json()).toEqual({ valid: true, diagnostics: [] });
-    const bad = (await post(app, '/v1/validate', { version: '1', type: 'flowchart', nodes: [], edges: [{ from: 'x', to: 'y' }] })).json();
+    const bad = (await post(app, '/v1/validate', { version: '1', type: 'flowchart', nodes: [{ id: 'x', to: [{ node: 'y' }, { node: 'z' }] }] })).json();
     expect(bad.valid).toBe(false);
     expect(bad.diagnostics.map((d: { code: string }) => d.code)).toEqual(['ref.edge', 'ref.edge']);
   });

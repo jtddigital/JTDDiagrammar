@@ -48,8 +48,11 @@ describe('layered engine', () => {
     version: '1',
     type: 'flowchart',
     direction,
-    nodes: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-    edges: [{ from: 'a', to: 'b' }, { from: 'b', to: 'c' }],
+    nodes: [
+      { id: 'a', to: [{ node: 'b' }] },
+      { id: 'b', to: [{ node: 'c' }] },
+      { id: 'c', to: [] as { node: string }[] },
+    ],
   });
 
   it('flows left-to-right or top-to-bottom (URS-DM-003)', () => {
@@ -60,7 +63,8 @@ describe('layered engine', () => {
   });
 
   it('orders nodes by edge direction and tolerates cycles (URS-LY-004)', () => {
-    const doc = { ...chain('LR'), edges: [...chain('LR').edges, { from: 'c', to: 'a' }] };
+    const doc = chain('LR');
+    doc.nodes[2]!.to.push({ node: 'a' });
     const n = geometry(doc).nodes;
     expect(n[0]!.x < n[1]!.x && n[1]!.x < n[2]!.x).toBe(true);
     expect(geometry(doc).edges).toHaveLength(3);

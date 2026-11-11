@@ -7,8 +7,7 @@ const flow = (label: string, extra: object = {}) => ({
   version: '1',
   type: 'flowchart',
   title: 'E2E',
-  nodes: [{ id: 'a', label }, { id: 'b' }],
-  edges: [{ from: 'a', to: 'b' }],
+  nodes: [{ id: 'a', label, to: [{ node: 'b' }] }, { id: 'b' }],
   ...extra,
 });
 
@@ -99,7 +98,7 @@ test('never offers a stale render for export while an edit is pending (URS-WEB-0
 
 test('edits, validates and exports a second diagram type with the same UI (URS-WEB-010)', async ({ page, request }) => {
   await open(page);
-  const doc = { version: '1', type: 'state', title: 'Door', states: [{ id: 'i', kind: 'initial' }, { id: 'closed' }, { id: 'open' }], transitions: [{ from: 'i', to: 'closed' }, { from: 'closed', to: 'open', event: 'push' }] };
+  const doc = { version: '1', type: 'state', title: 'Door', states: [{ id: 'i', kind: 'initial', to: [{ state: 'closed' }] }, { id: 'closed', to: [{ state: 'open', event: 'push' }] }, { id: 'open' }] };
   await setSource(page, doc);
   await expect(status(page)).toHaveText('Valid');
   await setSource(page, { ...doc, states: [...doc.states, { id: 'x', kind: 'final', states: [{ id: 'y' }] }] });

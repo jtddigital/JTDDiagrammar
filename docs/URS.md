@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.21 (draft) |
+| Version | 0.22 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -53,6 +53,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-IN-001 | M | Diagrams are defined in JSON that conforms to the published JSON Schema. | A valid sample passes Ajv; invalid samples fail. | T | Verified |
 | URS-IN-002 | M | Every source declares a schema `version`. Breaking changes bump the major version. | An unknown major version gives an explicit error. | T | Verified |
 | URS-IN-003 | M | Each type picks the source structure that fits it best (flat ID references for flowcharts, nesting for composite states). Every structure compiles to the same IR. | I | I | Verified |
+| URS-IN-009 | M | Connections are written under their source: each flowchart node lists its outgoing connections in `to` (`{ node, label?, exitSide?, entrySide?, style?, id?, quote? }`), and each state lists its transitions in `to` (`{ state, event?, guard?, action?, style?, id?, quote? }`). There are no top-level `edges` or `transitions` lists. | Every example, golden and test uses the nested form; diagnostics point at `/nodes/i/to/j`; XML, YAML and AI round trips keep it. | T | Verified |
 | URS-IN-004 | M | Validation reports **all** errors, each with a JSON Pointer path and a message. | A doc with 3 errors yields 3 diagnostics. | T | Verified |
 | URS-IN-005 | M | Common semantic validation: unique IDs and no dangling references. | Each rule has a failing test. | T | Verified |
 | URS-IN-006 | S | XML input via an adapter that maps to the identical source model. | JSON and XML equivalents render byte-identical SVG. | T | Verified |
@@ -70,9 +71,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-006 | M | Directed edges with an optional label. | The label renders on the edge. | T | Verified |
 | URS-DM-007 | S | Multi-line labels, with auto-wrap at a configurable maximum node width. | `\n` and long text both wrap. | T | Verified |
 | URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Verified |
-| URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Verified |
+| URS-DM-009 | S | Optional edge port hints (`exitSide` / `entrySide` on a connection). | Ports are respected. | T | Verified |
 | URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Verified |
-| URS-DM-015 | S | Section defaults: a top-level `styles` object sets a default style per section (a type's top-level lists, e.g. `nodes`, `edges`, `lanes`, `phases`). An item's own `style` overrides it field by field. | Defaults and overrides applied for every type; unknown sections rejected; kept through XML and AI refine. | T | Verified |
+| URS-DM-015 | S | Section defaults: a top-level `styles` object sets a default style per section (a type's top-level lists, e.g. `nodes`, `lanes`, `phases`). Connections have their own top-level default: `edgeStyle` (flowchart), `transitionStyle` (state). An item's own `style` overrides any default field by field. | Defaults and overrides applied for every type; unknown sections rejected; kept through XML and AI refine. | T | Verified |
 | URS-DM-016 | S | More style options: font size, bold, italic, opacity, arrowhead shape (triangle, open, diamond, circle, none) and edge-label background. Layout measures styled text. | Each option rendered; nodes and headers resize for font size; out-of-range values rejected. | T | Verified |
 | URS-DM-017 | S | Standard-size nodes: `label: callout | auto` (or a fixed `width`/`height`) keeps nodes at a standard size. Labels that do not fit go into a callout beside the node, joined by a leader line. The layout reserves room for it in the node's lane, phase and container. | Same size per shape; callouts clear of nodes and labels, inside their lane or container, in LR and TB; pseudostates unchanged. | T | Verified |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
@@ -228,12 +229,13 @@ Updated with each change. `—` = not started.
 | LY-006, LY-008 | core/src/layout/{metrics,labels,obstacles,grid}.ts | core/test/quality.test.ts (hard zero) | |
 | LY-007 | core/src/layout/layered/{order,route}.ts, test/quality-baseline.json | core/test/quality.test.ts, order.test.ts, tips.test.ts | Ratchet per fixture; crossings 3452 → 3007 at P6. |
 | DM-008 | core/src/layout/layered/order.ts (hints) | core/test/order.test.ts | |
-| DM-009 | core/src/layout/layered/route.ts (hintOf, detourC, head/tail stubs), flowchart fromSide/toSide | core/test/sweep-c.test.ts, golden/hints-* | Hinted ends skip port spreading and tip allocation; edges never pass through nodes (quality ratchet). |
+| DM-009 | core/src/layout/layered/route.ts (hintOf, detourC, head/tail stubs), flowchart `exitSide`/`entrySide` | core/test/sweep-c.test.ts, golden/hints-* | Hinted ends skip port spreading and tip allocation; edges never pass through nodes (quality ratchet). |
 | DM-012 | flowchart `notes` → `note` shape + dotted, arrowless link (IR `marker: 'none'`) | core/test/sweep-c.test.ts, golden/hints-* | Notes inherit their node's lane and phase. |
 | TYP-006 | core/src/diagrams/orgchart/* | core/test/sweep-c.test.ts, README example | Rescoped to org chart in v0.15; sequence and ER moved to TYP-007. |
 | TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022 | — | — | Won't (this release), v0.15. TYP-007: sequence diagrams need a new layout engine (lifelines, time axis); ER needs a crow's-foot marker set. IN-008: JSON/XML/YAML plus AI drafting cover authoring; a DSL adds a parser and a second syntax to maintain. DM-011: sub-lanes need nested band layout. RN-008: .vsdx is a large OPC/XML format. RN-009: browsers print SVG to PDF; a server PDF needs a renderer dependency. AI-022: no bulk use case under D-001. |
 | DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
 | DM-015 | schema/fragments.ts (`sectionStyles`), diagrams/section-styles.ts, each type's schema and toIR, ai.ts merges | core/test/style-sections.test.ts | Merge is shallow per field; per-item `style` wins. |
+| IN-009 | diagrams/flowchart/{model (`linksOf`),schema,to-ir,ai}.ts, diagrams/state/{model (`transitionsOf`),schema,to-ir,validate,ai}.ts, adapters/xml.ts | core/test/{flowchart,state,adapters,style-sections,sweep-c}.test.ts, all goldens (converted; drawings identical except one track swap in state-dark), ai/test/refine.test.ts | Generated ids `edge:<source>:<n>`. AI generation stays flat and is nested on the way in; generated edges from unknown sources are dropped. Random quality graphs re-baselined (input order changed, layout code unchanged). |
 | DM-016 | style.ts (`fontOf`), layout/layered/{build,route,index,compound}.ts, render/svg/* | core/test/style-sections.test.ts, golden/state-callouts | Italic is measured with upright widths (within ~1 %). Container header height now travels in geometry (`head`). |
 | DM-017 | shapes (`inner`), layout/layered/{build,graph,place,route,compound}.ts (`after`/`reach` reserve room), layout/labels.ts (callout placement), render/svg/index.ts | core/test/style-sections.test.ts, golden/callouts-tb, golden/state-callouts, README example | Callouts start in the reserved spot; the placer moves them only if blocked. |
 | DM-014 | schema/fragments.ts (`lineWidth`), render/svg/{index,bands,containers}.ts, web/src/preview/sanitize.ts | core/test/styles.test.ts (line thickness), golden/styled | One marker per colour and size; the sanitiser pattern-checks `stroke-width` and marker sizes. |
@@ -300,6 +302,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.22 | 2026-11-11 | Added IN-009: connections nest under their source node or state (`to`), replacing top-level `edges` and `transitions`; `edgeStyle` and `transitionStyle` replace `styles.edges` and `styles.transitions`; side hints renamed `exitSide`/`entrySide` (DM-009). Breaking change kept at version 1, as decided by the owner. |
 | 0.21 | 2026-11-11 | Added DM-015 (section defaults), DM-016 (more style options), DM-017 (standard-size nodes, callouts); all verified. |
 | 0.20 | 2026-11-11 | Added DM-014 (line thickness, `style.lineWidth`); verified. |
 | 0.19 | 2026-11-11 | Fix: a release made on the releases page made the Release workflow fail (`release already exists`), so no app bundle was attached. The workflow now attaches to an existing release and can be re-run for a tag; installers say what is missing. |

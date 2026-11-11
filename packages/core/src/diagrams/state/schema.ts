@@ -10,27 +10,9 @@ export const stateSchema = {
   properties: {
     ...envelope('state'),
     direction,
-    styles: sectionStyles(['states', 'transitions']),
+    styles: sectionStyles(['states']),
     states: { type: 'array', items: { $ref: '#/$defs/state' }, description: 'Top-level states.' },
-    transitions: {
-      type: 'array',
-      description: 'Drawn as `event [guard] / action`; endpoints may be any state, composite or nested.',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['from', 'to'],
-        properties: {
-          id: { ...id, description: 'Optional; generated when absent.' },
-          from: ref('Source state id.'),
-          to: ref('Target state id.'),
-          event: { type: 'string', description: 'Trigger.' },
-          guard: { type: 'string', description: 'Condition, shown in brackets.' },
-          action: { type: 'string', description: 'Effect, shown after a slash.' },
-          quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
-          style,
-        },
-      },
-    },
+    transitionStyle: { ...style, description: 'Default style for every transition; each one’s own `style` overrides it field by field.' },
   },
   $defs: {
     state: {
@@ -44,6 +26,22 @@ export const stateSchema = {
         states: { type: 'array', description: 'Nested states make this a composite state.', items: { $ref: '#/$defs/state' } },
         quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
         style,
+        to: { type: 'array', items: { $ref: '#/$defs/transition' }, description: 'Outgoing transitions; targets may be any state, composite or nested.' },
+      },
+    },
+    transition: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['state'],
+      description: 'Drawn as `event [guard] / action`.',
+      properties: {
+        state: ref('Target state id.'),
+        event: { type: 'string', description: 'Trigger.' },
+        guard: { type: 'string', description: 'Condition, shown in brackets.' },
+        action: { type: 'string', description: 'Effect, shown after a slash.' },
+        id: { ...id, description: 'Optional; generated when absent.' },
+        quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
+        style: { ...style, description: 'Overrides `transitionStyle` field by field.' },
       },
     },
   },

@@ -7,7 +7,7 @@ const generated = {
   valid: true,
   attempts: 2,
   diagnostics: [],
-  source: { version: '1', type: 'flowchart', title: 'From notes', nodes: [{ id: 'a', label: 'Collect' }, { id: 'b', label: 'Approve' }], edges: [{ from: 'a', to: 'b' }] },
+  source: { version: '1', type: 'flowchart', title: 'From notes', nodes: [{ id: 'a', label: 'Collect', to: [{ node: 'b' }] }, { id: 'b', label: 'Approve' }] },
 };
 
 async function mockAi(page: Page, enabled: boolean, reply?: { status: number; body: object }) {

@@ -8,10 +8,6 @@
       "fill": "#eff6ff",
       "stroke": "#1d4ed8"
     },
-    "edges": {
-      "stroke": "#475569",
-      "arrowhead": "open"
-    },
     "lanes": {
       "fill": "#f1f5f9",
       "fontSize": 14
@@ -39,18 +35,47 @@
       "id": "start",
       "shape": "terminator",
       "label": "Start",
-      "lane": "emp"
+      "lane": "emp",
+      "to": [
+        {
+          "node": "submit"
+        }
+      ]
     },
     {
       "id": "submit",
       "label": "Submit claim with receipts and a short business justification",
-      "lane": "emp"
+      "lane": "emp",
+      "to": [
+        {
+          "node": "check"
+        }
+      ]
     },
     {
       "id": "check",
       "shape": "decision",
       "label": "Within policy and budget for this quarter?",
-      "lane": "mgr"
+      "lane": "mgr",
+      "to": [
+        {
+          "node": "pay",
+          "label": "Yes",
+          "style": {
+            "stroke": "#15803d",
+            "labelFill": "#dcfce7"
+          }
+        },
+        {
+          "node": "return",
+          "label": "No",
+          "style": {
+            "stroke": "#b91c1c",
+            "dash": "dashed",
+            "arrowhead": "diamond"
+          }
+        }
+      ]
     },
     {
       "id": "return",
@@ -58,7 +83,15 @@
       "lane": "emp",
       "style": {
         "italic": true
-      }
+      },
+      "to": [
+        {
+          "node": "submit",
+          "style": {
+            "opacity": 0.5
+          }
+        }
+      ]
     },
     {
       "id": "pay",
@@ -68,7 +101,16 @@
         "bold": true,
         "fill": "#dcfce7",
         "stroke": "#15803d"
-      }
+      },
+      "to": [
+        {
+          "node": "end",
+          "style": {
+            "arrowhead": "circle",
+            "lineWidth": 2
+          }
+        }
+      ]
     },
     {
       "id": "end",
@@ -77,49 +119,9 @@
       "lane": "fin"
     }
   ],
-  "edges": [
-    {
-      "from": "start",
-      "to": "submit"
-    },
-    {
-      "from": "submit",
-      "to": "check"
-    },
-    {
-      "from": "check",
-      "to": "pay",
-      "label": "Yes",
-      "style": {
-        "stroke": "#15803d",
-        "labelFill": "#dcfce7"
-      }
-    },
-    {
-      "from": "check",
-      "to": "return",
-      "label": "No",
-      "style": {
-        "stroke": "#b91c1c",
-        "dash": "dashed",
-        "arrowhead": "diamond"
-      }
-    },
-    {
-      "from": "return",
-      "to": "submit",
-      "style": {
-        "opacity": 0.5
-      }
-    },
-    {
-      "from": "pay",
-      "to": "end",
-      "style": {
-        "arrowhead": "circle",
-        "lineWidth": 2
-      }
-    }
-  ],
-  "direction": "TB"
+  "direction": "TB",
+  "edgeStyle": {
+    "stroke": "#475569",
+    "arrowhead": "open"
+  }
 }

@@ -3,7 +3,15 @@ import { compile, createRegistry, render } from '../src/index.ts';
 import { stateAi } from '../src/diagrams/state/ai.ts';
 
 const reg = createRegistry();
-const doc = (states: unknown[], transitions: unknown[] = []) => ({ version: '1', type: 'state', states, transitions });
+type S = { id: string; kind?: string; label?: string; states?: S[] };
+type T = { from: string; to: string; event?: string; guard?: string; action?: string };
+/** Tests list transitions as compact pairs; the document nests each under its source state (URS-IN-009). */
+const attach = (states: S[], ts: T[]): S[] =>
+  states.map((s) => {
+    const to = ts.filter((t) => t.from === s.id).map(({ from: _from, to, ...rest }) => ({ state: to, ...rest }));
+    return { ...s, ...(s.states && { states: attach(s.states, ts) }), ...(to.length && { to }) };
+  });
+const doc = (states: S[], transitions: T[] = []) => ({ version: '1', type: 'state', states: attach(states, transitions) });
 const codes = (d: unknown) => compile(d, reg).diagnostics.map((x) => [x.severity, x.code, x.path]);
 
 describe('state type (URS-TYP-003..005)', () => {

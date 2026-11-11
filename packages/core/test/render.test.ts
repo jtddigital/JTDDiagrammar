@@ -48,7 +48,7 @@ describe('SVG output', () => {
     const out = svg(reg.type('flowchart')!.examples[0]!.source);
     expect(out).toContain('class="jtd jtd-flowchart"');
     expect(out).toContain('<g id="n-known" class="jtd-node jtd-shape-decision"');
-    expect(out).toContain('<g id="e-edge:2" class="jtd-edge">');
+    expect(out).toContain('<g id="e-edge:known:0" class="jtd-edge">');
   });
 
   it('draws lane and phase bands with headers (URS-RN-002)', () => {

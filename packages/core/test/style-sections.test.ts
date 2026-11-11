@@ -16,14 +16,14 @@ const overlap = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < 
 const flow = {
   version: '1',
   type: 'flowchart',
-  styles: { nodes: { fill: '#eff6ff', stroke: '#1d4ed8' }, edges: { stroke: '#475569', dash: 'dashed' }, lanes: { fill: '#f1f5f9' }, phases: { text: '#334155' }, notes: { fill: '#fff7ed' } },
+  styles: { nodes: { fill: '#eff6ff', stroke: '#1d4ed8' }, lanes: { fill: '#f1f5f9' }, phases: { text: '#334155' }, notes: { fill: '#fff7ed' } },
+  edgeStyle: { stroke: '#475569', dash: 'dashed' },
   lanes: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B', style: { fill: '#fef3c7' } }],
   phases: [{ id: 'p', label: 'P' }],
   nodes: [
-    { id: 'x', lane: 'a', phase: 'p' },
-    { id: 'y', lane: 'b', phase: 'p', style: { fill: '#dcfce7' } },
+    { id: 'x', lane: 'a', phase: 'p', to: [{ node: 'y' }] },
+    { id: 'y', lane: 'b', phase: 'p', style: { fill: '#dcfce7' }, to: [{ node: 'x', style: { dash: 'solid' } }] },
   ],
-  edges: [{ from: 'x', to: 'y' }, { from: 'y', to: 'x', style: { dash: 'solid' } }],
   notes: [{ for: 'x', text: 'n' }],
 };
 
@@ -40,7 +40,7 @@ describe('section styles (URS-DM-015)', () => {
   });
 
   it('works for state diagrams and org charts', () => {
-    const s = ir({ version: '1', type: 'state', styles: { states: { fill: '#fef3c7' }, transitions: { stroke: '#dc2626' } }, states: [{ id: 'c', states: [{ id: 'x', style: { stroke: '#000000' } }] }], transitions: [{ from: 'c', to: 'x' }] });
+    const s = ir({ version: '1', type: 'state', styles: { states: { fill: '#fef3c7' } }, transitionStyle: { stroke: '#dc2626' }, states: [{ id: 'c', states: [{ id: 'x', style: { stroke: '#000000' } }], to: [{ state: 'x' }] }] });
     expect(s.containers[0]!.style).toEqual({ fill: '#fef3c7' });
     expect(s.nodes[0]!.style).toEqual({ fill: '#fef3c7', stroke: '#000000' });
     expect(s.edges[0]!.style).toEqual({ stroke: '#dc2626' });
@@ -66,7 +66,7 @@ describe('section styles (URS-DM-015)', () => {
   });
 });
 
-const one = (style: object, extra: object = {}) => ({ version: '1', type: 'flowchart', nodes: [{ id: 'a', label: 'Approve the purchase order', style }, { id: 'b' }], edges: [{ from: 'a', to: 'b' }], ...extra });
+const one = (style: object, to: object[] = [{ node: 'b' }], back: object[] = []) => ({ version: '1', type: 'flowchart', nodes: [{ id: 'a', label: 'Approve the purchase order', style, to }, { id: 'b', to: back }] });
 
 describe('more style options (URS-DM-016)', () => {
   it('sizes nodes for their font and draws size, weight and slant', () => {
@@ -77,7 +77,7 @@ describe('more style options (URS-DM-016)', () => {
   });
 
   it('styles edge labels, band headers and container headers', () => {
-    expect(svg(one({}, { edges: [{ from: 'a', to: 'b', label: 'ok', style: { fontSize: 16, labelFill: '#fef9c3' } }] }))).toMatch(/fill="#fef9c3"\/><text [^>]*font-size="16"[^>]*>ok</);
+    expect(svg(one({}, [{ node: 'b', label: 'ok', style: { fontSize: 16, labelFill: '#fef9c3' } }]))).toMatch(/fill="#fef9c3"\/><text [^>]*font-size="16"[^>]*>ok</);
     const lanes = { version: '1', type: 'flowchart', lanes: [{ id: 'l', label: 'Lane', style: { fontSize: 20, bold: false } }], nodes: [{ id: 'a', lane: 'l' }] };
     expect(svg(lanes)).toMatch(/font-size="20"[^>]*>Lane</);
     const state = (fontSize?: number) => ({ version: '1', type: 'state', states: [{ id: 'c', label: 'Composite', ...(fontSize && { style: { fontSize } }), states: [{ id: 'x' }] }] });
@@ -87,12 +87,12 @@ describe('more style options (URS-DM-016)', () => {
   });
 
   it('applies opacity and arrowhead shapes', () => {
-    const out = svg(one({ opacity: 0.4 }, { edges: [{ from: 'a', to: 'b', style: { arrowhead: 'diamond' } }, { from: 'b', to: 'a', style: { arrowhead: 'none' } }] }));
+    const out = svg(one({ opacity: 0.4 }, [{ node: 'b', style: { arrowhead: 'diamond' } }], [{ node: 'a', style: { arrowhead: 'none' } }]));
     expect(out).toContain('<g id="n-a" class="jtd-node jtd-shape-process" transform="translate(');
     expect(out).toMatch(/<g id="n-a"[^>]*opacity="0.4"/);
     expect(out).toContain('marker-end="url(#jtd-arrow-diamond)"');
-    expect(out.match(/<g id="e-edge:1"[^]*?<\/g>/)![0]).not.toContain('marker-end');
-    for (const head of ['open', 'circle']) expect(svg(one({}, { edges: [{ from: 'a', to: 'b', style: { arrowhead: head } }] }))).toContain(`<marker id="jtd-arrow-${head}"`);
+    expect(out.match(/<g id="e-edge:b:0"[^]*?<\/g>/)![0]).not.toContain('marker-end');
+    for (const head of ['open', 'circle']) expect(svg(one({}, [{ node: 'b', style: { arrowhead: head } }]))).toContain(`<marker id="jtd-arrow-${head}"`);
   });
 
   it('rejects out-of-range values', () => {
@@ -107,12 +107,11 @@ const callouts = (label: string, extra: object = {}) => ({
   styles: { nodes: { label } },
   lanes: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
   nodes: [
-    { id: 's', label: 'Go', lane: 'a' },
-    { id: 'l', label: 'A rather long label that will never fit inside a standard node', lane: 'a' },
-    { id: 'd', shape: 'decision', label: 'Within policy for this quarter?', lane: 'b' },
+    { id: 's', label: 'Go', lane: 'a', to: [{ node: 'l' }] },
+    { id: 'l', label: 'A rather long label that will never fit inside a standard node', lane: 'a', to: [{ node: 'd' }] },
+    { id: 'd', shape: 'decision', label: 'Within policy for this quarter?', lane: 'b', to: [{ node: 'e', label: 'yes' }] },
     { id: 'e', label: 'End', lane: 'b' },
   ],
-  edges: [{ from: 's', to: 'l' }, { from: 'l', to: 'd' }, { from: 'd', to: 'e', label: 'yes' }],
   ...extra,
 });
 
@@ -153,14 +152,14 @@ describe('fixed-size nodes and callouts (URS-DM-017)', () => {
   });
 
   it('keeps callouts inside composite states', () => {
-    const g = geo({ version: '1', type: 'state', styles: { states: { label: 'callout' } }, states: [{ id: 'c', states: [{ id: 'x', label: 'A long description of a nested state' }, { id: 'y', label: 'Another long nested state label' }] }], transitions: [{ from: 'x', to: 'y' }] });
+    const g = geo({ version: '1', type: 'state', styles: { states: { label: 'callout' } }, states: [{ id: 'c', states: [{ id: 'x', label: 'A long description of a nested state', to: [{ state: 'y' }] }, { id: 'y', label: 'Another long nested state label' }] }] });
     for (const n of g.nodes) expect(inside(g.containers[0]!, n.callout!)).toBe(true);
   });
 
   it('honours a fixed width and height, and leaves pseudostates alone', () => {
     const n = geo(one({ width: 140, height: 60 })).nodes[0]!;
     expect([n.w, n.h]).toEqual([140, 60]);
-    const s = geo({ version: '1', type: 'state', styles: { states: { width: 140, height: 60, label: 'callout' } }, states: [{ id: 'i', kind: 'initial' }, { id: 'x' }], transitions: [{ from: 'i', to: 'x' }] });
+    const s = geo({ version: '1', type: 'state', styles: { states: { width: 140, height: 60, label: 'callout' } }, states: [{ id: 'i', kind: 'initial', to: [{ state: 'x' }] }, { id: 'x' }] });
     expect(s.nodes.find((x) => x.id === 'i')!.w).toBe(18);
   });
 

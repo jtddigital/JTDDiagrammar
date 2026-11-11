@@ -3,18 +3,58 @@
   "type": "flowchart",
   "title": "Retry loop",
   "nodes": [
-    { "id": "start", "shape": "terminator", "label": "Start" },
-    { "id": "try", "label": "Attempt upload" },
-    { "id": "ok", "shape": "decision", "label": "Succeeded?" },
-    { "id": "wait", "label": "Back off" },
-    { "id": "end", "shape": "terminator", "label": "Done" }
-  ],
-  "edges": [
-    { "from": "start", "to": "try" },
-    { "from": "try", "to": "ok" },
-    { "from": "ok", "to": "end", "label": "Yes" },
-    { "from": "ok", "to": "wait", "label": "No" },
-    { "from": "wait", "to": "try", "label": "retry" },
-    { "from": "wait", "to": "wait", "label": "tick" }
+    {
+      "id": "start",
+      "shape": "terminator",
+      "label": "Start",
+      "to": [
+        {
+          "node": "try"
+        }
+      ]
+    },
+    {
+      "id": "try",
+      "label": "Attempt upload",
+      "to": [
+        {
+          "node": "ok"
+        }
+      ]
+    },
+    {
+      "id": "ok",
+      "shape": "decision",
+      "label": "Succeeded?",
+      "to": [
+        {
+          "node": "end",
+          "label": "Yes"
+        },
+        {
+          "node": "wait",
+          "label": "No"
+        }
+      ]
+    },
+    {
+      "id": "wait",
+      "label": "Back off",
+      "to": [
+        {
+          "node": "try",
+          "label": "retry"
+        },
+        {
+          "node": "wait",
+          "label": "tick"
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "shape": "terminator",
+      "label": "Done"
+    }
   ]
 }

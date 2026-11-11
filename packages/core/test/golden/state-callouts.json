@@ -8,20 +8,27 @@
       "label": "callout",
       "width": 90,
       "height": 36
-    },
-    "transitions": {
-      "arrowhead": "open",
-      "fontSize": 11
     }
   },
   "states": [
     {
       "id": "i",
-      "kind": "initial"
+      "kind": "initial",
+      "to": [
+        {
+          "state": "idle"
+        }
+      ]
     },
     {
       "id": "idle",
-      "label": "Waiting for the customer to pick a plan"
+      "label": "Waiting for the customer to pick a plan",
+      "to": [
+        {
+          "state": "active",
+          "event": "subscribe"
+        }
+      ]
     },
     {
       "id": "active",
@@ -32,15 +39,38 @@
       "states": [
         {
           "id": "a1",
-          "kind": "initial"
+          "kind": "initial",
+          "to": [
+            {
+              "state": "billing"
+            }
+          ]
         },
         {
           "id": "billing",
-          "label": "Billing cycle running normally"
+          "label": "Billing cycle running normally",
+          "to": [
+            {
+              "state": "dunning",
+              "event": "payment failed"
+            }
+          ]
         },
         {
           "id": "dunning",
-          "label": "Retrying a failed payment"
+          "label": "Retrying a failed payment",
+          "to": [
+            {
+              "state": "billing",
+              "event": "paid"
+            }
+          ]
+        }
+      ],
+      "to": [
+        {
+          "state": "f",
+          "event": "cancel"
         }
       ]
     },
@@ -49,34 +79,8 @@
       "kind": "final"
     }
   ],
-  "transitions": [
-    {
-      "from": "i",
-      "to": "idle"
-    },
-    {
-      "from": "idle",
-      "to": "active",
-      "event": "subscribe"
-    },
-    {
-      "from": "a1",
-      "to": "billing"
-    },
-    {
-      "from": "billing",
-      "to": "dunning",
-      "event": "payment failed"
-    },
-    {
-      "from": "dunning",
-      "to": "billing",
-      "event": "paid"
-    },
-    {
-      "from": "active",
-      "to": "f",
-      "event": "cancel"
-    }
-  ]
+  "transitionStyle": {
+    "arrowhead": "open",
+    "fontSize": 11
+  }
 }

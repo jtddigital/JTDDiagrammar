@@ -8,9 +8,12 @@ export function randomGraphs(): [string, unknown][] {
   return specs.map(({ name, n, m, lanes, seed }) => {
     let s = seed;
     const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    const nodes = Array.from({ length: n }, (_, i) => ({ id: `n${i}`, label: `Step ${i}`, ...(lanes && { lane: `l${i % lanes}` }) }));
-    const edges = Array.from({ length: m }, (_, i) => ({ from: `n${Math.floor(rnd() * n)}`, to: `n${Math.floor(rnd() * n)}`, ...(i % 5 === 0 && { label: `e${i}` }) }));
-    const doc = { version: '1', type: 'flowchart', nodes, edges, ...(lanes && { lanes: Array.from({ length: lanes }, (_, i) => ({ id: `l${i}`, label: `Lane ${i}` })) }) };
+    const nodes = Array.from({ length: n }, (_, i) => ({ id: `n${i}`, label: `Step ${i}`, ...(lanes && { lane: `l${i % lanes}` }), to: [] as { node: string; label?: string }[] }));
+    for (let i = 0; i < m; i++) {
+      const [from, to] = [Math.floor(rnd() * n), Math.floor(rnd() * n)];
+      nodes[from]!.to.push({ node: `n${to}`, ...(i % 5 === 0 && { label: `e${i}` }) });
+    }
+    const doc = { version: '1', type: 'flowchart', nodes, ...(lanes && { lanes: Array.from({ length: lanes }, (_, i) => ({ id: `l${i}`, label: `Lane ${i}` })) }) };
     return [name, doc] as [string, unknown];
   });
 }

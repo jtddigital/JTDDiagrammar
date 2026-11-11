@@ -1,14 +1,14 @@
 import { error, warning, type Diagnostic } from '../../diagnostics.ts';
-import { walk, type StateDiagram } from './model.ts';
+import { transitionsOf, walk, type StateDiagram } from './model.ts';
 
 /** State-specific rules (URS-EXT-007, URS-TYP-003/004). References are checked by the common rules. */
 export function validateState(m: StateDiagram): Diagnostic[] {
   const out: Diagnostic[] = [];
   const all = [...walk(m.states)];
   const kind = new Map(all.map(({ state: s }) => [s.id, s.kind ?? 'state']));
-  const ts = m.transitions ?? [];
+  const ts = transitionsOf(m.states);
   const from = (id: string) => ts.filter((t) => t.from === id).length;
-  const into = (id: string) => ts.filter((t) => t.to === id).length;
+  const into = (id: string) => ts.filter((t) => t.state === id).length;
 
   const initials = new Map<string, number>();
   for (const { state: s, path, parent } of all) {
