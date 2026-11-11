@@ -564,43 +564,47 @@ Validation reports **every** problem, not only the first. Each one carries a JSO
 
 ## Install
 
-Installs the latest release for your user (no admin rights) and adds a `jtddiagrammar` command. Needs [Node.js](https://nodejs.org) 22.18 or later and access to the npm registry (dependencies are installed from the release's lockfile).
+### Windows
 
-Linux and macOS:
-
-```bash
-curl -fsSL https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.sh | bash
-```
-
-Windows (PowerShell):
+In PowerShell (no admin rights needed):
 
 ```powershell
 irm https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.ps1 | iex
 ```
 
-If the repository is private, the download links above need a signed-in browser, so get the installer from the [releases page](https://github.com/jtddigital/JTDDiagrammar/releases/latest) and run it with a token that can read the repository (or after `gh auth login`):
+If Node.js 22.18+ is missing, the installer installs the current Node.js LTS with `winget` first. Then it downloads the latest release, checks its SHA-256 and installs it to `%LOCALAPPDATA%\jtddiagrammar`. It also adds **JTDDiagrammar** shortcuts to the Start Menu and the desktop, and a `jtddiagrammar` command to your PATH.
 
-```bash
-GITHUB_TOKEN=<token> bash install.sh
+**To start:** double-click the **JTDDiagrammar** shortcut. A console window starts the app on http://localhost:8080 (local only) and opens your browser. Close the window to stop it.
+
+**Private repository:** the link above needs a signed-in browser. Download `install.ps1` from the [releases page](https://github.com/jtddigital/JTDDiagrammar/releases/latest) and run it with a token that can read the repository (or after `gh auth login`):
+
+```powershell
+$env:GITHUB_TOKEN = '<token>'; powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Then launch it:
+### Linux and macOS
+
+Needs Node.js 22.18+.
 
 ```bash
-jtddiagrammar
+curl -fsSL https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.sh | bash
 ```
 
-This starts the app on http://localhost:8080 (local only), waits until it's ready and opens your browser. Ctrl+C stops it. On Windows there is also a **JTDDiagrammar** Start Menu entry; on Linux, a desktop entry.
+Then run `jtddiagrammar` to start the app and open your browser; Ctrl+C stops it. On Linux there's also a desktop entry.
+
+### Commands
 
 | Command | Does |
 |---------|------|
+| `jtddiagrammar` | Start the app and open the browser |
 | `jtddiagrammar --port 9000 --no-open` | Another port; don't open the browser |
 | `jtddiagrammar update` | Install the latest release (or `update v1.2.3`) |
 | `jtddiagrammar version` | Show the installed version |
+| `jtddiagrammar uninstall` | Windows: remove the app, its shortcuts and PATH entry (`--keep-config` keeps your settings) |
 
-Settings, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder (`~/.local/share/jtddiagrammar`, or `%LOCALAPPDATA%\jtddiagrammar` on Windows). Updates keep it. The installer verifies each download's SHA-256 and keeps the previous version alongside the new one.
+**Settings**, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder. Updates keep it. Installing also needs access to the npm registry, because dependencies are installed from the release's lockfile.
 
-**Publishing a release:** push a tag such as `v1.0.0`. The `Release` workflow runs the checks and attaches the bundle, its checksum and both installers. CI installs and launches a packed release on Linux, macOS and Windows on every push (`pnpm release:e2e`).
+**Publishing a release:** push a tag such as `v1.0.0`. The `Release` workflow runs the checks and attaches the bundle, its checksum and both installers. On every push, CI installs, launches, updates and uninstalls a packed release on Windows (Windows PowerShell 5.1 and PowerShell 7) and Linux (`pnpm release:e2e`).
 
 ## Quick start
 

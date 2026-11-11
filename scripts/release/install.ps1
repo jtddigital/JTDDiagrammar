@@ -1,11 +1,12 @@
-# JTDDiagrammar installer for Windows (URS-NF-010). Windows PowerShell 5.1 or PowerShell 7.
+# JTDDiagrammar installer for Windows (URS-NF-010, URS-NF-013). Windows PowerShell 5.1 or PowerShell 7.
 #   irm https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.ps1 | iex
 #   powershell -ExecutionPolicy Bypass -File install.ps1 v1.2.3     # a specific release
 # Private repository: set GITHUB_TOKEN, or log in with `gh auth login`.
-# Overrides: JTD_HOME (install dir), JTD_REPO, JTD_API, JTD_VERSION.
+# Overrides: JTD_HOME (install dir), JTD_REPO, JTD_API, JTD_VERSION; JTD_NO_SHORTCUTS=1 skips shortcuts.
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+$OnWindows = $env:OS -eq 'Windows_NT'
+if ($OnWindows) { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 }
 
 function Get-Setting($Name, $Default) { $v = [Environment]::GetEnvironmentVariable($Name); if ($v) { $v } else { $Default } }
 function Say($Text) { Write-Host "jtddiagrammar: $Text" }
@@ -13,13 +14,23 @@ function Fail($Text) { throw "jtddiagrammar: $Text" }
 
 $Repo = Get-Setting 'JTD_REPO' 'jtddigital/JTDDiagrammar'
 $Api = Get-Setting 'JTD_API' 'https://api.github.com'
-$JtdHome = Get-Setting 'JTD_HOME' (Join-Path $env:LOCALAPPDATA 'jtddiagrammar')
+$JtdHome = if ($env:JTD_HOME) { $env:JTD_HOME } else { Join-Path $env:LOCALAPPDATA 'jtddiagrammar' }
 $Want = if ($args.Count -gt 0) { $args[0] } else { Get-Setting 'JTD_VERSION' 'latest' }
 $Asset = 'jtddiagrammar.tar.gz'
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js 22.18 or later is required: https://nodejs.org' }
-& node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=18)?0:1)'
-if ($LASTEXITCODE -ne 0) { Fail "Node.js 22.18 or later is required (found $(node --version))" }
+# Node.js 22.18+ runs the app. Missing or too old: install the current LTS with winget.
+function Test-Node {
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) { return $false }
+  & node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=18)?0:1)'
+  $LASTEXITCODE -eq 0
+}
+if (-not (Test-Node)) {
+  if (-not ($OnWindows -and (Get-Command winget -ErrorAction SilentlyContinue))) { Fail 'Node.js 22.18 or later is required: https://nodejs.org' }
+  Say 'installing Node.js LTS with winget'
+  & winget install --id OpenJS.NodeJS.LTS --exact --silent --accept-package-agreements --accept-source-agreements | Out-Host
+  $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (-not (Test-Node)) { Fail 'Node.js could not be installed; install it from https://nodejs.org and run this again' }
+}
 if (-not (Get-Command tar -ErrorAction SilentlyContinue)) { Fail 'tar is required (included with Windows 10 1803 and later)' }
 
 $Token = Get-Setting 'GITHUB_TOKEN' (Get-Setting 'GH_TOKEN' '')
@@ -38,7 +49,7 @@ $tar = $release.assets | Where-Object name -eq $Asset
 $sum = $release.assets | Where-Object name -eq "$Asset.sha256"
 if ($Tag -notmatch '^v[\w.+-]+$' -or -not $tar -or -not $sum) { Fail "release '$Want' has no $Asset" }
 
-$tmp = Join-Path ([IO.Path]::GetTempPath()) ("jtd-" + [Guid]::NewGuid())
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ('jtd-' + [Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 try {
   Say "downloading $Tag"
@@ -76,6 +87,7 @@ try {
   Set-Content -Path $currentFile -Value $Tag -NoNewline -Encoding ASCII
   Get-ChildItem $versions -Directory | Where-Object { $_.Name -ne $Tag -and $_.Name -ne $prev } | Remove-Item -Recurse -Force
 
+  # User settings (API key, port…) live outside the version folders and survive updates.
   $config = Join-Path $JtdHome 'config.env'
   if (-not (Test-Path $config)) { Copy-Item (Join-Path $dest '.env.example') $config }
 
@@ -90,25 +102,30 @@ try {
     'set /p JTD_VER=<"%JTD_HOME%\current"',
     'powershell -NoProfile -ExecutionPolicy Bypass -File "%JTD_HOME%\versions\%JTD_VER%\bin\jtddiagrammar.ps1" %*'
   )
-  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-  if (-not (($userPath -split ';') -contains $bin)) {
-    [Environment]::SetEnvironmentVariable('Path', (@($userPath, $bin) | Where-Object { $_ }) -join ';', 'User')
-    Say "added $bin to your PATH (new terminals)"
-  }
 
-  $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'JTDDiagrammar.lnk'
-  try {
-    $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut($menu)
-    $lnk.TargetPath = $shim
-    $lnk.Arguments = 'start'
-    $lnk.WorkingDirectory = $JtdHome
-    $lnk.Description = 'Diagrams from structured text'
-    $lnk.Save()
-  } catch { Say 'could not create the Start Menu entry; use the jtddiagrammar command' }
+  if ($OnWindows) {
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (-not (($userPath -split ';') -contains $bin)) {
+      [Environment]::SetEnvironmentVariable('Path', (@($userPath, $bin) | Where-Object { $_ }) -join ';', 'User')
+      Say "added $bin to your PATH (takes effect in new terminals)"
+    }
+    if (-not $env:JTD_NO_SHORTCUTS) {
+      $shell = New-Object -ComObject WScript.Shell
+      foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
+        $lnk = $shell.CreateShortcut((Join-Path $folder 'JTDDiagrammar.lnk'))
+        $lnk.TargetPath = $shim
+        $lnk.Arguments = 'start'
+        $lnk.WorkingDirectory = $JtdHome
+        $lnk.Description = 'Start JTDDiagrammar and open it in your browser'
+        $lnk.IconLocation = "$env:SystemRoot\System32\imageres.dll,1"
+        $lnk.Save()
+      }
+    }
+  }
 
   Say "installed $Tag in $JtdHome"
   Say "settings: $config (set ANTHROPIC_API_KEY there to enable AI generation)"
-  Say 'run: jtddiagrammar   (or JTDDiagrammar in the Start Menu)'
+  Say 'start it from the JTDDiagrammar shortcut (Start Menu or desktop), or run: jtddiagrammar'
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }

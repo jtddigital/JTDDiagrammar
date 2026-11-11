@@ -2,7 +2,9 @@
 #   jtddiagrammar [start] [--port N] [--no-open]   start the app and open it in the browser
 #   jtddiagrammar update [vX.Y.Z]                  install the latest (or a given) release
 #   jtddiagrammar version
+#   jtddiagrammar uninstall [--keep-config]      remove the app, its shortcuts and its PATH entry
 $ErrorActionPreference = 'Stop'
+$OnWindows = $env:OS -eq 'Windows_NT'
 $App = Split-Path -Parent $PSScriptRoot
 if (-not $env:JTD_HOME) { $env:JTD_HOME = Split-Path -Parent (Split-Path -Parent $App) }
 
@@ -17,6 +19,29 @@ function Test-Up($Url) {
 switch ($cmd) {
   'version' { Get-Content (Join-Path $App 'VERSION') }
   'update' { & (Join-Path $App 'bin\install.ps1') @rest }
+  'uninstall' {
+    $keep = $rest -contains '--keep-config'
+    if ($OnWindows) {
+      foreach ($folder in @([Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop'))) {
+        Remove-Item (Join-Path $folder 'JTDDiagrammar.lnk') -ErrorAction SilentlyContinue
+      }
+      $bin = Join-Path $env:JTD_HOME 'bin'
+      $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+      [Environment]::SetEnvironmentVariable('Path', (($userPath -split ';') | Where-Object { $_ -and $_ -ne $bin }) -join ';', 'User')
+    }
+    $config = Join-Path $env:JTD_HOME 'config.env'
+    $doomed = Get-ChildItem $env:JTD_HOME -Force | Where-Object { -not ($keep -and $_.FullName -eq $config) }
+    if ($OnWindows) {
+      # cmd.exe still has the running .cmd shim open: delete once this process has exited.
+      $list = ($doomed | ForEach-Object { if ($_.PSIsContainer) { "rmdir /s /q `"$($_.FullName)`"" } else { "del /f /q `"$($_.FullName)`"" } }) -join ' & '
+      $tail = if ($keep) { '' } else { " & rmdir /q `"$($env:JTD_HOME)`"" }
+      Start-Process cmd -ArgumentList "/c ping -n 3 127.0.0.1 >nul & $list$tail" -WindowStyle Hidden
+    } else {
+      $doomed | Remove-Item -Recurse -Force
+      if (-not $keep) { Remove-Item $env:JTD_HOME -Force }
+    }
+    if ($keep) { "JTDDiagrammar removed; kept $config" } else { 'JTDDiagrammar removed' }
+  }
   'start' {
     $config = Join-Path $env:JTD_HOME 'config.env'
     if (Test-Path $config) {
@@ -51,5 +76,5 @@ switch ($cmd) {
       if (-not $node.HasExited) { Stop-Process -Id $node.Id -Force }
     }
   }
-  default { Get-Content $PSCommandPath | Select-Object -Skip 1 -First 4 | ForEach-Object { $_ -replace '^# ?', '' }; exit 2 }
+  default { Get-Content $PSCommandPath | Select-Object -Skip 1 -First 5 | ForEach-Object { $_ -replace '^# ?', '' }; exit 2 }
 }
