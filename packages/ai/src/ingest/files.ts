@@ -1,5 +1,6 @@
 import { convert } from 'html-to-text';
 import mammoth from 'mammoth';
+import { PDFDocument } from 'pdf-lib';
 import type { InputBlock } from '../client.ts';
 import { AiError } from '../errors.ts';
 
@@ -14,6 +15,16 @@ export interface IngestLimits {
   maxFileBytes: number;
   /** All files together. The Messages API caps a request at 32 MB with base64 (4/3) included. */
   maxTotalBytes: number;
+  /** Per PDF; the Messages API accepts up to 600 pages. */
+  maxPdfPages?: number;
+}
+
+async function pdfPages(f: InputFile): Promise<number> {
+  try {
+    return (await PDFDocument.load(f.data, { ignoreEncryption: true, updateMetadata: false })).getPageCount();
+  } catch {
+    throw new AiError('ai.input', `could not read '${f.name}' as a PDF file`);
+  }
 }
 
 type Kind = 'pdf' | 'docx' | 'html' | 'text';
@@ -58,6 +69,11 @@ export async function ingest(files: readonly InputFile[], text: string | undefin
   for (const f of files) {
     if (f.data.byteLength > limits.maxFileBytes) throw new AiError('limit.file', `'${f.name}' is ${f.data.byteLength} bytes; the limit is ${limits.maxFileBytes}`);
     const kind = kindOf(f);
+    if (kind === 'pdf') {
+      const pages = await pdfPages(f);
+      const max = limits.maxPdfPages ?? 600;
+      if (pages > max) throw new AiError('limit.pages', `'${f.name}' has ${pages} pages; the limit is ${max}`);
+    }
     blocks.push(
       kind === 'pdf'
         ? { type: 'document', title: f.name, source: { type: 'base64', media_type: 'application/pdf', data: Buffer.from(f.data).toString('base64') } }

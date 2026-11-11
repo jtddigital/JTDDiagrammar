@@ -31,7 +31,7 @@ function node(n: PlacedNode, P: Palette): string {
   const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${line}"/>` : '';
   const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, NODE_FONT, fillAttr(n.style?.text));
   return (
-    `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" data-id="${esc(n.id)}" transform="translate(${num(n.x)} ${num(n.y)})">` +
+    `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})">` +
     `<path d="${s.outline(n.w, n.h)}" fill="${n.style?.fill ?? P.nodeFill}" ${stroke(line)}${dash(n.style?.dash)}/>${detail}${solid}${text}</g>`
   );
 }
@@ -45,7 +45,7 @@ function edge(e: RoutedEdge, P: Palette): string {
       lines(l.lines, l.x + l.w / 2, l.y + (l.h - l.lines.length * lineHeight(LABEL_FONT)) / 2, LABEL_FONT, ` font-size="${LABEL_FONT.size}"${fillAttr(e.style?.text)}`)
     : '';
   return (
-    `<g id="e-${esc(e.id)}" class="jtd-edge" data-id="${esc(e.id)}" data-from="${esc(e.from)}" data-to="${esc(e.to)}">` +
+    `<g id="e-${esc(e.id)}" class="jtd-edge">` +
     `<path d="${d}" fill="none" ${stroke(color)}${dash(e.style?.dash)} marker-end="url(#${markerId(color, P)})"/>${label}</g>`
   );
 }

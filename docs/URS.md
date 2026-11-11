@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.10 (draft) |
+| Version | 0.11 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -15,19 +15,24 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 - **Verify**: T = automated test, I = inspection, D = demonstration.
 - **Status**: Proposed → Accepted → Partial (some acceptance criteria met; see matrix) → Implemented → Verified (automated test passes) — or Withdrawn.
 
+### 2.1 Decisions
+| ID | Decision | Consequence |
+|----|----------|-------------|
+| D-001 | **Internal hosting** (2026-11-11): the API and web app run on an internal network for trusted users. | No end-user authentication in this release. AI spend is still guarded by per-client rate limits and per-request token budgets (URS-AI-019, URS-AI-009). Public exposure would need auth first. |
+
 ## 3. Requirements
 
 ### 3.1 Extensibility (EXT)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
 | URS-EXT-001 | M | Each diagram type is a plugin that implements one `DiagramType` interface and is registered in core. | Registry lists all built-in types. | T | Verified |
-| URS-EXT-002 | M | Adding a type requires no change to adapters, API, web app or SVG renderer. | A test-only fixture type renders through the API and the web app. | T | Partial |
+| URS-EXT-002 | M | Adding a type requires no change to adapters, API, web app or SVG renderer. | A test-only fixture type renders through the API and the web app. | T | Verified |
 | URS-EXT-003 | M | Every source declares `type`. A missing or unknown type returns a diagnostic that lists the registered types. | Test. | T | Verified |
 | URS-EXT-004 | M | Types compile to a shared Graph IR (nodes, edges, containers, partitions). Layout and rendering consume only the IR and the geometry built from it. | Lint rule: `layout/` and `render/` never import from `diagrams/`. | T | Verified |
 | URS-EXT-005 | M | Layout engines are pluggable and each type selects one. v1 ships `layered`. | Engine registry test. | T | Verified |
 | URS-EXT-006 | M | Each type ships its own JSON Schema. The combined schema dispatches on `type`. | Ajv validates per-type fixtures through the combined schema. | T | Verified |
 | URS-EXT-007 | M | Each type can add semantic validation rules through a hook. | Hook test. | T | Verified |
-| URS-EXT-008 | C | Diagram types can be registered from outside the repo as separate packages. | — | T | Proposed |
+| URS-EXT-008 | C | Diagram types can be registered from outside the repo as separate packages. | — | T | Partial |
 | URS-EXT-009 | M | Each type also ships its AI generation assets: a generation schema, guidance text, examples and a converter from generated output to authoring source (URS-AI-004). Adding a type requires no change to the `ai` package. | The test-only fixture type generates through a mock client. | T | Verified |
 | URS-EXT-010 | M | Each type ships a README example (source + rendered image) (URS-DOC-002). | CI check (URS-DOC-004). | T | Verified |
 
@@ -46,7 +51,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 |----|-----|-------------|---------------------|--------|--------|
 | URS-IN-001 | M | Diagrams are defined in JSON that conforms to the published JSON Schema. | A valid sample passes Ajv; invalid samples fail. | T | Verified |
 | URS-IN-002 | M | Every source declares a schema `version`. Breaking changes bump the major version. | An unknown major version gives an explicit error. | T | Verified |
-| URS-IN-003 | M | Each type picks the source structure that fits it best (flat ID references for flowcharts, nesting for composite states). Every structure compiles to the same IR. | I | I | Partial |
+| URS-IN-003 | M | Each type picks the source structure that fits it best (flat ID references for flowcharts, nesting for composite states). Every structure compiles to the same IR. | I | I | Verified |
 | URS-IN-004 | M | Validation reports **all** errors, each with a JSON Pointer path and a message. | A doc with 3 errors yields 3 diagnostics. | T | Verified |
 | URS-IN-005 | M | Common semantic validation: unique IDs and no dangling references. | Each rule has a failing test. | T | Verified |
 | URS-IN-006 | S | XML input via an adapter that maps to the identical source model. | JSON and XML equivalents render byte-identical SVG. | T | Proposed |
@@ -89,12 +94,12 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.6 Rendering (RN)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-RN-001 | M | Output is standalone, valid SVG 1.1. | Opens in Chrome, Firefox and Inkscape; passes a validator. | T/D | Partial |
+| URS-RN-001 | M | Output is standalone, valid SVG 1.1. | Opens in Chrome, Firefox and Inkscape; passes a validator. | T/D | Verified |
 | URS-RN-002 | M | Partition header bands and container labels render (Visio CFF style). | Snapshot. | T | Verified |
 | URS-RN-003 | M | Edge end markers (arrowheads; others via the registry). | Snapshot. | T | Verified |
 | URS-RN-004 | M | All user text is XML-escaped; no script or foreignObject is emitted. | Injection fixtures are escaped. | T | Verified |
 | URS-RN-005 | S | SVG elements carry `id`/`class` values derived from model IDs and the diagram type. | Selector test. | T | Verified |
-| URS-RN-006 | S | Font is embedded, or a safe fallback stack is used, so the file renders standalone. | D | D | Implemented |
+| URS-RN-006 | S | Font is embedded, or a safe fallback stack is used, so the file renders standalone. | D | D | Verified |
 | URS-RN-007 | C | PNG / PDF export. | — | T | Proposed |
 | URS-RN-008 | C | Visio (.vsdx) export/import. | — | T | Proposed |
 
@@ -110,7 +115,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-API-007 | S | Input format is chosen by `Content-Type` (JSON; XML once URS-IN-006 lands). | Integration test. | T | Partial |
 | URS-API-008 | S | An OpenAPI document is published. | `GET /v1/openapi.json`. | T | Verified |
 | URS-API-009 | S | `GET /health`. | Returns 200. | T | Verified |
-| URS-API-010 | C | `GET /v1/render?src=<base64url>` for `<img>` embedding. | Integration test. | T | Proposed |
+| URS-API-010 | C | `GET /v1/render?src=<base64url>` for `<img>` embedding. | Integration test. | T | Verified |
 | URS-API-011 | M | `GET /v1/types` lists the registered types with their descriptions. | Integration test. | T | Verified |
 | URS-API-012 | M | `POST /v1/generate` (multipart: `files[]`, `text`, `type` or `auto`, options) returns `{ source, valid, diagnostics, attempts, usage }`, plus `svg` when valid. | Integration test with a mock client. | T | Verified |
 | URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Proposed |
@@ -147,10 +152,10 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-006 | M | Repair loop: when validation fails, the diagnostics go back to Claude for correction, up to N retries (default 2). A final failure returns the best attempt, its diagnostics and `valid: false`. | Mock: invalid → valid on retry 1; invalid ×3 → `valid: false`. | T | Verified |
 | URS-AI-007 | M | The caller sets `type`, or `auto` lets the model choose from the registered types and return its reason. | Mock test for both. | T | Verified |
 | URS-AI-008 | M | Stop reasons are handled: `refusal` (with server-side fallbacks enabled) and `max_tokens` (truncation counts as a failure and is never parsed as success). Each surfaces as a distinct error code. | Mock test per stop reason. | T | Verified |
-| URS-AI-009 | M | Input limits on file size, file count and pages (PDF ≤ 600 pages, request ≤ 32 MB), plus a token pre-check with `count_tokens`. Over-limit input returns `413` with the reason. No silent truncation. | Limit tests. | T | Partial |
+| URS-AI-009 | M | Input limits on file size, file count and pages (PDF ≤ 600 pages, request ≤ 32 MB), plus a token pre-check with `count_tokens`. Over-limit input returns `413` with the reason. No silent truncation. | Limit tests. | T | Verified |
 | URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. | Log scrub test; bundle grep in CI. | T | Verified |
 | URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Verified |
-| URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Implemented |
+| URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Verified |
 | URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction. The result goes through URS-AI-005/006. | Mock test. | T | Proposed |
 | URS-AI-014 | S | Provenance: generated nodes and edges may carry a `source` quote from the input. This is a schema field, because the Citations API cannot be combined with structured outputs. | Fixture test. | T | Proposed |
 | URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Proposed |
@@ -178,10 +183,10 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-NF-001 | M | Modular: `core` is pure and isomorphic (no DOM, no Node APIs); `api` and `web` consume it. | Lint rule bans those imports. | T | Verified |
 | URS-NF-002 | M | TypeScript `strict`. | `tsc` runs in CI. | T | Verified |
 | URS-NF-003 | M | Unit tests per module plus golden SVG snapshots; CI runs on every push. | CI is green. | T | Verified |
-| URS-NF-004 | M | Every change cites URS IDs and records an impact assessment (§5). | Commit/PR inspection. | I | Implemented |
-| URS-NF-005 | S | ≥ 80 % line coverage on `core`. | CI gate. | T | Proposed |
+| URS-NF-004 | M | Every change cites URS IDs and records an impact assessment (§5). | Commit/PR inspection. | I | Verified |
+| URS-NF-005 | S | ≥ 80 % line coverage on `core`. | CI gate. | T | Verified |
 | URS-NF-006 | S | A container image serves the API and the static web app. | `docker run` serves both. | D | Verified |
-| URS-NF-007 | S | Only permissively licensed dependencies (MIT/Apache/BSD/ISC/OFL). | License check in CI. | T | Proposed |
+| URS-NF-007 | S | Only permissively licensed dependencies (MIT/Apache/BSD/ISC/OFL). | License check in CI. | T | Verified |
 | URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Verified |
 | URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
 
@@ -191,19 +196,19 @@ Updated with each change. `—` = not started.
 | URS ID | Module(s) | Test(s) | Note |
 |--------|-----------|---------|------|
 | EXT-001, EXT-005 | core/src/registry/ | core/test/registry.test.ts | |
-| EXT-002 | core/src/compile.ts, api/src/config.ts (registryModule) | core/test/extensibility.test.ts, api/test/api.test.ts | Core and API verified with the fixture type; the web app uses built-ins only. |
+| EXT-002 | core/src/compile.ts, api/src/config.ts (registryModule), web/src/registry.ts (examplesOf) | core/test/extensibility.test.ts, api/test/api.test.ts, web/test/registry.test.ts | Web: examples come from any registry; a test proves web source names no diagram type. |
 | EXT-003, IN-002 | core/src/validate/envelope.ts | core/test/envelope.test.ts | |
 | EXT-004, NF-001, NF-009 | eslint.config.js, core/tsconfig.json (no DOM/Node types) | test/boundaries.test.ts | |
 | EXT-006 | core/src/schema/combined.ts | core/test/extensibility.test.ts | |
 | EXT-007 | core/src/diagrams/flowchart/validate.ts | core/test/flowchart.test.ts | |
 | EXT-010 | core/src/registry/diagram-type.ts (`examples` required) | scripts/docs/readme.test.ts | |
 | IN-001, IN-004 | core/src/validate/schema.ts, core/src/adapters/json.ts | core/test/schema.test.ts, core/test/json.test.ts | Semantic rules run only once the schema passes. |
-| IN-003 | core/src/diagrams/flowchart/ | core/test/flowchart.test.ts | Flowchart only so far. |
+| IN-003 | core/src/diagrams/{flowchart,state}/ | core/test/flowchart.test.ts, state.test.ts | Flat (flowchart) and nested (state) sources, one IR. |
 | IN-005, DM-005 | core/src/validate/common.ts | core/test/common.test.ts | Pointer targets the element, not the field. |
 | DM-001, DM-002, TYP-002, LY-003 | core/src/layout/layered/{layering,order,place,main-axis,bands}.ts | core/test/layout.test.ts (partitions: *, URS-TYP-002) | |
 | RN-002 | core/src/render/svg/bands.ts | core/test/render.test.ts, golden/cff-* | |
 | NF-002 | tsconfig.base.json | `pnpm typecheck` | |
-| NF-004 | CLAUDE.md, commit bodies | — | Inspection. |
+| NF-004 | CLAUDE.md, scripts/ci/commits.ts | CI `commits` job | Every pushed commit must contain `URS impacted:`. |
 | TYP-001, DM-004 | core/src/shapes/, core/src/diagrams/flowchart/ | core/test/shapes.test.ts, golden/shapes | |
 | DM-003, LY-004 | core/src/layout/flow.ts, layout/layered/{cycles,rank}.ts | core/test/layout.test.ts | |
 | DM-006, DM-007 | core/src/measure/text.ts, layout/layered/route.ts | core/test/measure.test.ts, golden/text | |
@@ -215,9 +220,9 @@ Updated with each change. `—` = not started.
 | DM-008 | core/src/layout/layered/order.ts (hints) | core/test/order.test.ts | |
 | DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
-| RN-001 | core/src/render/svg/ | core/test/render.test.ts | Well-formed, allowed elements; Chromium render. No DTD/Inkscape check yet. |
+| RN-001 | core/src/render/svg/ | core/test/render.test.ts (well-formed; SVG 1.1 element and attribute allowlist), web/e2e/svg.spec.ts (Chromium and Firefox) | `data-*` attributes removed (not SVG 1.1). No DTD check: the W3C DTD is unreachable from CI. |
 | RN-003..005 | core/src/render/svg/{index,escape,text}.ts | core/test/render.test.ts, golden/* | |
-| RN-006 | core/src/measure/font-metrics.ts (Arial-compatible stack) | — | Fallback stack, no embedding. |
+| RN-006 | core/src/measure/font-metrics.ts (Arial-compatible stack) | web/e2e/svg.spec.ts, app.spec.ts (LY-009) | Safe fallback stack; renders standalone in Chromium and Firefox. |
 | NF-003 | vitest + golden SVGs + CI | core/test/golden.test.ts | CI green on P0. |
 | DOC-002..004 | scripts/docs/, docs/img/ | scripts/docs/readme.test.ts, `pnpm docs:check` | |
 | NF-008 | .env.example, CI `secrets` job | CI | Green on P0. |
@@ -232,12 +237,17 @@ Updated with each change. `—` = not started.
 | LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~110 ms. 1000/2000 random graph ~2.4 s. |
 | NF-006 | Dockerfile, CI `docker` job | CI | Image built and served in CI (P3 run green). |
 | EXT-009, AI-004 | core/src/registry/diagram-type.ts (AiAssets), core/src/diagrams/flowchart/ai.ts | core/test/ai-assets.test.ts | Subset lint plus a 300-sample property test: only `pattern` errors survive conversion. |
-| AI-001, AI-009 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | PDF page count not checked; the API's own limit applies. |
+| AI-001 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | |
+| API-010 | api/src/routes/render.ts (GET) | api/test/api.test.ts | |
+| AI-009 | ai/src/ingest/files.ts (pdf-lib page count) | ai/test/ingest.test.ts | Files, size, total, pages, tokens. |
+| EXT-008 | api/src/config.ts (`REGISTRY_MODULE`) | api/test/api.test.ts | API only; the web bundle ships built-in types. |
+| NF-005 | vitest.config.ts (threshold 80 %) | `pnpm test` | Core at 99.8 % lines. |
+| NF-007 | scripts/ci/licences.ts (`pnpm licences`, part of `pnpm check`) | scripts/ci/licences.test.ts | SPDX expressions evaluated; prod deps only. |
 | AI-002, AI-003, AI-008, AI-016 | packages/ai/src/anthropic.ts | ai/test/anthropic.test.ts (stubbed SDK) | AI-016: cache_control on a byte-stable system prompt. Live run 2026-11-11: first call wrote 1827 cached tokens, the next two read 1827 each. |
 | AI-005..007 | packages/ai/src/generate.ts, prompt.ts | ai/test/generate.test.ts, api/test/generate.test.ts | |
 | AI-010 | api/src/config.ts (presence only), eslint.config.js | api/test/generate.test.ts, test/boundaries.test.ts | Key read by the SDK only; web cannot import AI code. |
 | AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts, `pnpm ai:live` (prompt injection case) | Structural defences tested. Live run 2026-11-11: injected title and `<script>` node ignored, output schema-valid, SVG has no unescaped script. One live fixture so far. |
-| AI-012 | no logging of bodies or material | Inspection | Retention: nothing is stored, so nothing to configure. |
+| AI-012 | no logging of bodies or material | api/test/api.test.ts (log capture) | Nothing is stored, so retention is moot. |
 | AI-017 | generate.ts usage totals | ai/test/generate.test.ts | Tokens, cache and attempts reported; no cost estimate yet. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
 | AI-018 | scripts/ai/{live-check,cases}.ts (`pnpm ai:live`) | scripts/ai/cases.test.ts (checks only) | Smoke subset: 3 cases with pass/fail checks, usage and cache reporting. No reference diagrams or recall metrics yet. Live run 2026-11-11 (claude-opus-5-5, effort high): 3/3 pass, all valid on the first attempt, 5–7 s each. |
@@ -258,6 +268,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.11 | 2026-11-11 | Decision D-001 (internal hosting). Sweep A: EXT-002, IN-003, RN-001, RN-006, API-010, AI-009, AI-012, NF-004, NF-005, NF-007 verified; EXT-008 partial. |
 | 0.10 | 2026-11-11 | P6: layout quality and styling. LY-006, LY-007, LY-008, DM-008 and DM-010 verified; DM-009 deferred to P7. |
 | 0.9 | 2026-11-11 | P5: state diagrams with composite states. TYP-003..005, DM-013, LY-011, LY-012 and WEB-010 verified. |
 | 0.8.2 | 2026-11-11 | First live run of `pnpm ai:live`: 3/3 pass. AI-011 and AI-016 verified; AI-018 stays partial (no reference corpus or recall metrics). |

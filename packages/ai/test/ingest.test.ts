@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { AiError } from '../src/errors.ts';
 import { ingest } from '../src/ingest/files.ts';
@@ -11,6 +12,12 @@ const file = (name: string, content: string | Uint8Array, mediaType?: string) =>
 });
 const code = async (p: Promise<unknown>) => p.then(() => 'ok', (e: unknown) => (e instanceof AiError ? e.code : String(e)));
 
+async function pdf(pages: number): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  for (let i = 0; i < pages; i++) doc.addPage();
+  return doc.save();
+}
+
 /** Smallest valid DOCX: one paragraph. */
 async function docx(text: string): Promise<Uint8Array> {
   const zip = new JSZip();
@@ -22,8 +29,15 @@ async function docx(text: string): Promise<Uint8Array> {
 
 describe('ingest (URS-AI-001, URS-AI-009, URS-AI-011)', () => {
   it('passes PDFs through as base64 document blocks', async () => {
-    const [b] = await ingest([file('spec.pdf', '%PDF-1.4 x')], undefined, limits);
-    expect(b).toEqual({ type: 'document', title: 'spec.pdf', source: { type: 'base64', media_type: 'application/pdf', data: Buffer.from('%PDF-1.4 x').toString('base64') } });
+    const bytes = await pdf(2);
+    const [b] = await ingest([file('spec.pdf', bytes)], undefined, limits);
+    expect(b).toEqual({ type: 'document', title: 'spec.pdf', source: { type: 'base64', media_type: 'application/pdf', data: Buffer.from(bytes).toString('base64') } });
+  });
+
+  it('enforces the PDF page limit and rejects unreadable PDFs (URS-AI-009)', async () => {
+    expect(await code(ingest([file('big.pdf', await pdf(4))], undefined, { ...limits, maxPdfPages: 3 }))).toBe('limit.pages');
+    expect(await code(ingest([file('ok.pdf', await pdf(3))], undefined, { ...limits, maxPdfPages: 3 }))).toBe('ok');
+    expect(await code(ingest([file('bad.pdf', '%PDF-1.4 not really')], undefined, limits))).toBe('ai.input');
   });
 
   it('extracts text from DOCX, HTML, Markdown and plain text, wrapped as documents', async () => {

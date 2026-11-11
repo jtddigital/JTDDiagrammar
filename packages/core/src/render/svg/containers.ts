@@ -13,7 +13,7 @@ export const containers = (cs: readonly PlacedContainer[], P: Palette): string =
       const head = c.lines.length * lineHeight(CONTAINER_FONT) + 2 * CONTAINER_HEAD_PAD;
       const stroke = c.style?.stroke ?? P.nodeStroke;
       return (
-        `<g id="c-${esc(c.id)}" class="jtd-container" data-id="${esc(c.id)}">` +
+        `<g id="c-${esc(c.id)}" class="jtd-container">` +
         `<rect x="${num(c.x)}" y="${num(c.y)}" width="${num(c.w)}" height="${num(c.h)}" rx="12" fill="${c.style?.fill ?? P.containerFill}" stroke="${stroke}" stroke-width="${METRICS.stroke}"${dash(c.style?.dash)}/>` +
         `<path d="M${num(c.x)} ${num(c.y + head)}H${num(c.x + c.w)}" stroke="${stroke}" stroke-width="1"/>` +
         lines(c.lines, c.x + c.w / 2, c.y + CONTAINER_HEAD_PAD, CONTAINER_FONT, ` font-size="${CONTAINER_FONT.size}" font-weight="bold"${c.style?.text ? ` fill="${c.style.text}"` : ''}`) +

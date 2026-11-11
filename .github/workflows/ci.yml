@@ -20,8 +20,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
 
+  commits:
+    # URS-NF-004: every pushed commit carries an impact assessment.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx scripts/ci/commits.ts "${{ github.event.before }}" "${{ github.sha }}"
+
   e2e:
-    # Web app against the real API (URS-WEB-001..004, URS-LY-009 in a browser).
+    # Web app against the real API (URS-WEB-001..004, URS-LY-009 in a browser); SVGs in Chromium and Firefox (URS-RN-001).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +47,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @jtd/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @jtd/web exec playwright install --with-deps chromium firefox
       - run: pnpm e2e
 
   docker:

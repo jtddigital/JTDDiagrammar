@@ -78,7 +78,7 @@ export const generateRoutes = ({ reg, pool, ai, claude }: Ctx): Route[] => [
             },
             maxRepairs: ai.maxRepairs,
             maxInputTokens: ai.maxInputTokens,
-            limits: { maxFiles: ai.maxFiles, maxFileBytes: ai.maxFileBytes, maxTotalBytes: ai.maxTotalBytes },
+            limits: { maxFiles: ai.maxFiles, maxFileBytes: ai.maxFileBytes, maxTotalBytes: ai.maxTotalBytes, maxPdfPages: ai.maxPdfPages },
           },
         );
       } catch (e) {

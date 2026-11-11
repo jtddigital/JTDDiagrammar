@@ -37,6 +37,7 @@ export const AI_STATUS: Record<AiErrorCode, number> = {
   'limit.files': 413,
   'limit.file': 413,
   'limit.tokens': 413,
+  'limit.pages': 413,
   'ai.refusal': 422,
   'ai.truncated': 422,
   'ai.config': 503,

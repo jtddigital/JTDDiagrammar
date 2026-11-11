@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "e2e": "playwright test --project=e2e",
+    "e2e": "playwright test --project=e2e --project=svg-chromium --project=svg-firefox",
     "screens": "playwright test --project=screens"
   },
   "dependencies": {

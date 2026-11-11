@@ -2,7 +2,7 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { anthropicClient, type ClaudeClient } from '@jtd/ai';
 import type { Registry } from '@jtd/core';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.ts';
 import { requestError } from './errors.ts';
 import { openapi } from './openapi.ts';
@@ -14,7 +14,7 @@ import type { Route } from './routes/route.ts';
 import { validateRoutes } from './routes/validate.ts';
 
 /** REST API (URS-API-001) plus the built web app at `/` when available. */
-export async function buildApp(cfg: Config, opts: { logger?: boolean; claude?: ClaudeClient } = {}): Promise<FastifyInstance> {
+export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOptions['logger']; claude?: ClaudeClient } = {}): Promise<FastifyInstance> {
   const reg = ((await import(cfg.registryModule)) as { createRegistry(): Registry }).createRegistry();
   const pool = new RenderPool(cfg.renderWorkers, cfg.renderTimeoutMs, { registryModule: cfg.registryModule, maxNodes: cfg.maxNodes, maxEdges: cfg.maxEdges });
   // Request bodies (diagram content) are never logged.

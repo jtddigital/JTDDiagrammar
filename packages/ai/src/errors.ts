@@ -5,6 +5,7 @@ export type AiErrorCode =
   | 'limit.files'
   | 'limit.file'
   | 'limit.tokens'
+  | 'limit.pages'
   | 'ai.refusal'
   | 'ai.truncated'
   | 'ai.config' // credentials rejected

@@ -18,7 +18,7 @@ const label = (b: PlacedBand) =>
     ` font-size="${BAND_FONT.size}" font-weight="bold"${b.style?.text ? ` fill="${b.style.text}"` : ''}`,
   );
 
-const group = (b: PlacedBand, body: string) => `<g id="${b.kind[0]}-${esc(b.id)}" class="jtd-${b.kind}" data-id="${esc(b.id)}">${body}</g>`;
+const group = (b: PlacedBand, body: string) => `<g id="${b.kind[0]}-${esc(b.id)}" class="jtd-${b.kind}">${body}</g>`;
 
 /** Lane rows and phase columns with header cells, beneath edges and nodes (URS-RN-002). `style.fill` colours the header. */
 export function bands(bs: readonly PlacedBand[], P: Palette, corner?: Box): string {

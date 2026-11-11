@@ -55,6 +55,20 @@ describe('POST /v1/render (URS-API-002, URS-API-005)', () => {
   });
 });
 
+describe('GET /v1/render (URS-API-010)', () => {
+  it('renders base64url-encoded source for <img> embedding', async () => {
+    const src = Buffer.from(JSON.stringify(flow)).toString('base64url');
+    const res = await app.inject(`/v1/render?src=${src}`);
+    expect([res.statusCode, res.headers['content-type']]).toEqual([200, 'image/svg+xml; charset=utf-8']);
+    expect(res.body).toBe(render(flow, createRegistry()).svg);
+  });
+
+  it('rejects undecodable src', async () => {
+    const res = await app.inject('/v1/render?src=not-json');
+    expect([res.statusCode, res.json().diagnostics[0].code]).toEqual([400, 'parse.src']);
+  });
+});
+
 describe('limits (URS-API-006)', () => {
   it('413 for oversized bodies', async () => {
     const res = await post(app, '/v1/render', { ...flow, title: 'x'.repeat(5000) });
@@ -111,6 +125,24 @@ describe('other endpoints', () => {
     expect(Object.keys(doc.paths).sort()).toEqual(['/health', '/v1/ai', '/v1/generate', '/v1/openapi.json', '/v1/render', '/v1/schema', '/v1/schema/{type}', '/v1/types', '/v1/validate']);
     expect(Object.keys(doc.paths['/v1/generate'].post.requestBody.content)).toEqual(['multipart/form-data', 'application/json']);
     expect(doc.paths['/v1/render'].post.requestBody.content['application/json'].schema).toEqual({ $ref: '#/components/schemas/Diagram' });
+  });
+
+  it('loads diagram types from REGISTRY_MODULE (URS-EXT-008)', () => {
+    expect(fromEnv({ REGISTRY_MODULE: '@acme/diagrams' }).registryModule).toBe('@acme/diagrams');
+    expect(fromEnv({}).registryModule).toBe('@jtd/core');
+  });
+
+  it('never logs request bodies (URS-AI-012)', async () => {
+    const logs: string[] = [];
+    const logged = await buildApp(cfg(), { logger: { level: 'trace', stream: { write: (l: string) => void logs.push(l) } } });
+    try {
+      await post(logged, '/v1/render', { ...flow, title: 'SECRET-MARKER-123' });
+      await post(logged, '/v1/validate', { ...flow, title: 'SECRET-MARKER-123' });
+    } finally {
+      await logged.close();
+    }
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs.join('\n')).not.toContain('SECRET-MARKER-123');
   });
 
   it('sets nosniff on every response', async () => {

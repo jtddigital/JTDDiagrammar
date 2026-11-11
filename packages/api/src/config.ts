@@ -16,6 +16,7 @@ export interface AiConfig {
   maxFiles: number;
   maxFileBytes: number;
   maxTotalBytes: number;
+  maxPdfPages: number;
 }
 
 export interface Config {
@@ -59,7 +60,8 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
     renderTimeoutMs: int(env.RENDER_TIMEOUT_MS, 5000),
     renderWorkers: int(env.RENDER_WORKERS, Math.max(1, Math.min(4, availableParallelism() - 1))),
     ...(existsSync(web) && { webDist: web }),
-    registryModule: '@jtd/core',
+    // An external package may export createRegistry() with extra types (URS-EXT-008).
+    registryModule: env.REGISTRY_MODULE ?? '@jtd/core',
     ai: {
       enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
       model: env.AI_MODEL ?? 'claude-opus-5-5',
@@ -70,6 +72,7 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
       maxFiles: int(env.AI_MAX_FILES, 5),
       maxFileBytes: int(env.AI_MAX_FILE_BYTES, 20_000_000),
       maxTotalBytes: int(env.AI_MAX_TOTAL_BYTES, 20_000_000),
+      maxPdfPages: int(env.AI_MAX_PDF_PAGES, 600),
     },
   };
 };

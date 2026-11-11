@@ -7,14 +7,27 @@ import { fixtures } from './fixtures.ts';
 
 const reg = createRegistry();
 const svg = (doc: unknown) => render(doc, reg).svg!;
-const ALLOWED = new Set(['svg', 'title', 'defs', 'marker', 'path', 'rect', 'g', 'text']);
+/** SVG 1.1 elements we emit, and the attributes each may carry (URS-RN-001). */
+const ALLOWED: Record<string, string[]> = {
+  svg: ['xmlns', 'version', 'width', 'height', 'viewBox', 'class'],
+  title: [],
+  defs: [],
+  marker: ['id', 'viewBox', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'orient'],
+  path: ['d', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'marker-end'],
+  rect: ['x', 'y', 'width', 'height', 'rx', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray'],
+  g: ['id', 'class', 'transform', 'font-family', 'font-size', 'fill', 'style'],
+  text: ['x', 'y', 'text-anchor', 'font-size', 'font-weight', 'fill', 'class'],
+};
 
 describe('SVG output', () => {
   it.each(fixtures())('%s is well-formed, standalone SVG 1.1 (URS-RN-001)', (_n, doc) => {
     const out = svg(doc);
     expect(XMLValidator.validate(out)).toBe(true);
     expect(out).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" version="1\.1"/);
-    for (const [, tag] of out.matchAll(/<([a-zA-Z]+)/g)) expect(ALLOWED.has(tag!), tag).toBe(true);
+    for (const [, tag, attrs] of out.matchAll(/<([a-zA-Z]+)([^>]*)>/g)) {
+      expect(ALLOWED[tag!], tag).toBeDefined();
+      for (const [, name] of attrs!.matchAll(/\s([a-zA-Z:-]+)=/g)) expect(ALLOWED[tag!], `${tag}@${name}`).toContain(name);
+    }
   });
 
   it('escapes all user text and never emits script or foreignObject (URS-RN-004)', () => {
@@ -34,16 +47,16 @@ describe('SVG output', () => {
   it('derives ids and classes from the model and type (URS-RN-005)', () => {
     const out = svg(reg.type('flowchart')!.examples[0]!.source);
     expect(out).toContain('class="jtd jtd-flowchart"');
-    expect(out).toContain('<g id="n-known" class="jtd-node jtd-shape-decision" data-id="known"');
-    expect(out).toContain('<g id="e-edge:2" class="jtd-edge" data-id="edge:2" data-from="known" data-to="send"');
+    expect(out).toContain('<g id="n-known" class="jtd-node jtd-shape-decision"');
+    expect(out).toContain('<g id="e-edge:2" class="jtd-edge">');
   });
 
   it('draws lane and phase bands with headers (URS-RN-002)', () => {
     const out = svg(reg.type('flowchart')!.examples[1]!.source);
     expect(out.match(/class="jtd-lane"/g)).toHaveLength(3);
     expect(out.match(/class="jtd-phase"/g)).toHaveLength(2);
-    expect(out).toContain('<g id="l-sales" class="jtd-lane" data-id="sales">');
-    expect(out).toMatch(/<g id="p-order" class="jtd-phase" data-id="order">.*>Order<\/text><\/g>/);
+    expect(out).toContain('<g id="l-sales" class="jtd-lane">');
+    expect(out).toMatch(/<g id="p-order" class="jtd-phase">.*>Order<\/text><\/g>/);
   });
 
   it('reports a missing layout engine instead of throwing', () => {
