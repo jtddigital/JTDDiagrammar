@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.17 (draft) |
+| Version | 0.18 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -276,7 +276,7 @@ Updated with each change. `—` = not started.
 | WEB-009 | core/src/render.ts (`ir` in result), web/src/pick.ts | web/test/pick.test.ts, web/e2e/preview.spec.ts | SVG id prefix + model id → IR `src` pointer → `locate()`. |
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
-| NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash) | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
+| NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
 | NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Verified on the first tagged release. |
 
 ## 5. Change Impact Assessment (required per change)
@@ -292,6 +292,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.18 | 2026-11-11 | Fix: Windows PowerShell 5.1 strips quotes from native arguments, so the installer's `node -e` version check failed on Windows (user report). Version now compared in PowerShell; static test plus a CI job emulating 5.1 argument passing. |
 | 0.17 | 2026-11-11 | Windows-first installer: added NF-013 (winget Node, shortcuts, uninstall, both PowerShells). macOS dropped from CI (shares the Linux script). |
 | 0.16 | 2026-11-11 | Added NF-010 (installer), NF-011 (launcher), NF-012 (release workflow); implemented. Node floor raised to 22.18 (type stripping on by default). |
 | 0.15 | 2026-11-11 | Sweep E: inline sanitised preview with pan/zoom, click to source, hover quotes, schema autocomplete, persistence and share links, staged progress and refine in the web app, PNG export, web `REGISTRY_MODULE`. EXT-008, TYP-006 (rescoped), RN-007 (rescoped), WEB-005/006/008/009/012/013/014 verified. Added TYP-007, RN-009. W: TYP-007, IN-008, DM-011, RN-008, RN-009, AI-022. |

@@ -19,10 +19,11 @@ $Want = if ($args.Count -gt 0) { $args[0] } else { Get-Setting 'JTD_VERSION' 'la
 $Asset = 'jtddiagrammar.tar.gz'
 
 # Node.js 22.18+ runs the app. Missing or too old: install the current LTS with winget.
+# Compared here, not with `node -e`: Windows PowerShell 5.1 strips double quotes from native arguments.
 function Test-Node {
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) { return $false }
-  & node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=18)?0:1)'
-  $LASTEXITCODE -eq 0
+  $v = [version]((& node --version) -replace '^v', '' -replace '-.*$', '')
+  $v -ge [version]'22.18'
 }
 if (-not (Test-Node)) {
   if (-not ($OnWindows -and (Get-Command winget -ErrorAction SilentlyContinue))) { Fail 'Node.js 22.18 or later is required: https://nodejs.org' }
