@@ -49,3 +49,14 @@ describe('README images (URS-DOC-002, URS-DOC-003)', () => {
     expect(examplesSection(createRegistry().registerType(grouped))).toContain('> **Not yet supported:** containers cannot be combined with lanes or phases yet; they are not drawn.');
   });
 });
+
+describe('language reference (URS-DOC-006)', () => {
+  it('documents every schema field of every registered type, nested ones included', async () => {
+    const { referenceSection } = await import('./reference.ts');
+    const reg = createRegistry().registerType(checklist);
+    const ref = referenceSection(reg);
+    for (const t of reg.types()) expect(ref).toContain(`### \`${t.id}\``);
+    for (const f of ['`nodes[].shape`', '`nodes[].style`', '`edges[].from`', '`states[].kind`', '`transitions[].guard`', '`items[].label`', '`theme`']) expect(ref).toContain(f);
+    expect(ref).toContain('Same fields as `states[]`');
+  });
+});

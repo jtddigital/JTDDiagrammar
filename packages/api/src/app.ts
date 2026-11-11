@@ -5,6 +5,7 @@ import type { Registry } from '@jtd/core';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Config } from './config.ts';
 import { requestError } from './errors.ts';
+import { registerSourceParsers } from './input.ts';
 import { openapi } from './openapi.ts';
 import { RenderPool } from './pool.ts';
 import { generateRoutes } from './routes/generate.ts';
@@ -19,7 +20,8 @@ export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOption
   const pool = new RenderPool(cfg.renderWorkers, cfg.renderTimeoutMs, { registryModule: cfg.registryModule, maxNodes: cfg.maxNodes, maxEdges: cfg.maxEdges });
   // Request bodies (diagram content) are never logged.
   const app = Fastify({ bodyLimit: cfg.bodyLimit, logger: opts.logger ?? false });
-  app.removeContentTypeParser('text/plain'); // JSON only (URS-API-007)
+  app.removeContentTypeParser('text/plain');
+  registerSourceParsers(app); // JSON, XML or YAML by Content-Type (URS-API-007)
   await app.register(fastifyMultipart, { limits: { files: cfg.ai.maxFiles, fileSize: cfg.ai.maxFileBytes, fieldSize: cfg.bodyLimit } });
 
   app.addHook('onSend', async (_req, reply) => {

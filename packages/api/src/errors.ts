@@ -12,7 +12,7 @@ export function requestError(err: unknown): { status: number; diagnostics: Diagn
     case 'FST_ERR_CTP_BODY_TOO_LARGE':
       return { status: 413, diagnostics: [error('limit.body', 'request body is too large')] };
     case 'FST_ERR_CTP_INVALID_MEDIA_TYPE':
-      return { status: 415, diagnostics: [error('request.media-type', 'send application/json (or multipart/form-data to /v1/generate)')] };
+      return { status: 415, diagnostics: [error('request.media-type', 'send application/json, application/xml or application/yaml (multipart/form-data for /v1/generate)')] };
     case 'FST_ERR_CTP_EMPTY_JSON_BODY':
       return { status: 400, diagnostics: [error('parse.json', 'request body is empty')] };
     case 'FST_REQ_FILE_TOO_LARGE':

@@ -37,11 +37,11 @@ export const examplesSection = (reg: Registry): string =>
     })
     .join('\n');
 
-export function replaceSection(readme: string, body: string): string {
-  const start = readme.indexOf(BEGIN);
-  const end = readme.indexOf(END);
-  if (start < 0 || end < start) throw new Error('README is missing the generated examples markers');
-  return `${readme.slice(0, start + BEGIN.length)}\n\n${body}\n${readme.slice(end)}`;
+export function replaceSection(readme: string, body: string, begin = BEGIN, end = END): string {
+  const i = readme.indexOf(begin);
+  const j = readme.indexOf(end);
+  if (i < 0 || j < i) throw new Error(`README is missing the generated markers ${begin}`);
+  return `${readme.slice(0, i + begin.length)}\n\n${body}\n${readme.slice(j)}`;
 }
 
 /** Every example must compile cleanly (URS-DOC-004, URS-EXT-010). */

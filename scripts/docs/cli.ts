@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRegistry } from '@jtd/core';
 import { examplesSection, exampleProblems, images, IMG_DIR, replaceSection } from './readme.ts';
+import { REF_BEGIN, REF_END, referenceSection } from './reference.ts';
 
 const mode = process.argv[2];
 if (mode !== 'build' && mode !== 'check') throw new Error('usage: cli.ts build|check');
@@ -11,7 +12,7 @@ const reg = createRegistry();
 const problems = exampleProblems(reg);
 
 const readme = readFileSync(at('README.md'), 'utf8');
-const files = new Map([['README.md', replaceSection(readme, examplesSection(reg))], ...images(reg)]);
+const files = new Map([['README.md', replaceSection(replaceSection(readme, examplesSection(reg)), referenceSection(reg), REF_BEGIN, REF_END)], ...images(reg)]);
 // Generated SVGs are compared byte for byte. Screenshots (PNG, `pnpm docs:screens`) vary by machine, so only their presence is checked.
 const existing = existsSync(at(IMG_DIR)) ? readdirSync(at(IMG_DIR)).filter((f) => f.endsWith('.svg')).map((f) => `${IMG_DIR}/${f}`) : [];
 const linked = [...files.get('README.md')!.matchAll(/\]\((docs\/img\/[^)]+)\)/g)].map((m) => m[1]!);

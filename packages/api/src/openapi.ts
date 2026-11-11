@@ -10,7 +10,16 @@ export function openapi(routes: readonly Route[], reg: Registry): object {
     (paths[path] ??= {})[r.method.toLowerCase()] = {
       summary: r.summary,
       ...(params.length && { parameters: params }),
-      ...(r.body && { requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/Diagram' } } } } }),
+      ...(r.body && {
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/Diagram' } },
+            'application/xml': { schema: { type: 'string', description: 'The same document as XML (<diagram> root)' } },
+            'application/yaml': { schema: { type: 'string', description: 'The same document as YAML' } },
+          },
+        },
+      }),
       ...(r.requestBody && { requestBody: r.requestBody }),
       responses: Object.fromEntries(Object.entries(r.responses).map(([code, description]) => [code, { description }])),
     };

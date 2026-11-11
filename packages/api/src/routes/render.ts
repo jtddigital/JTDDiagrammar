@@ -1,6 +1,7 @@
 import { error } from '@jtd/core';
 import { statusFor } from '../errors.ts';
 import type { FastifyReply } from 'fastify';
+import { readDoc } from '../input.ts';
 import type { Ctx, Route } from './route.ts';
 
 /** A standalone SVG opened directly must not be able to run anything. */
@@ -17,8 +18,10 @@ function decodeSrc(src: unknown): unknown {
 
 const wantsJson = (accept = '') => accept.includes('application/json') && !accept.includes('image/svg+xml');
 
-export const renderRoutes = ({ pool }: Ctx): Route[] => {
-  const respond = async (doc: unknown, accept: string | undefined, reply: FastifyReply) => {
+export const renderRoutes = ({ pool, reg }: Ctx): Route[] => {
+  const respond = async (body: unknown, accept: string | undefined, reply: FastifyReply) => {
+    const { doc, diagnostics } = readDoc(body, reg);
+    if (doc === undefined) return reply.code(400).send({ diagnostics });
     const out = await pool.render(doc);
     if (out === 'timeout') return reply.code(422).send({ diagnostics: [error('limit.time', 'rendering took too long')] });
     if (!out.svg) return reply.code(statusFor(out.diagnostics)).send({ diagnostics: out.diagnostics });
@@ -33,9 +36,9 @@ export const renderRoutes = ({ pool }: Ctx): Route[] => {
   {
     method: 'POST',
     url: '/v1/render',
-    summary: 'Render a diagram to SVG (URS-API-002). Send `Accept: application/json` for `{ svg, diagnostics }`.',
+    summary: 'Render a diagram to SVG (URS-API-002). Body as JSON, XML or YAML by Content-Type. Send `Accept: application/json` for `{ svg, diagnostics }`.',
     body: true,
-    responses: { 200: 'SVG (image/svg+xml), or { svg, diagnostics } as JSON', 400: 'Invalid diagram: { diagnostics }', 413: 'Too large: { diagnostics }', 415: 'Not JSON', 422: 'Render timed out: { diagnostics }' },
+    responses: { 200: 'SVG (image/svg+xml), or { svg, diagnostics } as JSON', 400: 'Invalid diagram: { diagnostics }', 413: 'Too large: { diagnostics }', 415: 'Not JSON, XML or YAML', 422: 'Render timed out: { diagnostics }' },
     handler: (req, reply) => respond(req.body, req.headers.accept, reply),
   },
   {

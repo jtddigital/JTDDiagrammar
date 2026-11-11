@@ -13,5 +13,8 @@
     "@jtd/ai": "workspace:*",
     "@jtd/core": "workspace:*",
     "fastify": "^5.12.8"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
   }
 }

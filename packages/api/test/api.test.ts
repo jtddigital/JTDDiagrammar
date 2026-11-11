@@ -1,4 +1,5 @@
-import { combinedSchema, createRegistry, render } from '@jtd/core';
+import { combinedSchema, createRegistry, render, toXml } from '@jtd/core';
+import { stringify } from 'yaml';
 import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
@@ -52,6 +53,25 @@ describe('POST /v1/render (URS-API-002, URS-API-005)', () => {
     expect((await post(app, '/v1/render', '{"version":')).json()).toEqual({ diagnostics: [expect.objectContaining({ code: 'parse.json' })] });
     const res = await app.inject({ method: 'POST', url: '/v1/render', headers: { 'content-type': 'text/plain' }, payload: 'x' });
     expect(res.statusCode).toBe(415);
+  });
+});
+
+describe('XML and YAML bodies (URS-API-007)', () => {
+  const xml = toXml(flow);
+  const yaml = stringify(flow);
+  const raw = (url: string, type: string, payload: string) => app.inject({ method: 'POST', url, headers: { 'content-type': type }, payload });
+
+  it('renders the same SVG from JSON, XML and YAML', async () => {
+    const json = (await post(app, '/v1/render', flow)).body;
+    for (const [type, body] of [['application/xml', xml], ['text/xml', xml], ['application/yaml', yaml], ['text/yaml', yaml]] as const)
+      expect((await raw('/v1/render', type, body)).body, type).toBe(json);
+  });
+
+  it('validates XML and reports parse errors as diagnostics', async () => {
+    expect((await raw('/v1/validate', 'application/xml', xml)).json()).toEqual({ valid: true, diagnostics: [] });
+    const bad = await raw('/v1/render', 'application/xml', '<diagram><nodes></diagram>');
+    expect([bad.statusCode, bad.json().diagnostics[0].code]).toEqual([400, 'parse.xml']);
+    expect((await raw('/v1/validate', 'application/yaml', 'a: [')).json()).toMatchObject({ valid: false, diagnostics: [{ code: 'parse.yaml' }] });
   });
 });
 

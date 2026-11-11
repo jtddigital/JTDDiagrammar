@@ -376,37 +376,90 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ## Language
 
-Every diagram is a JSON object with a common envelope:
+Diagrams are JSON, XML or YAML documents describing the same model. The tables below are generated from the schemas (`pnpm docs:build`), so they always match what the validator accepts.
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `version` | yes | Schema version. Major `1` is supported (`"1"`, `"1.2"`). |
-| `type` | yes | Diagram type id, e.g. `flowchart`. |
-| `title` | no | Diagram title. |
-| `theme` | no | `default` or `dark`. |
-| `$schema` | no | Optional schema URL for editor tooling. |
+<!-- BEGIN GENERATED: reference (pnpm docs:build) -->
+
+Fields every diagram has:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `$schema` | string |  | Optional schema URL for editor tooling. |
+| `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
+| `type` | `flowchart` \| `state` | yes | Diagram type. |
+| `title` | string |  | Title shown above the diagram. |
+| `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
 ### `flowchart`
 
-| Field | Description |
-|-------|-------------|
-| `direction` | `LR` (default) or `TB`. |
-| `lanes[]` | `{ id, label, style? }`. Present → cross-functional flowchart. A lane's `style.fill` colours its header. |
-| `phases[]` | `{ id, label, style? }`. Requires `lanes`. |
-| `nodes[]` | `{ id, shape?, label?, lane?, phase?, order?, style? }`. `shape` is one of `process` (default), `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`. `label` defaults to `id`. `order` is a hint: nodes in the same column and lane are placed in ascending `order`. |
-| `edges[]` | `{ from, to, label?, id?, style? }` |
+Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 
-Ids match `^[A-Za-z_][A-Za-z0-9_.-]*$`. With lanes present, every node needs a `lane`. With phases present, every node also needs a `phase`.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
+| `lanes` | list of objects |  | Functional bands (rows for `LR`). Present → cross-functional flowchart. |
+| `lanes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `lanes[].label` | string | yes | Header text. |
+| `lanes[].style` | object |  | Colour and dash overrides (see Styling). |
+| `phases` | list of objects |  | Stages across the lanes. Require lanes. |
+| `phases[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `phases[].label` | string | yes | Header text. |
+| `phases[].style` | object |  | Colour and dash overrides (see Styling). |
+| `nodes` | list of objects | yes | Steps, decisions and other shapes. |
+| `nodes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `nodes[].shape` | `process` \| `decision` \| `terminator` \| `document` \| `data` \| `subprocess` \| `connector` |  | Default `process`. |
+| `nodes[].label` | string |  | Defaults to the id. `\n` breaks lines; long text wraps. |
+| `nodes[].lane` | string |  | Lane id; required when the diagram has lanes. |
+| `nodes[].phase` | string |  | Phase id; required when the diagram has phases. |
+| `nodes[].order` | integer |  | Hint: nodes in the same column and lane are placed in ascending order. |
+| `nodes[].style` | object |  | Colour and dash overrides (see Styling). |
+| `edges` | list of objects |  | Directed connections. |
+| `edges[].id` | string |  | Optional; generated when absent. |
+| `edges[].from` | string | yes | Source node id. |
+| `edges[].to` | string | yes | Target node id. |
+| `edges[].label` | string |  | Text on the edge. |
+| `edges[].style` | object |  | Colour and dash overrides (see Styling). |
 
 ### `state`
 
-| Field | Description |
-|-------|-------------|
-| `direction` | `LR` (default) or `TB`. |
-| `states[]` | `{ id, kind?, label?, states?, style? }`. `kind` is `state` (default), `initial`, `final` or `choice`. A `state` with nested `states` is a composite state; nesting can go any depth. `label` defaults to the id for ordinary states; pseudostates draw no label. |
-| `transitions[]` | `{ from, to, event?, guard?, action?, id?, style? }`, drawn as `event [guard] / action`. Endpoints can be any state, including a composite state or a state inside one. |
+States and the transitions between them, with composite (nested) states. For lifecycles and modes.
 
-Rules: at most one `initial` per region (the top level or a composite), with no incoming transitions; `final` states have no outgoing transitions; pseudostates cannot contain states. Ids are unique across all levels.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
+| `states` | list of objects | yes | Top-level states. |
+| `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `states[].kind` | `state` \| `initial` \| `final` \| `choice` |  | `state` (default) or a pseudostate; pseudostates draw no label and cannot contain states. |
+| `states[].label` | string |  | Defaults to the id for ordinary states. |
+| `states[].states` | list of objects |  | Nested states make this a composite state. Same fields as `states[]`. |
+| `states[].style` | object |  | Colour and dash overrides (see Styling). |
+| `transitions` | list of objects |  | Drawn as `event [guard] / action`; endpoints may be any state, composite or nested. |
+| `transitions[].id` | string |  | Optional; generated when absent. |
+| `transitions[].from` | string | yes | Source state id. |
+| `transitions[].to` | string | yes | Target state id. |
+| `transitions[].event` | string |  | Trigger. |
+| `transitions[].guard` | string |  | Condition, shown in brackets. |
+| `transitions[].action` | string |  | Effect, shown after a slash. |
+| `transitions[].style` | object |  | Colour and dash overrides (see Styling). |
+
+<!-- END GENERATED: reference -->
+
+**XML** uses attributes for scalars and child elements for objects and lists, with any item name:
+
+```xml
+<diagram version="1" type="flowchart" title="Refunds">
+  <lanes><lane id="cs" label="Support"/></lanes>
+  <nodes>
+    <node id="ask" shape="terminator" label="Request" lane="cs"><style fill="#dbeafe"/></node>
+    <node id="pay" label="Pay" lane="cs"/>
+  </nodes>
+  <edges><edge from="ask" to="pay"/></edges>
+</diagram>
+```
+
+**YAML** is the JSON structure written as YAML.
+
+Flowchart rules: with lanes, every node needs a `lane`; with phases, every node also needs a `phase`. State rules: at most one `initial` per region (the top level or a composite), with no incoming transitions; `final` states have no outgoing transitions; pseudostates cannot contain states. Ids are unique across all levels.
 
 ### Styling
 
@@ -483,8 +536,9 @@ Output is standalone SVG 1.1. Text uses `Arial, Liberation Sans, Helvetica, sans
 
 | Method | Path | Returns |
 |--------|------|---------|
-| POST | `/v1/render` | `image/svg+xml`, or `{ svg, diagnostics }` with `Accept: application/json` |
-| POST | `/v1/validate` | `{ valid, diagnostics }` |
+| POST | `/v1/render` | `image/svg+xml`, or `{ svg, diagnostics }` with `Accept: application/json`. Body as JSON, XML (`application/xml`) or YAML (`application/yaml`) |
+| GET | `/v1/render?src=…` | SVG for `<img>` embedding; `src` is the JSON document, base64url-encoded |
+| POST | `/v1/validate` | `{ valid, diagnostics }`; JSON, XML or YAML |
 | GET | `/v1/types` | Registered diagram types and their examples |
 | GET | `/v1/schema`, `/v1/schema/{type}` | JSON Schema (2020-12), combined or per type |
 | POST | `/v1/generate` | Diagram source generated by Claude from text and/or documents (see [AI generation](#ai-generation)) |
