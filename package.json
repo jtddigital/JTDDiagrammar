@@ -21,7 +21,8 @@
     "docs:screens": "pnpm --filter @jtd/web screens",
     "ai:live": "tsx scripts/ai/live-check.ts",
     "quality": "tsx scripts/quality.ts",
-    "licences": "tsx scripts/ci/licences.ts"
+    "licences": "tsx scripts/ci/licences.ts",
+    "ai:eval": "tsx scripts/ai/eval.ts"
   },
   "devDependencies": {
     "@jtd/ai": "workspace:*",

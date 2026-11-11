@@ -87,3 +87,65 @@ describe('without AI credentials (URS-API-015, URS-API-016, URS-AI-010)', () => 
     expect(JSON.stringify(c)).not.toContain('sk-ant-secret-value');
   });
 });
+
+describe('POST /v1/refine (URS-API-013)', () => {
+  it('returns the refined, validated diagram', async () => {
+    const { app } = await start([{ json: flow }]);
+    const source = { version: '1', type: 'flowchart', title: 'Refunds', nodes: [{ id: 'ask', style: { fill: '#ff0000' } }] };
+    const res = await app.inject({ method: 'POST', url: '/v1/refine', payload: { source, instruction: 'add the payment step' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ valid: true, source: { nodes: [{ id: 'ask', style: { fill: '#ff0000' } }, { id: 'pay' }] } });
+  });
+
+  it('rejects a missing instruction', async () => {
+    const { app } = await start([]);
+    const res = await app.inject({ method: 'POST', url: '/v1/refine', payload: { source: { version: '1', type: 'flowchart', nodes: [] } } });
+    expect([res.statusCode, res.json().diagnostics[0].code]).toEqual([400, 'ai.input']);
+  });
+});
+
+describe('progress over SSE (URS-API-014, URS-AI-015)', () => {
+  const events = (body: string) =>
+    body
+      .trim()
+      .split('\n\n')
+      .map((chunk) => {
+        const [, event] = /^event: (.*)$/m.exec(chunk)!;
+        const [, data] = /^data: (.*)$/m.exec(chunk)!;
+        return { event, data: JSON.parse(data!) };
+      });
+
+  it('streams progress, then the result', async () => {
+    const { app } = await start([{ json: flow }]);
+    const res = await app.inject({ method: 'POST', url: '/v1/generate', headers: { accept: 'text/event-stream' }, payload: { text: 'x', type: 'flowchart' } });
+    expect(res.headers['content-type']).toBe('text/event-stream; charset=utf-8');
+    const ev = events(res.body);
+    expect(ev.map((e) => e.event)).toEqual(['progress', 'progress', 'progress', 'result']);
+    expect(ev.slice(0, 3).map((e) => e.data.stage)).toEqual(['ingest', 'generate', 'validate']);
+    expect(ev[3]!.data).toMatchObject({ valid: true, type: 'flowchart' });
+  });
+
+  it('ends with an error event carrying the status', async () => {
+    const { app } = await start([{ text: '', stop: 'refusal' }]);
+    const res = await app.inject({ method: 'POST', url: '/v1/generate', headers: { accept: 'text/event-stream' }, payload: { text: 'x', type: 'flowchart' } });
+    expect(events(res.body).at(-1)).toEqual({ event: 'error', data: { status: 422, diagnostics: [expect.objectContaining({ code: 'ai.refusal' })] } });
+  });
+});
+
+describe('rate limit (URS-AI-019)', () => {
+  it('allows N AI requests per client per minute, then 429 with Retry-After', async () => {
+    const { app } = await start([{ json: flow }, { json: flow }], { ratePerMinute: 2 });
+    const go = () => app.inject({ method: 'POST', url: '/v1/generate', payload: { text: 'x', type: 'flowchart' } });
+    expect([(await go()).statusCode, (await go()).statusCode]).toEqual([200, 200]);
+    const third = await go();
+    expect([third.statusCode, third.json().diagnostics[0].code]).toEqual([429, 'limit.rate']);
+    expect(Number(third.headers['retry-after'])).toBeGreaterThan(0);
+    expect((await app.inject({ method: 'POST', url: '/v1/render', payload: { version: '1', type: 'flowchart', nodes: [] } })).statusCode).toBe(200);
+  });
+
+  it('reads limits, output budget and prices from the environment', () => {
+    const c = fromEnv({ AI_RATE_LIMIT: '0', AI_MAX_OUTPUT_TOKENS: '8000', AI_PRICES: '{"m":{"input":1,"output":2,"cacheRead":0,"cacheWrite":0}}' }).ai;
+    expect([c.ratePerMinute, c.maxOutputTokens, c.prices?.m?.output]).toEqual([0, 8000, 2]);
+    expect(fromEnv({ AI_PRICES: 'not json' }).ai.prices).toBeUndefined();
+  });
+});

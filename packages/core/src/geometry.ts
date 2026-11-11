@@ -16,6 +16,7 @@ export interface Box {
 export interface PlacedNode extends Box {
   id: string;
   style?: Style;
+  quote?: string;
   shape: string;
   lines: string[];
 }
@@ -23,6 +24,7 @@ export interface PlacedNode extends Box {
 export interface RoutedEdge {
   id: string;
   style?: Style;
+  quote?: string;
   marker?: 'none';
   from: string;
   to: string;

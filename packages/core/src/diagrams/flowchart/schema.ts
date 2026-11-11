@@ -12,6 +12,7 @@ const node = {
     lane: ref('Lane id; required when the diagram has lanes.'),
     phase: ref('Phase id; required when the diagram has phases.'),
     order: { type: 'integer', description: 'Hint: nodes in the same column and lane are placed in ascending order.' },
+    quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
     style,
   },
 } as const;
@@ -43,6 +44,7 @@ const edge = {
     label: { type: 'string', description: 'Text on the edge.' },
     fromSide: { ...side, description: 'Side to leave the source by (N, E, S, W); default follows the flow.' },
     toSide: { ...side, description: 'Side to enter the target by; default follows the flow.' },
+    quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
     style,
   },
 } as const;

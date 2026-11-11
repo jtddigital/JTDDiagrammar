@@ -1,5 +1,6 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
-import { STATE_KINDS, type State, type StateDiagram, type Transition } from './model.ts';
+import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
+import { STATE_KINDS, walk, type State, type StateDiagram, type Transition } from './model.ts';
 
 const str = { type: 'string' } as const;
 
@@ -25,6 +26,7 @@ const schema = {
           kind: { type: 'string', enum: STATE_KINDS },
           label: str,
           parent: { type: 'string', description: 'Id of the composite state this state is nested in; omit at top level.' },
+          quote: { type: 'string', description: 'Short verbatim excerpt from the material supporting this state.' },
         },
       },
     },
@@ -34,7 +36,7 @@ const schema = {
         type: 'object',
         additionalProperties: false,
         required: ['from', 'to'],
-        properties: { from: str, to: str, event: str, guard: str, action: str },
+        properties: { from: str, to: str, event: str, guard: str, action: str, quote: { type: 'string', description: 'Short verbatim excerpt supporting this transition.' } },
       },
     },
   },
@@ -43,7 +45,7 @@ const schema = {
 interface Generated {
   title: string;
   direction: 'LR' | 'TB';
-  states: { id: string; kind: State['kind']; label: string; parent?: string }[];
+  states: { id: string; kind: State['kind']; label: string; parent?: string; quote?: string }[];
   transitions: Transition[];
 }
 
@@ -61,7 +63,7 @@ function nest(flat: Generated['states']): State[] {
       .map((s) => {
         const children = build(s.id);
         const kind = s.kind ?? 'state';
-        return { id: s.id, ...(kind !== 'state' && { kind }), ...(s.label && { label: s.label }), ...(children.length && { states: children }) };
+        return { id: s.id, ...(kind !== 'state' && { kind }), ...(s.label && { label: s.label }), ...(children.length && { states: children }), ...(s.quote && { quote: s.quote }) };
       });
   return build(undefined);
 }
@@ -71,7 +73,8 @@ const guide = `Diagram type: state.
 - Start each region with one "initial" pseudostate (empty label) that has exactly one outgoing transition; use "final" (empty label) for terminal ends and "choice" (empty label) for branching on guards.
 - Group sub-states under a composite state by setting their "parent" to its id. A composite state is an ordinary "state" with children; it may have its own initial pseudostate.
 - Transitions: "event" is what triggers them, "guard" is a condition without brackets, "action" is what happens, without a slash. Omit parts that the material does not mention.
-- Use direction "LR" unless the material describes a long linear sequence.`;
+- Use direction "LR" unless the material describes a long linear sequence.
+- Where the material supports a state or transition directly, set "quote" to a short verbatim excerpt (at most 20 words).`;
 
 const examples = [
   {
@@ -102,6 +105,32 @@ export const stateAi: AiAssets<StateDiagram> = {
   schema,
   guide,
   examples,
+  toGenerated: (m) => ({
+    title: m.title ?? '',
+    direction: m.direction ?? 'LR',
+    states: [...walk(m.states)].map(({ state: s, parent }) => {
+      const kind = s.kind ?? 'state';
+      return { id: s.id, kind, label: s.label ?? (kind === 'state' && !s.states?.length ? s.id : ''), ...(parent !== undefined && { parent }), ...pick(s, 'quote') };
+    }),
+    transitions: (m.transitions ?? []).map((t) => pick(t, 'from', 'to', 'event', 'guard', 'action', 'quote')),
+  }),
+  // Restore theme, state styles and transition ids/styles, matched by id and endpoints.
+  merge: (prev, next) => {
+    const states = byId([...walk(prev.states)].map((w) => w.state));
+    const match = edgeMatcher(prev.transitions ?? [], (t) => t.event);
+    const restyle = (ss: State[]): State[] => ss.map((s) => ({ ...s, ...pick(states.get(s.id) ?? ({} as State), 'style'), ...(s.states && { states: restyle(s.states) }) }));
+    return {
+      ...next,
+      ...pick(prev, 'theme'),
+      states: restyle(next.states),
+      ...(next.transitions && {
+        transitions: next.transitions.map((t) => {
+          const p = match(t) ?? ({} as Transition);
+          return { ...pick(p, 'id'), ...t, ...pick(p, 'style') };
+        }),
+      }),
+    };
+  },
   fromGenerated: (generated) => {
     const g = generated as Generated;
     return { version: '1', type: 'state', title: g.title, direction: g.direction, states: nest(g.states), transitions: g.transitions };

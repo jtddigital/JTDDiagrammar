@@ -40,6 +40,8 @@ export const checklist: DiagramType<Checklist> = {
       properties: { items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'label'], properties: { id: { type: 'string' }, label: { type: 'string' } } } } },
     },
     fromGenerated: (g) => ({ version: '1', type: 'checklist', items: (g as Checklist).items }) as unknown as Checklist,
+    toGenerated: (m) => ({ items: m.items }),
+    merge: (_prev, next) => next,
     guide: 'Diagram type: checklist. One item per step.',
     examples: [{ input: 'Do A.', output: { items: [{ id: 'a', label: 'A' }] } }],
   },

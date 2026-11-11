@@ -16,6 +16,8 @@ export interface Style {
 interface Sourced {
   src?: string;
   style?: Style;
+  /** Supporting excerpt from the material it was generated from (URS-AI-014). */
+  quote?: string;
 }
 
 export interface IRNode extends Sourced {

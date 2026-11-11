@@ -21,6 +21,17 @@ export const userTurn = (blocks: readonly InputBlock[]): Turn => ({
   content: [...blocks, { type: 'text', text: 'Create the diagram from the material above.' }],
 });
 
+/** Ask for a change to an existing diagram (URS-AI-013). The instruction comes from the user, not from material. */
+export const refineTurn = (current: unknown, instruction: string): Turn => ({
+  role: 'user',
+  content: [
+    {
+      type: 'text',
+      text: `Current diagram:\n${JSON.stringify(current)}\n\nChange it as follows:\n<instruction>\n${instruction}\n</instruction>\n\nReturn the complete updated diagram. Keep everything the instruction does not ask to change, including ids.`,
+    },
+  ],
+});
+
 /** Feeds validation failures back for correction (URS-AI-006). */
 export const repairTurn = (ds: readonly Diagnostic[]): Turn => ({
   role: 'user',

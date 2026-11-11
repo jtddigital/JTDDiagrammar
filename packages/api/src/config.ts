@@ -2,7 +2,17 @@ import { existsSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
+import type { Price } from '@jtd/ai';
+
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+const json = (v: string | undefined): Record<string, Price> | undefined => {
+  try {
+    return v ? (JSON.parse(v) as Record<string, Price>) : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 /** AI generation settings (URS-AI-002, URS-AI-009). */
 export interface AiConfig {
@@ -17,6 +27,12 @@ export interface AiConfig {
   maxFileBytes: number;
   maxTotalBytes: number;
   maxPdfPages: number;
+  /** Output budget per Claude call. */
+  maxOutputTokens: number;
+  /** AI requests per client per minute; 0 disables (URS-AI-019). */
+  ratePerMinute: number;
+  /** Price table override, USD per million tokens (URS-AI-017). */
+  prices?: Record<string, Price>;
 }
 
 export interface Config {
@@ -73,6 +89,9 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
       maxFileBytes: int(env.AI_MAX_FILE_BYTES, 20_000_000),
       maxTotalBytes: int(env.AI_MAX_TOTAL_BYTES, 20_000_000),
       maxPdfPages: int(env.AI_MAX_PDF_PAGES, 600),
+      maxOutputTokens: int(env.AI_MAX_OUTPUT_TOKENS, 64000),
+      ratePerMinute: count(env.AI_RATE_LIMIT, 10),
+      ...(json(env.AI_PRICES) && { prices: json(env.AI_PRICES)! }),
     },
   };
 };

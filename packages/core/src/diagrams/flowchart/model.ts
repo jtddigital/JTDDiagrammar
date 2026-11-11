@@ -16,6 +16,7 @@ export interface FlowNode {
   lane?: string;
   phase?: string;
   order?: number;
+  quote?: string;
   style?: Style;
 }
 
@@ -26,6 +27,7 @@ export interface FlowEdge {
   label?: string;
   fromSide?: Side;
   toSide?: Side;
+  quote?: string;
   style?: Style;
 }
 

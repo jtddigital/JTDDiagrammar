@@ -21,6 +21,7 @@ export const orgchartSchema = {
           name: { type: 'string', description: 'Shown first, on its own line.' },
           title: { type: 'string', description: 'Role, shown under the name.' },
           manager: ref('Id of the person this person reports to; omit at the top.'),
+          quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
           style,
         },
       },

@@ -35,7 +35,7 @@ export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOption
   });
 
   // Tests inject a mock; otherwise the SDK client exists only when credentials are configured (URS-API-015).
-  const claude = opts.claude ?? (cfg.ai.enabled ? anthropicClient({ model: cfg.ai.model, effort: cfg.ai.effort, fallbacks: cfg.ai.fallbacks }) : undefined);
+  const claude = opts.claude ?? (cfg.ai.enabled ? anthropicClient({ model: cfg.ai.model, effort: cfg.ai.effort, fallbacks: cfg.ai.fallbacks, maxTokens: cfg.ai.maxOutputTokens }) : undefined);
   const ctx = { reg, pool, ai: cfg.ai, ...(claude && { claude }) };
   const routes: Route[] = [...metaRoutes(ctx), ...validateRoutes(ctx), ...renderRoutes(ctx), ...generateRoutes(ctx)];
   let doc: object | undefined;

@@ -1,6 +1,7 @@
 import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
+import { byId, pick } from '../../ai-merge.ts';
 import type { OrgChart, Person } from './model.ts';
 import { orgchartSchema } from './schema.ts';
 
@@ -21,7 +22,7 @@ const toIR = (m: OrgChart): GraphIR => ({
   ...(m.title !== undefined && { title: m.title }),
   ...(m.theme && { theme: m.theme }),
   direction: m.direction ?? 'TB',
-  nodes: m.people.map((p, i) => ({ id: p.id, shape: 'card', label: p.title ? `${p.name}\n${p.title}` : p.name, ...(p.style && { style: p.style }), src: pointer('people', i) })),
+  nodes: m.people.map((p, i) => ({ id: p.id, shape: 'card', label: p.title ? `${p.name}\n${p.title}` : p.name, ...pick(p, 'style', 'quote'), src: pointer('people', i) })),
   edges: m.people.flatMap((p, i) => (p.manager === undefined ? [] : [{ id: `edge:${i}`, from: p.manager, to: p.id, marker: 'none' as const, src: pointer('people', i, 'manager') }])),
   containers: [],
 });
@@ -60,7 +61,13 @@ const ai: AiAssets<OrgChart> = {
           type: 'object',
           additionalProperties: false,
           required: ['id', 'name'],
-          properties: { id: { type: 'string' }, name: { type: 'string' }, title: { type: 'string' }, manager: { type: 'string', description: 'Id of their manager; omit at the top.' } },
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            title: { type: 'string' },
+            manager: { type: 'string', description: 'Id of their manager; omit at the top.' },
+            quote: { type: 'string', description: 'Short verbatim excerpt naming this person or role.' },
+          },
         },
       },
     },
@@ -69,10 +76,17 @@ const ai: AiAssets<OrgChart> = {
     const { title, people } = g as { title: string; people: Person[] };
     return { version: '1', type: 'orgchart', title, people };
   },
+  toGenerated: (m) => ({ title: m.title ?? '', people: m.people.map((p) => pick(p, 'id', 'name', 'title', 'manager', 'quote')) }),
+  // Restore theme, direction and styles by person id.
+  merge: (prev, next) => {
+    const people = byId(prev.people);
+    return { ...next, ...pick(prev, 'theme', 'direction'), people: next.people.map((p) => ({ ...p, ...pick(people.get(p.id) ?? ({} as Person), 'style') })) };
+  },
   guide: `Diagram type: orgchart.
 - One entry per person or role named in the material; "name" is the person (or the role if no name is given), "title" their role.
 - "manager" is the id of who they report to. Exactly the people at the top have no manager.
-- Do not invent people or reporting lines that the material does not state.`,
+- Do not invent people or reporting lines that the material does not state.
+- Where the material names a person or role directly, set "quote" to a short verbatim excerpt (at most 20 words).`,
   examples: [
     {
       input: 'Dana leads the clinic. Two nurses, Eli and Fay, report to Dana.',

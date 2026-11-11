@@ -9,6 +9,7 @@ export interface State {
   kind?: StateKind;
   label?: string;
   states?: State[];
+  quote?: string;
   style?: Style;
 }
 
@@ -20,6 +21,7 @@ export interface Transition {
   event?: string;
   guard?: string;
   action?: string;
+  quote?: string;
   style?: Style;
 }
 

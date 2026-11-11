@@ -3,7 +3,10 @@ import type { JsonSchema } from '@jtd/core';
 /** Content we send: text, or a PDF passed through as a document block. */
 export type InputBlock =
   | { type: 'text'; text: string }
-  | { type: 'document'; title: string; source: { type: 'base64'; media_type: 'application/pdf'; data: string } };
+  | { type: 'document'; title: string; source: { type: 'base64'; media_type: 'application/pdf'; data: string } }
+  | { type: 'image'; source: { type: 'base64'; media_type: ImageType; data: string } };
+
+export type ImageType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
 /** Assistant turns carry the model's content blocks verbatim (thinking blocks must round-trip unchanged). */
 export interface Turn {

@@ -6,6 +6,7 @@ export interface Person {
   title?: string;
   /** Id of this person's manager; omitted at the top. */
   manager?: string;
+  quote?: string;
   style?: Style;
 }
 

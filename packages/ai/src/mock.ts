@@ -5,6 +5,8 @@ export interface ScriptedReply {
   json?: unknown;
   text?: string;
   stop?: string;
+  /** Model reported as having served the reply (default 'mock'). */
+  model?: string;
 }
 
 /** Deterministic stand-in for Claude: replays scripted replies and records requests (URS-AI-020). */
@@ -24,7 +26,7 @@ export class MockClaude implements ClaudeClient {
     const r = this.#replies.shift();
     if (!r) throw new Error('MockClaude: no scripted reply left');
     const text = r.text ?? JSON.stringify(r.json);
-    return { content: [{ type: 'text', text }], text, stop: r.stop ?? 'end_turn', model: 'mock', usage: { input: 100, output: 50, cacheRead: 80, cacheWrite: 0 } };
+    return { content: [{ type: 'text', text }], text, stop: r.stop ?? 'end_turn', model: r.model ?? 'mock', usage: { input: 100, output: 50, cacheRead: 80, cacheWrite: 0 } };
   }
 
   async countTokens(): Promise<number> {

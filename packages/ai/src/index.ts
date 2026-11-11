@@ -1,6 +1,7 @@
 export { anthropicClient, type AnthropicOptions } from './anthropic.ts';
-export type { ClaudeClient, ClaudeReply, ClaudeRequest, Effort, InputBlock, Turn, Usage } from './client.ts';
+export type { ClaudeClient, ClaudeReply, ClaudeRequest, Effort, ImageType, InputBlock, Turn, Usage } from './client.ts';
 export { AiError, type AiErrorCode } from './errors.ts';
-export { generate, type GenerateOptions, type GenerateRequest, type GenerateResult } from './generate.ts';
+export { generate, refine, type GenerateOptions, type GenerateRequest, type GenerateResult, type Progress, type RefineRequest } from './generate.ts';
+export { cost, PRICES, type Price } from './pricing.ts';
 export { ingest, type IngestLimits, type InputFile } from './ingest/files.ts';
 export { MockClaude, type ScriptedReply } from './mock.ts';

@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.13 (draft) |
+| Version | 0.14 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -118,8 +118,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-API-010 | C | `GET /v1/render?src=<base64url>` for `<img>` embedding. | Integration test. | T | Verified |
 | URS-API-011 | M | `GET /v1/types` lists the registered types with their descriptions. | Integration test. | T | Verified |
 | URS-API-012 | M | `POST /v1/generate` (multipart: `files[]`, `text`, `type` or `auto`, options) returns `{ source, valid, diagnostics, attempts, usage }`, plus `svg` when valid. | Integration test with a mock client. | T | Verified |
-| URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Proposed |
-| URS-API-014 | S | `generate` and `refine` stream progress as SSE when called with `Accept: text/event-stream` (URS-AI-015). | Integration test. | T | Proposed |
+| URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Verified |
+| URS-API-014 | S | `generate` and `refine` stream progress as SSE when called with `Accept: text/event-stream` (URS-AI-015). | Integration test. | T | Verified |
 | URS-API-015 | M | With no AI credentials configured, the AI endpoints return `503`; every other endpoint keeps working. | Integration test. | T | Verified |
 | URS-API-016 | S | `GET /v1/ai` reports whether AI generation is available, so clients can hide it when it isn't. | Integration test. | T | Verified |
 
@@ -156,15 +156,15 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. | Log scrub test; bundle grep in CI. | T | Verified |
 | URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Verified |
 | URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Verified |
-| URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction. The result goes through URS-AI-005/006. | Mock test. | T | Proposed |
-| URS-AI-014 | S | Provenance: generated nodes and edges may carry a `source` quote from the input. This is a schema field, because the Citations API cannot be combined with structured outputs. | Fixture test. | T | Proposed |
-| URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Proposed |
+| URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction. The result goes through URS-AI-005/006. | Mock test. | T | Verified |
+| URS-AI-014 | S | Provenance: generated nodes and edges may carry a `source` quote from the input. This is a schema field, because the Citations API cannot be combined with structured outputs. | Fixture test. | T | Verified |
+| URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Verified |
 | URS-AI-016 | S | Prompt caching: the stable prefix (system prompt, type guidance, examples) is cached and kept free of volatile data. | Live check: `cache_read_input_tokens > 0` on a repeat call. | T | Verified |
-| URS-AI-017 | S | Usage reported per request: input/output tokens, cache reads, attempts and estimated cost. | Mock test. | T | Partial |
+| URS-AI-017 | S | Usage reported per request: input/output tokens, cache reads, attempts and estimated cost. | Mock test. | T | Verified |
 | URS-AI-018 | S | Evaluation suite: a corpus of input documents with reference diagrams. Metrics: valid on first try, valid after repairs, node/edge recall, lane-assignment accuracy. It runs on demand (it costs money), not on every CI run. | Report produced. | D | Partial |
-| URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Proposed |
+| URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Verified |
 | URS-AI-020 | M | The Claude client sits behind an interface with a deterministic mock. CI never calls the live API. | CI has no key; tests pass. | T | Verified |
-| URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Proposed |
+| URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
 | URS-AI-022 | C | Bulk generation via the Message Batches API. | — | T | Proposed |
 
 ### 3.10 Documentation (DOC)
@@ -253,9 +253,14 @@ Updated with each change. `—` = not started.
 | AI-010 | api/src/config.ts (presence only), eslint.config.js | api/test/generate.test.ts, test/boundaries.test.ts | Key read by the SDK only; web cannot import AI code. |
 | AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts, `pnpm ai:live` (prompt injection case) | Structural defences tested. Live run 2026-11-11: injected title and `<script>` node ignored, output schema-valid, SVG has no unescaped script. One live fixture so far. |
 | AI-012 | no logging of bodies or material | api/test/api.test.ts (log capture) | Nothing is stored, so retention is moot. |
-| AI-017 | generate.ts usage totals | ai/test/generate.test.ts | Tokens, cache and attempts reported; no cost estimate yet. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
-| AI-018 | scripts/ai/{live-check,cases}.ts (`pnpm ai:live`) | scripts/ai/cases.test.ts (checks only) | Smoke subset: 3 cases with pass/fail checks, usage and cache reporting. No reference diagrams or recall metrics yet. Live run 2026-11-11 (claude-opus-5-5, effort high): 3/3 pass, all valid on the first attempt, 5–7 s each. |
+| AI-013, API-013 | ai/src/generate.ts (refine), DiagramType.ai.toGenerated/merge, api/src/routes/generate.ts | ai/test/refine.test.ts, core/test/ai-assets.test.ts (lossless round trip), api/test/generate.test.ts | Styles, hints, notes, ids and theme carried over. |
+| AI-014 | quote fields → IR → geometry → SVG `<title>` | core/test/styles.test.ts | Generation schemas ask for short verbatim excerpts. |
+| AI-015, API-014 | generate/refine `onProgress`; SSE in api/src/routes/generate.ts | ai/test/refine.test.ts, api/test/generate.test.ts | Stages: ingest, select, generate, validate, repair. |
+| AI-017 | ai/src/pricing.ts (`AI_PRICES` override) | ai/test/refine.test.ts | Priced per reply by the serving model; undefined if any model is unpriced. |
+| AI-019 | api/src/rate-limit.ts (`AI_RATE_LIMIT`), `AI_MAX_OUTPUT_TOKENS`, `AI_MAX_INPUT_TOKENS` | api/test/rate-limit.test.ts, generate.test.ts | Per client IP, in memory (D-001: internal hosting). |
+| AI-021 | ai/src/ingest/files.ts (PNG, JPEG, GIF, WebP) | ai/test/refine.test.ts | |
+| AI-018 | scripts/ai/{eval,corpus,metrics}.ts (`pnpm ai:eval`), live-check | scripts/ai/metrics.test.ts | Corpus of 6 documents across all three types; metrics: valid first/final, node and edge recall, lane accuracy. Not yet run with a key; the live smoke check passed 3/3 (v0.8.2). |
 | API-012, API-015, API-016 | api/src/routes/generate.ts, errors.ts | api/test/generate.test.ts, web/e2e/generate.spec.ts | |
 | WEB-011, WEB-012 | web/src/generate/* | web/e2e/generate.spec.ts | WEB-012: cancel plus a status line; no staged progress. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
@@ -273,6 +278,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.14 | 2026-11-11 | Sweep D: refine, provenance, progress over SSE, cost estimate, rate limiting, image input, evaluation corpus. AI-013/014/015/017/019/021, API-013/014 verified; AI-018 partial (not yet run). |
 | 0.13 | 2026-11-11 | Sweep C: port side hints, notes, org chart type. DM-009, DM-012 verified; TYP-006 partial. |
 | 0.12 | 2026-11-11 | Sweep B: XML and YAML input (core + API), generated language reference. IN-006, IN-007, API-007, DOC-006 verified. |
 | 0.11 | 2026-11-11 | Decision D-001 (internal hosting). Sweep A: EXT-002, IN-003, RN-001, RN-006, API-010, AI-009, AI-012, NF-004, NF-005, NF-007 verified; EXT-008 partial. |

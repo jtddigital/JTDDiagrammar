@@ -48,3 +48,15 @@ describe('styling and themes (URS-DM-010)', () => {
     expect(compile(flow({}, { style: { glow: true } }), reg).diagnostics.map((d) => d.code)).toEqual(['schema.additionalProperties']);
   });
 });
+
+describe('provenance quotes (URS-AI-014)', () => {
+  it('become escaped tooltips on nodes and edges', () => {
+    const out = svg(flow({}, { quote: 'The <clerk> collects "forms"' }, { quote: 'then hands over' }));
+    expect(out).toMatch(/<g id="n-a" [^>]*><title>The &lt;clerk&gt; collects &quot;forms&quot;<\/title>/);
+    expect(out).toMatch(/<g id="e-edge:0" class="jtd-edge"><title>then hands over<\/title>/);
+  });
+
+  it('are optional and absent from output when unset', () => {
+    expect(svg(flow())).not.toMatch(/<g id="n-a"[^>]*><title>/);
+  });
+});

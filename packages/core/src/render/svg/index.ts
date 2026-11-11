@@ -16,6 +16,8 @@ export interface SvgOptions {
 }
 
 const stroke = (color: string) => `stroke="${color}" stroke-width="${M.stroke}"`;
+/** Provenance as a native tooltip (URS-AI-014). */
+const tooltip = (q: string | undefined) => (q ? `<title>${esc(q)}</title>` : '');
 const fillAttr = (c: string | undefined) => (c ? ` fill="${c}"` : '');
 
 /** One arrowhead per edge colour; the default keeps the id `jtd-arrow`. */
@@ -33,6 +35,7 @@ function node(n: PlacedNode, P: Palette): string {
   const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, NODE_FONT, fillAttr(n.style?.text));
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})">` +
+    tooltip(n.quote) +
     `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line)}${dash(n.style?.dash)}/>${detail}${solid}${text}</g>`
   );
 }
@@ -47,6 +50,7 @@ function edge(e: RoutedEdge, P: Palette): string {
     : '';
   return (
     `<g id="e-${esc(e.id)}" class="jtd-edge">` +
+    tooltip(e.quote) +
     `<path d="${d}" fill="none" ${stroke(color)}${dash(e.style?.dash)}${e.marker === 'none' ? '' : ` marker-end="url(#${markerId(color, P)})"`}/>${label}</g>`
   );
 }
