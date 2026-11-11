@@ -35,6 +35,8 @@ async function fakeGitHub(dir: string) {
       const assets = [ASSET, `${ASSET}.sha256`].map((name, i) => ({ name, url: `${base}/assets/${i}` }));
       return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ tag_name: TAG, assets }));
     }
+    // A release made on the releases page, without the workflow's files.
+    if (req.url === '/repos/test/repo/releases/tags/v0.0.1') return res.writeHead(200).end(JSON.stringify({ tag_name: 'v0.0.1', assets: [] }));
     const m = /^\/assets\/([01])$/.exec(req.url ?? '');
     if (m && req.headers.accept === 'application/octet-stream') {
       downloads++;
@@ -97,6 +99,8 @@ try {
 
   const again = await run(...installer(TAG));
   check(again.status === 0 && gh.downloads() === 4, 'updates in place to a named release');
+  const bare = await run(...installer('v0.0.1'));
+  check(bare.status !== 0 && /v0\.0\.1 has no jtddiagrammar\.tar\.gz attached/.test(bare.stderr + bare.stdout), 'explains a release without the app bundle');
   const denied = await run(...installer(), { GITHUB_TOKEN: 'wrong' });
   check(denied.status !== 0 && /GITHUB_TOKEN/.test(denied.stderr + denied.stdout), 'explains a refused private repository');
 

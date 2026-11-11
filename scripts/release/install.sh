@@ -42,9 +42,12 @@ read -r TAG TAR_URL SUM_URL < <(node -e '
   const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
   const url = (n) => (r.assets || []).find((a) => a.name === n)?.url;
   const [t, s] = [url(process.argv[2]), url(process.argv[2] + ".sha256")];
-  if (!/^v[\w.+-]+$/.test(r.tag_name || "") || !t || !s) process.exit(1);
-  console.log(r.tag_name, t, s);
-' "$TMP/release.json" "$ASSET") || die "release '$WANT' has no $ASSET"
+  if (!/^v[\w.+-]+$/.test(r.tag_name || "")) process.exit(1);
+  console.log(r.tag_name, t || "-", s || "-");
+' "$TMP/release.json" "$ASSET") || die "release '$WANT' has an unexpected tag"
+if [ "$TAR_URL" = - ] || [ "$SUM_URL" = - ]; then
+  die "release $TAG has no $ASSET attached (GitHub's 'Source code' archive is not the app). The Release workflow attaches it: check its run under Actions, or start it with 'Run workflow' for tag $TAG."
+fi
 
 say "downloading $TAG"
 get "$TAR_URL" application/octet-stream "$TMP/$ASSET"

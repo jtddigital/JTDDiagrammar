@@ -604,7 +604,7 @@ Then run `jtddiagrammar` to start the app and open your browser; Ctrl+C stops it
 
 **Settings**, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder. Updates keep it. Installing also needs access to the npm registry, because dependencies are installed from the release's lockfile.
 
-**Publishing a release:** push a tag such as `v1.0.0`. The `Release` workflow runs the checks and attaches the bundle, its checksum and both installers. On every push, CI installs, launches, updates and uninstalls a packed release on Windows (Windows PowerShell 5.1 and PowerShell 7) and Linux (`pnpm release:e2e`).
+**Publishing a release:** push a tag such as `v1.0.0`, or create the release on the releases page. Either way the `Release` workflow runs the checks, then attaches the bundle, its checksum and both installers. If those files are missing from a release, open **Actions → Release → Run workflow** and enter the tag. GitHub's own "Source code" archives are not the app bundle. On every push, CI installs, launches, updates and uninstalls a packed release on Windows (Windows PowerShell 5.1 and PowerShell 7) and Linux (`pnpm release:e2e`).
 
 ## Quick start
 
