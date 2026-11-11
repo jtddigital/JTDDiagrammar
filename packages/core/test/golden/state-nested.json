@@ -1,0 +1,39 @@
+{
+  "version": "1",
+  "type": "state",
+  "title": "Two levels of nesting",
+  "states": [
+    { "id": "start", "kind": "initial" },
+    { "id": "off", "label": "Off" },
+    {
+      "id": "machine",
+      "label": "Machine",
+      "states": [
+        { "id": "m0", "kind": "initial" },
+        { "id": "idle", "label": "Idle" },
+        {
+          "id": "running",
+          "label": "Running",
+          "states": [
+            { "id": "r0", "kind": "initial" },
+            { "id": "slow", "label": "Slow" },
+            { "id": "fast", "label": "Fast" }
+          ]
+        }
+      ]
+    },
+    { "id": "fault", "label": "Fault" }
+  ],
+  "transitions": [
+    { "from": "start", "to": "off" },
+    { "from": "off", "to": "machine", "event": "power on" },
+    { "from": "m0", "to": "idle" },
+    { "from": "idle", "to": "running", "event": "start" },
+    { "from": "r0", "to": "slow" },
+    { "from": "slow", "to": "fast", "event": "boost" },
+    { "from": "fast", "to": "slow", "event": "ease" },
+    { "from": "fast", "to": "fault", "event": "overheat" },
+    { "from": "fault", "to": "idle", "event": "reset" },
+    { "from": "machine", "to": "off", "event": "power off" }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "type": "state",
+  "title": "Login (top to bottom, choice)",
+  "direction": "TB",
+  "states": [
+    { "id": "start", "kind": "initial" },
+    { "id": "entering", "label": "Entering credentials" },
+    { "id": "check", "kind": "choice" },
+    { "id": "locked", "label": "Locked" },
+    { "id": "in", "label": "Signed in" },
+    { "id": "end", "kind": "final" }
+  ],
+  "transitions": [
+    { "from": "start", "to": "entering" },
+    { "from": "entering", "to": "check", "event": "submit" },
+    { "from": "check", "to": "in", "guard": "valid" },
+    { "from": "check", "to": "entering", "guard": "invalid", "action": "count attempt" },
+    { "from": "check", "to": "locked", "guard": "attempts > 3" },
+    { "from": "in", "to": "end", "event": "sign out" }
+  ]
+}

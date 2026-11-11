@@ -1,0 +1,24 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "All shapes",
+  "direction": "TB",
+  "nodes": [
+    { "id": "t", "shape": "terminator", "label": "Terminator" },
+    { "id": "p", "shape": "process", "label": "Process" },
+    { "id": "d", "shape": "decision", "label": "Decision?" },
+    { "id": "doc", "shape": "document", "label": "Document" },
+    { "id": "io", "shape": "data", "label": "Data" },
+    { "id": "sub", "shape": "subprocess", "label": "Subprocess" },
+    { "id": "c", "shape": "connector", "label": "A" }
+  ],
+  "edges": [
+    { "from": "t", "to": "p" },
+    { "from": "p", "to": "d" },
+    { "from": "d", "to": "doc", "label": "Yes" },
+    { "from": "d", "to": "io", "label": "No" },
+    { "from": "doc", "to": "sub" },
+    { "from": "io", "to": "sub" },
+    { "from": "sub", "to": "c" }
+  ]
+}

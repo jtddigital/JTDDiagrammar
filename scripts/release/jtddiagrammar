@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# JTDDiagrammar launcher (URS-NF-011).
+#   jtddiagrammar [start] [--port N] [--no-open]   start the app and open it in the browser
+#   jtddiagrammar update [vX.Y.Z]                  install the latest (or a given) release
+#   jtddiagrammar version
+set -euo pipefail
+
+APP="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+JTD_HOME="${JTD_HOME:-$(dirname "$(dirname "$APP")")}"
+export JTD_HOME
+
+cmd=start
+if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then cmd="$1"; shift; fi
+
+case "$cmd" in
+  version) cat "$APP/VERSION" ;;
+  update) exec bash "$APP/bin/install.sh" "$@" ;;
+  start)
+    if [ -f "$JTD_HOME/config.env" ]; then set -a; . "$JTD_HOME/config.env"; set +a; fi
+    export PORT="${PORT:-8080}" HOST="${HOST:-127.0.0.1}" NODE_ENV=production
+    open=1
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --port) PORT="$2"; shift 2 ;;
+        --no-open) open=0; shift ;;
+        *) echo "unknown option: $1" >&2; exit 2 ;;
+      esac
+    done
+    url="http://localhost:$PORT"
+    browse() {
+      [ "$open" = 1 ] || return 0
+      if [ "$(uname)" = Darwin ]; then open "$url"
+      elif command -v xdg-open >/dev/null; then xdg-open "$url" >/dev/null 2>&1 &
+      fi
+    }
+    if curl -sf "$url/health" >/dev/null 2>&1; then echo "already running at $url"; browse; exit 0; fi
+    node "$APP/packages/api/src/server.ts" &
+    pid=$!
+    trap 'kill $pid 2>/dev/null || true' INT TERM EXIT
+    for _ in $(seq 1 60); do
+      curl -sf "$url/health" >/dev/null 2>&1 && break
+      kill -0 $pid 2>/dev/null || { echo "the server failed to start" >&2; exit 1; }
+      sleep 0.5
+    done
+    echo "JTDDiagrammar $(cat "$APP/VERSION") at $url (Ctrl+C to stop)"
+    browse
+    wait $pid
+    ;;
+  *) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

@@ -1,0 +1,32 @@
+name: Release
+
+# URS-NF-012: pushing a v* tag publishes the app bundle, its checksum and the installers.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm release:pack "$TAG"
+        env:
+          TAG: ${{ github.ref_name }}
+      - run: |
+          cd dist-release
+          gh release create "$TAG" jtddiagrammar.tar.gz jtddiagrammar.tar.gz.sha256 install.sh install.ps1 \
+            --title "JTDDiagrammar $TAG" --generate-notes --verify-tag
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "Lanes only",
+  "lanes": [
+    { "id": "a", "label": "Customer Success and Account Management" },
+    { "id": "empty", "label": "Legal" },
+    { "id": "b", "label": "Engineering" }
+  ],
+  "nodes": [
+    { "id": "ticket", "label": "Raise ticket", "lane": "a" },
+    { "id": "triage", "shape": "decision", "label": "Bug?", "lane": "b" },
+    { "id": "fix", "label": "Fix", "lane": "b" },
+    { "id": "answer", "label": "Answer customer", "lane": "a" },
+    { "id": "close", "shape": "terminator", "label": "Close", "lane": "a" }
+  ],
+  "edges": [
+    { "from": "ticket", "to": "triage" },
+    { "from": "triage", "to": "fix", "label": "Yes" },
+    { "from": "triage", "to": "answer", "label": "No" },
+    { "from": "fix", "to": "answer" },
+    { "from": "answer", "to": "close" },
+    { "from": "fix", "to": "fix", "label": "retest" }
+  ]
+}

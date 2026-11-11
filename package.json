@@ -1,0 +1,44 @@
+{
+  "name": "jtddiagrammar",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/ai && tsc -p packages/api && tsc -p packages/web && tsc -p .",
+    "test": "vitest run --coverage",
+    "docs:build": "tsx scripts/docs/cli.ts build",
+    "docs:check": "tsx scripts/docs/cli.ts check",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check && pnpm licences",
+    "fonts:metrics": "tsx scripts/fonts/metrics.ts",
+    "dev:api": "node packages/api/src/server.ts",
+    "dev:web": "pnpm --filter @jtd/web dev",
+    "e2e": "pnpm --filter @jtd/web e2e",
+    "docs:screens": "pnpm --filter @jtd/web screens",
+    "ai:live": "tsx scripts/ai/live-check.ts",
+    "quality": "tsx scripts/quality.ts",
+    "licences": "tsx scripts/ci/licences.ts",
+    "ai:eval": "tsx scripts/ai/eval.ts",
+    "release:pack": "tsx scripts/release/pack.ts",
+    "release:e2e": "tsx scripts/release/e2e.ts"
+  },
+  "devDependencies": {
+    "@jtd/ai": "workspace:*",
+    "@jtd/core": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "5.1.0",
+    "eslint": "^10.14.0",
+    "fast-xml-parser": "^5.12.0",
+    "license-checker-rseidelsohn": "^5.0.1",
+    "opentype.js": "^2.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}

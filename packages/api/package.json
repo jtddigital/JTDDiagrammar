@@ -1,0 +1,20 @@
+{
+  "name": "@jtd/api",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.ts"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^10.1.8",
+    "@fastify/static": "^10.1.10",
+    "@jtd/ai": "workspace:*",
+    "@jtd/core": "workspace:*",
+    "fastify": "^5.12.8"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
+  }
+}
