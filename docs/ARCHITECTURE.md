@@ -1,105 +1,165 @@
 # Architecture & Plan — JTDDiagrammar
 
-## 1. Pipeline
-```
-source (JSON | XML*) ──adapter──▶ Model ──validate──▶ Model' ──layout──▶ Geometry ──render──▶ SVG string
-```
-Every stage is a pure function in `@jtd/core`. API and web call the **same** code → identical SVG (URS-WEB-003, URS-LY-001).
+## 1. Principle
+Diagram types are plugins. Everything downstream of a type plugin (layout, routing, shapes, SVG, API, web app) is type-agnostic and works only on a shared **Graph IR**. A cross-functional flowchart is a flowchart with partitions. A state diagram is a graph with containers. Neither gets special code outside its own plugin. (URS-EXT-001..006)
 
-## 2. Repo layout (pnpm workspaces, TypeScript strict)
+## 2. Pipeline
+```
+source ─adapter─▶ doc ─registry[type]─▶ DiagramType
+                         │ validate (schema + semantic hook)
+                         │ toIR()
+                         ▼
+                      Graph IR ─engine[type.engine].layout()─▶ Geometry ─svg.render()─▶ SVG
+```
+| Layer | Knows about | Never knows about |
+|-------|-------------|-------------------|
+| adapters (json, xml*) | text formats | diagram types |
+| types/* | its own source model, the IR | layout internals, SVG |
+| layout/* | IR, geometry, text metrics | types |
+| render/svg | geometry, shape registry | types, layout |
+
+Enforced with `no-restricted-imports` (URS-EXT-004, URS-NF-001).
+
+## 3. Core contracts
+```ts
+interface DiagramType<M = unknown> {
+  id: string;                          // "flowchart" | "state" | …
+  schema: JSONSchema;                  // validates M (URS-EXT-006)
+  shapes: string[];                    // allowed shape ids (URS-DM-004)
+  engine: string;                      // "layered" (URS-EXT-005)
+  validate?(m: M): Diagnostic[];       // semantic hook (URS-EXT-007)
+  toIR(m: M): GraphIR;
+}
+
+interface GraphIR {
+  direction: 'LR' | 'TB';
+  nodes: { id: string; shape: string; label: string; parent?: string; order?: number; style?: Style }[];
+  edges: { id: string; from: string; to: string; label?: string; ports?: Ports; marker?: string; style?: Style }[];
+  containers: { id: string; label?: string; parent?: string; style?: Style }[];          // URS-DM-013
+  partitions?: { lanes: Band[]; phases?: Band[]; assign: Record<string, { lane: string; phase?: string }> }; // URS-DM-001/002
+}
+
+interface LayoutEngine { id: string; layout(ir: GraphIR, m: Measurer): Geometry }
+interface Shape { id: string; textBox(w, h): Box; outline(w, h): PathData; ports(w, h): PortMap }
+```
+`Geometry` = positioned nodes, containers, bands, edge polylines and label boxes. The renderer turns it into SVG with no type knowledge.
+
+## 4. Repo layout (pnpm workspaces, TypeScript strict)
 ```
 packages/
-  core/                     # isomorphic, zero DOM/Node deps (URS-NF-001)
-    src/model/              types.ts, schema.json
-    src/adapters/           json.ts, xml.ts*
-    src/validate/           schema.ts (Ajv), semantic.ts
-    src/measure/            font-metrics.ts (generated table), text.ts (wrap/measure)
-    src/layout/             rank.ts, grid.ts, place.ts, route.ts, labels.ts
-    src/render/svg/         shapes/*.ts, bands.ts, edges.ts, defs.ts, escape.ts, index.ts
-    src/index.ts            render(src, opts) → { svg, diagnostics }
-  api/                      # Fastify
-    src/routes/             render.ts, validate.ts, schema.ts, health.ts
-    src/limits.ts
-  web/                      # Vite + React + CodeMirror 6
-    src/editor/  src/preview/  src/export/  src/examples/
-fixtures/                   # shared sample diagrams + golden SVGs
-docs/                       # URS.md, ARCHITECTURE.md
+  core/src/
+    registry.ts               types + engines + shapes
+    ir/                       types.ts
+    adapters/                 json.ts, xml.ts*
+    validate/                 schema.ts (Ajv), common.ts (ids, refs)
+    types/
+      flowchart/              schema.json, model.ts, to-ir.ts, validate.ts, index.ts
+      state/                  schema.json, model.ts, to-ir.ts, validate.ts, index.ts
+    shapes/                   registry.ts, process.ts, decision.ts, terminator.ts, state.ts, initial.ts, final.ts, …
+    measure/                  font-metrics.ts (generated), text.ts
+    layout/
+      layered/                cycles.ts, rank.ts, order.ts, place.ts, index.ts
+      constraints/            partitions.ts, containers.ts
+      route/                  channels.ts, astar.ts, self-loop.ts, ports.ts
+      labels.ts
+    render/svg/               document.ts, nodes.ts, edges.ts, bands.ts, containers.ts, markers.ts, escape.ts
+    index.ts                  render(src) → { svg, diagnostics }
+  api/src/routes/             render.ts, validate.ts, schema.ts, types.ts, health.ts
+  web/src/                    editor/, preview/, export/, examples/<type>/
+fixtures/<type>/              samples + golden SVGs
 ```
-`*` = Should/Could, later phase.
 
-## 3. Language (schema v1, draft)
-Flat, ID-referenced (URS-IN-003). Flat beats nesting nodes under lanes: edges cross lanes, diffs stay small, moving a node = one field.
+## 5. Source formats (schema v1, drafts)
+Each type picks the source structure that fits it best; the IR is what they share (URS-IN-003).
+
+**Flowchart, with lanes = cross-functional** (URS-TYP-001/002). The format is flat with ID references: edges cross lanes, and diffs stay small.
 ```json
 {
-  "version": "1",
-  "title": "Order Fulfilment",
-  "orientation": "horizontal",
-  "lanes":  [{ "id": "cust", "label": "Customer" },
-             { "id": "sales", "label": "Sales" },
-             { "id": "wh", "label": "Warehouse" }],
-  "phases": [{ "id": "order", "label": "Order" },
-             { "id": "fulfil", "label": "Fulfil" }],
+  "version": "1", "type": "flowchart", "direction": "LR",
+  "lanes":  [{ "id": "cust", "label": "Customer" }, { "id": "wh", "label": "Warehouse" }],
+  "phases": [{ "id": "order", "label": "Order" }, { "id": "fulfil", "label": "Fulfil" }],
   "nodes": [
-    { "id": "start", "type": "terminator", "label": "Start",       "lane": "cust",  "phase": "order" },
-    { "id": "place", "type": "process",    "label": "Place order", "lane": "cust",  "phase": "order" },
-    { "id": "stock", "type": "decision",   "label": "In stock?",   "lane": "sales", "phase": "order" },
-    { "id": "ship",  "type": "process",    "label": "Ship",        "lane": "wh",    "phase": "fulfil" },
-    { "id": "end",   "type": "terminator", "label": "End",         "lane": "cust",  "phase": "fulfil" }
+    { "id": "start", "shape": "terminator", "label": "Start",     "lane": "cust", "phase": "order" },
+    { "id": "stock", "shape": "decision",   "label": "In stock?", "lane": "wh",   "phase": "order" },
+    { "id": "ship",  "shape": "process",    "label": "Ship",      "lane": "wh",   "phase": "fulfil" }
   ],
   "edges": [
-    { "from": "start", "to": "place" },
-    { "from": "place", "to": "stock" },
-    { "from": "stock", "to": "ship", "label": "Yes" },
-    { "from": "stock", "to": "end",  "label": "No"  },
-    { "from": "ship",  "to": "end" }
-  ],
-  "style": { "theme": "default" }
+    { "from": "start", "to": "stock" },
+    { "from": "stock", "to": "ship", "label": "Yes" }
+  ]
 }
 ```
-**Why JSON canonical:** native to JS, JSON Schema + Ajv for free, Fastify validates with the same schema, LLM-friendly. XML/YAML/DSL are thin adapters onto the same model — never separate render paths.
+Drop `lanes`/`phases` and the same file is a plain flowchart.
 
-## 4. Layout algorithm (the hard part; why Mermaid/PlantUML fall short)
-Generic engines (dagre, ELK) don't treat lanes×phases as hard constraints. Custom grid engine:
+**State** (URS-TYP-003..005). Nested, because the hierarchy is the meaning.
+```json
+{
+  "version": "1", "type": "state", "direction": "LR",
+  "states": [
+    { "id": "init", "kind": "initial" },
+    { "id": "idle", "label": "Idle" },
+    { "id": "active", "label": "Active", "states": [
+        { "id": "a0", "kind": "initial" }, { "id": "run", "label": "Running" }, { "id": "paused", "label": "Paused" } ] },
+    { "id": "done", "kind": "final" }
+  ],
+  "transitions": [
+    { "from": "init", "to": "idle" },
+    { "from": "idle", "to": "active", "event": "start", "guard": "ready", "action": "boot()" },
+    { "from": "run", "to": "paused", "event": "pause" },
+    { "from": "run", "to": "run", "event": "tick" },
+    { "from": "active", "to": "done", "event": "stop" }
+  ]
+}
+```
+`toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts.
 
-1. **Rank** (`rank.ts`): break cycles via DFS back-edges; longest-path layering *within each phase*. Global flow position = (phase index, local rank). Phases are monotonic → a node can't drift into another phase. (URS-LY-004)
-2. **Grid** (`grid.ts`): column count per phase = max local rank across lanes. Cell = (lane, phase, rank).
-3. **Place** (`place.ts`): nodes sharing a cell stack across the lane; order by `order` hint, else barycenter of neighbours (crossing reduction, URS-LY-007). Band sizes = max content + padding (URS-LY-002/003).
-4. **Route** (`route.ts`): orthogonal A* on a sparse channel graph built from the gutters between cells; cost = length + bend penalty + crossing penalty. Ports chosen from relative direction unless hinted. (URS-LY-005/006)
-5. **Labels** (`labels.ts`): place on longest segment, nudge off obstacles. (URS-LY-008)
-6. **Orientation**: layout in horizontal coordinates; vertical = axis swap at the end. One algorithm. (URS-DM-003)
+## 6. Layout
+One engine at first, `layered` (Sugiyama-style), with optional constraint modules. Types turn features on by populating the IR. Engines never check the type.
 
-**Text measurement** (URS-LY-009): no DOM in Node, and canvas measurement differs per OS. Bundle one OFL font (e.g. Inter), generate an advance-width table at build time, embed the font in the SVG (`@font-face` data URI, subsetted). Deterministic everywhere.
+1. **Cycles**: DFS to find back-edges, which are reversed for ranking. (URS-LY-004)
+2. **Rank**: longest-path layering. When `phases` are present, ranks are scoped per phase and phases stay in order. (`constraints/partitions.ts`)
+3. **Order**: barycenter crossing reduction. Nodes are confined to their lane band and to their container's span; `order` hints are respected. (URS-LY-007, URS-DM-008)
+4. **Place**: compute coordinates, size bands and containers to their content, recursing bottom-up for nested containers. (URS-LY-002/003/012)
+5. **Route**: orthogonal A* over a channel graph built from the gaps between nodes and bands, with a dedicated self-loop router. (URS-LY-005/006/011)
+6. **Labels**: place on the longest segment, then nudge off obstacles. (URS-LY-008)
+7. **Direction**: lay out in LR coordinates, then swap axes for TB. (URS-DM-003)
 
-## 5. API (Fastify)
-| Method | Path | In | Out |
-|--------|------|----|-----|
-| POST | `/v1/render` | diagram (JSON) | `image/svg+xml` \| 400 diagnostics |
-| POST | `/v1/validate` | diagram | `{ valid, diagnostics[] }` |
-| GET  | `/v1/schema` | — | JSON Schema |
-| GET  | `/v1/openapi.json` | — | OpenAPI |
-| GET  | `/health` | — | 200 |
+Future types that don't fit a layered layout (sequence, ER) add a new engine and change nothing else.
 
-Limits: 1 MB body, 1000 nodes, 2000 edges, 2 s render timeout (URS-API-006). Diagnostic shape: `{ severity, code, message, path }` (JSON Pointer).
+**Text measurement** (URS-LY-009): bundle one OFL font, generate a table of its character widths at build time, and embed a subset of the font in the SVG. The result is deterministic in Node and in every browser.
 
-## 6. Web app
-Split pane: CodeMirror (JSON mode + schema lint/autocomplete) | SVG preview (pan/zoom). Renders **client-side** via `@jtd/core` (no round-trip, works offline); export = download that SVG string. Diagnostics' JSON Pointer → source offset via `jsonc-parser` for inline markers.
+## 7. API (Fastify)
+| Method | Path | Out |
+|--------|------|-----|
+| POST | `/v1/render` | `image/svg+xml`, or 400 with diagnostics |
+| POST | `/v1/validate` | `{ valid, diagnostics[] }` |
+| GET  | `/v1/types` | registered types |
+| GET  | `/v1/schema[/{type}]` | JSON Schema |
+| GET  | `/v1/openapi.json` | OpenAPI |
+| GET  | `/health` | 200 |
 
-## 7. Tooling
-pnpm · TypeScript strict · Vitest (unit + golden SVG snapshots) · Playwright (web E2E) · ESLint `no-restricted-imports` guarding `core` purity · GitHub Actions CI · Docker.
+Limits: 1 MB body, 1000 nodes, 2000 edges, 2 s render time (URS-API-006). Diagnostic shape: `{ severity, code, message, path }`, where `path` is a JSON Pointer.
 
-## 8. Delivery phases
+## 8. Web app
+Split pane: a CodeMirror editor next to an SVG preview with pan and zoom. Rendering happens client-side through `@jtd/core`. The editor fetches its schema from the registry using the document's `type`, so it contains no type-specific code (URS-WEB-010). Export downloads the SVG string that is already rendered (URS-WEB-003).
+
+## 9. Delivery phases
 | Phase | Scope | Key URS |
 |-------|-------|---------|
-| **P0** Foundations | monorepo, CI, schema v1, types, validation | IN-001..005, NF-001..004 |
-| **P1** MVP render | measure, rank, grid, place, simple orthogonal routing, all shapes, bands, SVG | DM-001..006, LY-001..005, LY-009, RN-001..004 |
-| **P2** API | Fastify routes, limits, OpenAPI | API-001..009 |
-| **P3** Web | editor, live preview, diagnostics, export | WEB-001..004 |
-| **P4** Quality layout | obstacle-avoiding routing, crossing min, label placement, vertical orientation, wrap, styling | LY-006..008, LY-010, DM-007..010 |
-| **P5** Extras | XML/YAML adapters, autocomplete, examples, share links, PNG/PDF | IN-006..008, WEB-005..009, RN-007 |
+| **P0** Foundations | monorepo, CI, registry, IR, schema composition, common validation | EXT-001..007, IN-001..005, NF-001..004 |
+| **P1** Flowchart | measuring, layered engine, basic router, flowchart shapes, SVG | TYP-001, DM-003..006, LY-001..005, LY-009, RN-001..005 |
+| **P2** API + Web (thin) | render/validate/types/schema routes, editor, preview, export | API-001..009, API-011, WEB-001..004, WEB-010 |
+| **P3** Cross-functional | partitions constraint, band rendering | TYP-002, DM-001/002/005, LY-002/003, RN-002 |
+| **P4** State | containers, compound layout, self-loops, state shapes | TYP-003..005, DM-013, LY-011/012 |
+| **P5** Layout quality | obstacle avoidance, crossing minimisation, label placement, wrapping, styling | LY-006..008, LY-010, DM-007..010 |
+| **P6** Extras | XML/YAML adapters, autocomplete, examples, share links, PNG/PDF | IN-006..008, WEB-005..009, RN-007 |
 
-## 9. Risks
+P1 → P2 gets a working end-to-end slice early. P3 and P4 then validate the plugin seams with two quite different types.
+
+## 10. Risks
 | Risk | Mitigation |
 |------|------------|
-| Edge routing quality is the make-or-break | Isolate in `route.ts` behind an interface; fixture suite of nasty cases; swap algorithms without touching others. |
-| Font metric drift between runtimes | Single bundled font + generated table; never measure via DOM. |
-| Schema churn breaks users | `version` field + adapters from old majors. |
+| The IR is shaped around flowcharts and doesn't fit later types | Build P3 (partitions) and P4 (containers) before stabilising the IR. Add new engines rather than bending `layered`. |
+| Edge routing quality makes or breaks the product | Keep it isolated behind the `route/` interface; maintain a fixture suite of hard cases. |
+| Font metrics drift between runtimes | Use a single bundled font and a generated width table; never measure through the DOM. |
+| Schema churn breaks users | `version` field per document, plus adapters from older major versions. |
