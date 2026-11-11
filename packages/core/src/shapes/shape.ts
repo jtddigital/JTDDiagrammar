@@ -16,6 +16,10 @@ export interface Shape {
   outline(w: number, h: number): string;
   /** Stroke-only extras, e.g. subprocess bars. */
   detail?(w: number, h: number): string;
+  /** Filled with the stroke colour, e.g. the dot of an initial state. */
+  solid?(w: number, h: number): string;
+  /** The shape draws no label (pseudostates). */
+  unlabelled?: boolean;
   /** Vertical offset of the label centre from the box centre. */
   labelDy?(w: number, h: number): number;
   /** Boundary point on a side; t ∈ [-1, 1] spreads multiple edges along the side where the shape allows. */

@@ -157,6 +157,17 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 
 **P1 implementation notes.** Ranks come from longest-path layering; sources are then pulled next to their earliest successor. Crossings are reduced with 8 barycenter sweeps, keeping the best result. Cross-axis placement uses neighbour-mean targets packed with isotonic regression (`layout/pack.ts`), which gives no overlaps and least-squares alignment. Routing is orthogonal through the gaps between layers: jogs are assigned to tracks by interval colouring, ports spread along each side, and diamonds use their side tips for branches. Each edge label sits in its edge's first gap. Not yet done: obstacle avoidance beyond the layer grid, label collision handling, and containers (a warning is emitted).
 
+**Compound layout, as built in P5** (`compound.ts`, used when the IR has containers and no partitions; flat diagrams keep the original path, and their golden SVGs are byte-identical). Hierarchical ports, as in ELK's separate-children mode:
+1. Every edge is planned at its lowest common scope. Each container border it crosses gets a zero-size port item.
+2. **Top-down**, each scope is ranked with `layering()`: entry ports in a first phase, content in the middle, exit ports in a last phase. The ranking at an edge's lowest common scope decides which side, flow start or flow end, it uses at every border below.
+3. **Bottom-up**, each scope runs build → order → place → route with child containers as sized boxes. The router's new `fixed` hook pins a crossing edge to the exact border point the child produced.
+4. Containers are sized around their content, with the label and a divider at the top.
+5. Edges are stitched from their pieces, innermost on the source side to innermost on the target side. Labels come from the piece at the lowest common scope (self-loops from their own level).
+
+Not supported, with a warning: an edge between a container and its own content; containers inside lanes or phases.
+
+**State type** (`diagrams/state/`): nested source; composite states become IR containers, pseudostates become the `initial`, `final` and `choice` shapes (solid fills via `Shape.solid`, no label via `Shape.unlabelled`); transition labels are `event [guard] / action`. The AI generation schema is flat with `parent` refs (no recursion in structured outputs); `fromGenerated` nests them, and unknown or cyclic parents fall back to the top level.
+
 **Partitions, as built in P2.** Phases are hard column groups: `layering.ts` reverses links that point into an earlier phase, ranks each phase on its own, and offsets the ranks, so every phase owns at least one layer (empty phases included). `main-axis.ts` pads each phase, enforces a minimum length that fits its header label, and puts phase boundaries inside the gaps between layers. Lanes are hard row groups: ordering sorts by lane first, then by barycenter. `place.ts` places each lane on its own (alignment uses only same-lane neighbours), then stacks the lanes as bands, each at least as tall as its header label, with the content centred. Dummy vertices join the lane of their chain's first vertex, so a cross-lane edge stays in its source lane until its last gap. `bands.ts` builds the lane and phase boxes and their header cells in flow coordinates. Lane headers sit at the flow start and phase headers at the cross start, so `LR` gets lanes on the left and phases on top, and `TB` the reverse, from the same code. Lane labels are horizontal and wrap at 140 px.
 
 ## 7. API (Fastify)

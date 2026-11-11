@@ -33,12 +33,20 @@ export interface PlacedBand extends Box {
   header: Box;
 }
 
+/** A composite region, e.g. a composite state (URS-DM-013). Outer containers have lower depth. */
+export interface PlacedContainer extends Box {
+  id: string;
+  lines: string[];
+  depth: number;
+}
+
 export interface Geometry {
   width: number;
   height: number;
   bands: PlacedBand[];
   /** Empty header cell where lane and phase headers meet. */
   corner?: Box;
+  containers: PlacedContainer[];
   nodes: PlacedNode[];
   edges: RoutedEdge[];
 }

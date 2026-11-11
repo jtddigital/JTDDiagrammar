@@ -38,7 +38,14 @@ describe('README images (URS-DOC-002, URS-DOC-003)', () => {
   });
 
   it('surfaces layout warnings next to the image', () => {
-    const grouped = { ...checklist, toIR: (m: unknown) => ({ ...checklist.toIR(m as never), containers: [{ id: 'group' }] }) };
-    expect(examplesSection(createRegistry().registerType(grouped))).toContain('> **Not yet supported:** containers are not laid out yet.');
+    // Containers inside lanes are the one combination the engine does not lay out yet.
+    const grouped = {
+      ...checklist,
+      toIR: (m: unknown) => {
+        const ir = checklist.toIR(m as never);
+        return { ...ir, nodes: ir.nodes.map((n) => ({ ...n, lane: 'l' })), partitions: { lanes: [{ id: 'l', label: 'L' }] }, containers: [{ id: 'group' }] };
+      },
+    };
+    expect(examplesSection(createRegistry().registerType(grouped))).toContain('> **Not yet supported:** containers cannot be combined with lanes or phases yet; they are not drawn.');
   });
 });

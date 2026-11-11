@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Box, Geometry, Point } from '../src/index.ts';
-import { createRegistry, render } from '../src/index.ts';
+import { compile, createRegistry, render } from '../src/index.ts';
+import { lineHeight } from '../src/measure/text.ts';
+import { CONTAINER_FONT, CONTAINER_HEAD_PAD } from '../src/style.ts';
 import { fixtures } from './fixtures.ts';
 
 const reg = createRegistry();
@@ -20,10 +22,19 @@ describe.each(fixtures())('layout invariants: %s', (_name, doc) => {
   });
 
   it('edges start and end on their nodes', () => {
-    const box = new Map(g.nodes.map((n) => [n.id, n]));
+    const box = new Map<string, Box>([...g.nodes, ...g.containers].map((n) => [n.id, n]));
     for (const e of g.edges) {
       expect(onBox(e.points[0]!, box.get(e.from)!), `${e.id} start`).toBe(true);
       expect(onBox(e.points.at(-1)!, box.get(e.to)!), `${e.id} end`).toBe(true);
+    }
+  });
+
+  it('routes self-loops around their node (URS-LY-011)', () => {
+    const box = new Map<string, Box>([...g.nodes, ...g.containers].map((n) => [n.id, n]));
+    const strictlyInside = (p: Point, b: Box) => p.x > b.x + 0.5 && p.x < b.x + b.w - 0.5 && p.y > b.y + 0.5 && p.y < b.y + b.h - 0.5;
+    for (const e of g.edges.filter((x) => x.from === x.to)) {
+      expect(e.points.length).toBeGreaterThanOrEqual(4);
+      for (const p of e.points) expect(strictlyInside(p, box.get(e.from)!), e.id).toBe(false);
     }
   });
 
@@ -113,5 +124,39 @@ describe('cross-functional is a flowchart with lanes (URS-TYP-002)', () => {
     expect([a.diagnostics, b.diagnostics]).toEqual([[], []]);
     expect(a.geometry!.nodes.map((n) => n.id).sort()).toEqual(b.geometry!.nodes.map((n) => n.id).sort());
     expect([a.geometry!.bands.length, b.geometry!.bands.length]).toEqual([5, 0]);
+  });
+});
+
+const nested = fixtures().filter(([, d]) => (compile(d, reg).ir?.containers.length ?? 0) > 0);
+
+describe.each(nested)('containers: %s (URS-LY-012, URS-DM-013)', (_name, doc) => {
+  const ir = compile(doc, reg).ir!;
+  const g = geometry(doc);
+  const parent = new Map([...ir.nodes, ...ir.containers].map((e) => [e.id, e.parent]));
+  const within = (id: string, c: string): boolean => {
+    for (let p = parent.get(id); p !== undefined; p = parent.get(p)) if (p === c) return true;
+    return false;
+  };
+  const boxes = new Map<string, Box>([...g.nodes, ...g.containers].map((b) => [b.id, b]));
+  const head = (c: (typeof g.containers)[number]) => c.lines.length * lineHeight(CONTAINER_FONT) + 2 * CONTAINER_HEAD_PAD;
+
+  it('draws every container, outer before inner', () => {
+    expect(g.containers.map((c) => c.id).sort()).toEqual(ir.containers.map((c) => c.id).sort());
+    g.containers.forEach((c, i) => i && expect(c.depth).toBeGreaterThanOrEqual(g.containers[i - 1]!.depth));
+  });
+
+  it('keeps content inside its container, below the label', () => {
+    for (const c of g.containers)
+      for (const [id, b] of boxes)
+        if (within(id, c.id)) {
+          expect(inside(b, c), `${id} inside ${c.id}`).toBe(true);
+          expect(b.y, `${id} below ${c.id} label`).toBeGreaterThanOrEqual(c.y + head(c) - 1e-6);
+        }
+  });
+
+  it('keeps everything else outside each container', () => {
+    for (const c of g.containers)
+      for (const [id, b] of boxes)
+        if (id !== c.id && !within(id, c.id) && !within(c.id, id)) expect(overlap(b, c), `${id} vs ${c.id}`).toBe(false);
   });
 });

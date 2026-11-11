@@ -91,7 +91,7 @@ describe('other endpoints', () => {
 
   it('GET /v1/types lists registered types (URS-API-011)', async () => {
     const types = (await app.inject('/v1/types')).json();
-    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'checklist']);
+    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'state', 'checklist']);
     expect(types[0]).toMatchObject({ schema: '/v1/schema/flowchart', examples: [{ name: 'basic' }, { name: 'cross-functional' }] });
   });
 

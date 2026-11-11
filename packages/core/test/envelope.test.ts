@@ -12,14 +12,14 @@ describe('envelope (URS-IN-002, URS-EXT-003)', () => {
   it('reports missing version and type together, listing registered types', () => {
     expect(codes({})).toEqual([
       ['envelope.version', '/version', "'version' is required (supported major: 1)"],
-      ['envelope.type', '/type', "'type' is required (one of: flowchart)"],
+      ['envelope.type', '/type', "'type' is required (one of: flowchart, state)"],
     ]);
   });
 
   it('rejects unknown majors and unknown types', () => {
     expect(codes({ version: '2', type: 'gantt' })).toEqual([
       ['envelope.version', '/version', "unsupported version '2' (supported major: 1)"],
-      ['envelope.type', '/type', "unknown type 'gantt' (one of: flowchart)"],
+      ['envelope.type', '/type', "unknown type 'gantt' (one of: flowchart, state)"],
     ]);
   });
 

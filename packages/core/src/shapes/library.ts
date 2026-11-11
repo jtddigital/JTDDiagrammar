@@ -86,9 +86,33 @@ const connector: Shape = {
   port: midPort,
 };
 
+const circle = (cx: number, cy: number, r: number) =>
+  `M${n(cx - r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 1 ${n(cx + r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 1 ${n(cx - r)} ${n(cy)}Z`;
+const fixed = (d: number) => () => ({ w: d, h: d });
+
+/** State: rounded rectangle. */
+const state: Shape = {
+  id: 'state',
+  size: (tw, th) => ({ w: Math.max(80, tw + 2 * PAD_X), h: Math.max(36, th + 2 * PAD_Y) }),
+  outline: (w, h) => {
+    const r = Math.min(10, h / 2);
+    return `M${r} 0H${n(w - r)}A${r} ${r} 0 0 1 ${n(w)} ${r}V${n(h - r)}A${r} ${r} 0 0 1 ${n(w - r)} ${n(h)}H${r}A${r} ${r} 0 0 1 0 ${n(h - r)}V${r}A${r} ${r} 0 0 1 ${r} 0Z`;
+  },
+  port: boxPort(),
+};
+
+/** Initial pseudostate: filled dot. */
+const initial: Shape = { id: 'initial', unlabelled: true, size: fixed(18), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2), port: midPort };
+
+/** Final state: ring around a dot. */
+const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2 - 4), port: midPort };
+
+/** Choice pseudostate: small diamond. */
+const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26), port: midPort };
+
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

@@ -31,12 +31,14 @@ interface Ctx {
   edges: readonly IREdge[];
   loops: readonly { edge: number; node: number }[];
   phases?: readonly PhaseLayers[];
+  /** Pinned attachment (local m, c) for an edge at a node, e.g. a container's border port. */
+  fixed?(edge: number, node: number): MC | undefined;
 }
 
-type MC = { m: number; c: number };
+export type MC = { m: number; c: number };
 
 /** Ports spread along a side, ordered by the neighbour's cross position. Returns local (m, c) per chain end. */
-function ports({ flow, nodes, verts, chains }: Ctx): MC[][] {
+function ports({ flow, nodes, verts, chains, fixed }: Ctx): MC[][] {
   const groups = new Map<string, { chain: number; end: 0 | 1; key: number }[]>();
   chains.forEach((ch, i) => {
     const ends = [
@@ -53,9 +55,14 @@ function ports({ flow, nodes, verts, chains }: Ctx): MC[][] {
     const [v, end] = k.split(':').map(Number) as [number, 0 | 1];
     const n = nodes[verts[v]!.node]!;
     const side: Side = end === 0 ? flow.mainEnd : flow.mainStart;
-    list.sort((a, b) => a.key - b.key || a.chain - b.chain);
-    list.forEach((e, j) => {
-      const t = list.length === 1 ? 0 : -1 + (2 * j) / (list.length - 1);
+    const free = list.filter((e) => {
+      const f = fixed?.(chains[e.chain]!.edge, verts[v]!.node);
+      if (f) out[e.chain]![e.end] = f;
+      return !f;
+    });
+    free.sort((a, b) => a.key - b.key || a.chain - b.chain);
+    free.forEach((e, j) => {
+      const t = free.length === 1 ? 0 : -1 + (2 * j) / (free.length - 1);
       out[e.chain]![e.end] = flow.local(shape(n.shape).port(side, n.w, n.h, t));
     });
   }

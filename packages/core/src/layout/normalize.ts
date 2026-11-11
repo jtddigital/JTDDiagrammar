@@ -7,6 +7,7 @@ type Content = Omit<Geometry, 'width' | 'height'>;
 export function normalize(g: Content): Geometry {
   const boxes: Box[] = [
     ...g.bands,
+    ...g.containers,
     ...g.nodes,
     ...g.edges.flatMap((e) => [...e.points.map((p) => ({ ...p, w: 0, h: 0 })), ...(e.label ? [e.label] : [])]),
   ];
@@ -19,6 +20,7 @@ export function normalize(g: Content): Geometry {
     height: max(boxes.map((b) => b.y + b.h)) - y0,
     bands: g.bands.map((b) => ({ ...shift(b), header: shift(b.header) })),
     ...(g.corner && { corner: shift(g.corner) }),
+    containers: g.containers.map(shift),
     nodes: g.nodes.map(shift),
     edges: g.edges.map((e) => ({ ...e, points: e.points.map(shift), ...(e.label && { label: shift(e.label) }) })),
   };

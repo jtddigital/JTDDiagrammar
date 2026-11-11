@@ -4,6 +4,7 @@ import { num } from '../../num.ts';
 import { shape } from '../../shapes/library.ts';
 import { LABEL_FONT, NODE_FONT, TITLE_FONT } from '../../style.ts';
 import { bands } from './bands.ts';
+import { containers } from './containers.ts';
 import { esc } from './escape.ts';
 import { lines } from './text.ts';
 import { THEME as T } from './theme.ts';
@@ -22,9 +23,11 @@ function node(n: PlacedNode): string {
   const s = shape(n.shape);
   const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - (n.lines.length * lineHeight(NODE_FONT)) / 2;
   const detail = s.detail ? `<path d="${s.detail(n.w, n.h)}" fill="none" ${stroke(T.nodeStroke)}/>` : '';
+  const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${T.nodeStroke}"/>` : '';
+  const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, NODE_FONT);
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" data-id="${esc(n.id)}" transform="translate(${num(n.x)} ${num(n.y)})">` +
-    `<path d="${s.outline(n.w, n.h)}" fill="${T.nodeFill}" ${stroke(T.nodeStroke)}/>${detail}${lines(n.lines, n.w / 2, textTop, NODE_FONT)}</g>`
+    `<path d="${s.outline(n.w, n.h)}" fill="${T.nodeFill}" ${stroke(T.nodeStroke)}/>${detail}${solid}${text}</g>`
   );
 }
 
@@ -59,6 +62,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     titleSvg +
     `<g transform="translate(${num(T.margin + (innerW - g.width) / 2)} ${num(T.margin + titleH)})">` +
     bands(g.bands, g.corner) +
+    containers(g.containers) +
     g.edges.map(edge).join('') +
     g.nodes.map(node).join('') +
     `</g></g></svg>\n`

@@ -9,6 +9,7 @@ export const THEME = {
   laneFill: '#ffffff',
   laneHeaderFill: '#f1f5f9',
   phaseHeaderFill: '#e2e8f0',
+  containerFill: '#f8fafc',
   stroke: 1.5,
   margin: 24,
   titleGap: 16,

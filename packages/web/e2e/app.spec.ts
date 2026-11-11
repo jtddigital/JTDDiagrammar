@@ -95,3 +95,19 @@ test('never offers a stale render for export while an edit is pending (URS-WEB-0
   await expect(status(page)).toHaveText('Valid');
   await expect(page.getByRole('button', { name: 'Export SVG' })).toBeEnabled();
 });
+
+test('edits, validates and exports a second diagram type with the same UI (URS-WEB-010)', async ({ page, request }) => {
+  await open(page);
+  const doc = { version: '1', type: 'state', title: 'Door', states: [{ id: 'i', kind: 'initial' }, { id: 'closed' }, { id: 'open' }], transitions: [{ from: 'i', to: 'closed' }, { from: 'closed', to: 'open', event: 'push' }] };
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  await setSource(page, { ...doc, states: [...doc.states, { id: 'x', kind: 'final', states: [{ id: 'y' }] }] });
+  await expect(status(page)).toHaveText('1 error');
+  await expect(page.locator('.cm-lintRange-error')).toHaveText('"states"');
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export SVG' }).click()]);
+  const exported = Buffer.concat(await (await download.createReadStream()).toArray()).toString('utf8');
+  expect(exported).toBe(await (await request.post('/v1/render', { data: doc })).text());
+  expect(exported).toContain('class="jtd jtd-state"');
+});

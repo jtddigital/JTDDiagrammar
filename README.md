@@ -13,10 +13,10 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P2 | Cross-functional layout (lanes × phases) | **Done** |
 | P3 | REST API + web app (editor, live preview, SVG export) | **Done** |
 | P4 | AI generation from documents (Claude) | **Done** |
-| P5 | State diagrams | Next |
-| P6–P7 | Layout quality, extras | Planned |
+| P5 | State diagrams (composite states) | **Done** |
+| P6–P7 | Layout quality, extras | Next |
 
-Today you can write flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
+Today you can write **state diagrams** (with composite states) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
 
 ## Diagram types
 
@@ -204,6 +204,173 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### State diagram
+
+`type: state` · States, pseudostates and transitions labelled `event [guard] / action`.
+
+![State diagram](docs/img/state-basic.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "state",
+  "title": "Support ticket",
+  "states": [
+    {
+      "id": "start",
+      "kind": "initial"
+    },
+    {
+      "id": "open",
+      "label": "Open"
+    },
+    {
+      "id": "progress",
+      "label": "In progress"
+    },
+    {
+      "id": "waiting",
+      "label": "Waiting on customer"
+    },
+    {
+      "id": "closed",
+      "label": "Closed"
+    },
+    {
+      "id": "end",
+      "kind": "final"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "start",
+      "to": "open"
+    },
+    {
+      "from": "open",
+      "to": "progress",
+      "event": "assign"
+    },
+    {
+      "from": "progress",
+      "to": "waiting",
+      "event": "ask",
+      "action": "notify customer"
+    },
+    {
+      "from": "waiting",
+      "to": "progress",
+      "event": "reply"
+    },
+    {
+      "from": "progress",
+      "to": "closed",
+      "event": "resolve",
+      "guard": "fix verified"
+    },
+    {
+      "from": "closed",
+      "to": "end"
+    }
+  ]
+}
+```
+
+</details>
+
+### Composite state diagram
+
+`type: state` · Nested states, a transition out of an inner state, and a self-transition.
+
+![Composite state diagram](docs/img/state-composite.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "state",
+  "title": "Media player",
+  "states": [
+    {
+      "id": "init",
+      "kind": "initial"
+    },
+    {
+      "id": "stopped",
+      "label": "Stopped"
+    },
+    {
+      "id": "active",
+      "label": "Active",
+      "states": [
+        {
+          "id": "a0",
+          "kind": "initial"
+        },
+        {
+          "id": "playing",
+          "label": "Playing"
+        },
+        {
+          "id": "paused",
+          "label": "Paused"
+        }
+      ]
+    },
+    {
+      "id": "error",
+      "label": "Error"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "init",
+      "to": "stopped"
+    },
+    {
+      "from": "stopped",
+      "to": "active",
+      "event": "play"
+    },
+    {
+      "from": "a0",
+      "to": "playing"
+    },
+    {
+      "from": "playing",
+      "to": "paused",
+      "event": "pause"
+    },
+    {
+      "from": "paused",
+      "to": "playing",
+      "event": "resume"
+    },
+    {
+      "from": "playing",
+      "to": "playing",
+      "event": "tick",
+      "action": "advance"
+    },
+    {
+      "from": "active",
+      "to": "stopped",
+      "event": "stop"
+    },
+    {
+      "from": "playing",
+      "to": "error",
+      "event": "decode failure"
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -228,6 +395,16 @@ Every diagram is a JSON object with a common envelope:
 | `edges[]` | `{ from, to, label?, id? }` |
 
 Ids match `^[A-Za-z_][A-Za-z0-9_.-]*$`. With lanes present, every node needs a `lane`. With phases present, every node also needs a `phase`.
+
+### `state`
+
+| Field | Description |
+|-------|-------------|
+| `direction` | `LR` (default) or `TB`. |
+| `states[]` | `{ id, kind?, label?, states? }`. `kind` is `state` (default), `initial`, `final` or `choice`. A `state` with nested `states` is a composite state; nesting can go any depth. `label` defaults to the id for ordinary states; pseudostates draw no label. |
+| `transitions[]` | `{ from, to, event?, guard?, action?, id? }`, drawn as `event [guard] / action`. Endpoints can be any state, including a composite state or a state inside one. |
+
+Rules: at most one `initial` per region (the top level or a composite), with no incoming transitions; `final` states have no outgoing transitions; pseudostates cannot contain states. Ids are unique across all levels.
 
 ### Diagnostics
 

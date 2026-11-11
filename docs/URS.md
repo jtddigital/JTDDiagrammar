@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.8.2 (draft) |
+| Version | 0.9 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -36,9 +36,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 |----|-----|-------------|---------------------|--------|--------|
 | URS-TYP-001 | M | `flowchart`: nodes (`process`, `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`) and directed edges. | Each shape has a snapshot. | T | Verified |
 | URS-TYP-002 | M | Cross-functional flowchart = `flowchart` with `lanes` and optional `phases` (URS-DM-001/002). It is not a separate type. | Same nodes render both with and without lanes. | T | Verified |
-| URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Proposed |
-| URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Proposed |
-| URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Proposed |
+| URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Verified |
+| URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Verified |
+| URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Verified |
 | URS-TYP-006 | C | Further types (sequence, ER, org chart), each as a plugin. | — | T | Proposed |
 
 ### 3.3 Input / Language (IN)
@@ -68,7 +68,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Proposed |
 | URS-DM-011 | C | Nested sub-lanes. | — | T | Proposed |
 | URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Proposed |
-| URS-DM-013 | S | Containers: nestable groups with labels (used by composite states and flowchart groups). | Snapshot. | T | Proposed |
+| URS-DM-013 | S | Containers: nestable groups with labels (used by composite states and flowchart groups). | Snapshot. | T | Verified |
 
 ### 3.5 Layout (LY)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -83,8 +83,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-LY-008 | S | Edge labels do not overlap nodes. | Box intersection test. | T | Proposed |
 | URS-LY-009 | M | Text measurement is identical in Node and the browser (bundled font metrics, no DOM). | Same widths in both runtimes. | T | Verified |
 | URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI. | T | Verified |
-| URS-LY-011 | S | Self-loop edges are routed without overlapping their node. | Geometry assertion. | T | Partial |
-| URS-LY-012 | S | Compound layout: containers are sized to their children, and edges may cross container boundaries. | Geometry assertion. | T | Proposed |
+| URS-LY-011 | S | Self-loop edges are routed without overlapping their node. | Geometry assertion. | T | Verified |
+| URS-LY-012 | S | Compound layout: containers are sized to their children, and edges may cross container boundaries. | Geometry assertion. | T | Verified |
 
 ### 3.6 Rendering (RN)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -130,7 +130,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-007 | S | Built-in example templates for each type. | D | D | Verified |
 | URS-WEB-008 | C | Persist to localStorage; shareable URL. | E2E test. | T | Proposed |
 | URS-WEB-009 | C | Clicking a node in the preview jumps to its source. | E2E test. | T | Proposed |
-| URS-WEB-010 | M | Editor validation and autocomplete follow the document's `type`, with no type-specific code in the web app. | E2E test with two types. | T | Partial |
+| URS-WEB-010 | M | Editor validation and autocomplete follow the document's `type`, with no type-specific code in the web app. | E2E test with two types. | T | Verified |
 | URS-WEB-011 | M | Generate panel: paste text or drop files, pick a type or `auto`, then generate. The result loads into the editor (editable) with its diagnostics. | E2E test with a mock API. | T | Verified |
 | URS-WEB-012 | S | Generation shows staged progress and can be cancelled. | E2E test. | T | Partial |
 | URS-WEB-013 | S | Refine box: a natural-language instruction applied to the current source. | E2E test. | T | Proposed |
@@ -212,7 +212,6 @@ Updated with each change. `—` = not started.
 | LY-005 | core/src/layout/layered/route.ts | core/test/layout.test.ts | |
 | LY-007 | core/src/layout/layered/order.ts | — | Barycenter heuristic; no crossing baseline yet (P6). |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
-| LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle | Basic; no dedicated assertion. |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts | Well-formed, allowed elements; Chromium render. No DTD/Inkscape check yet. |
 | RN-003..005 | core/src/render/svg/{index,escape,text}.ts | core/test/render.test.ts, golden/* | |
 | RN-006 | core/src/measure/font-metrics.ts (Arial-compatible stack) | — | Fallback stack, no embedding. |
@@ -223,7 +222,10 @@ Updated with each change. `—` = not started.
 | API-007 | packages/api/src/app.ts (JSON only) | api.test.ts (415) | XML awaits URS-IN-006. |
 | API-008 | packages/api/src/openapi.ts (derived from route table) | api.test.ts | |
 | WEB-001..004, WEB-007 | packages/web/src/** | packages/web/e2e/app.spec.ts, web/test/locate.test.ts | Includes regression test for stale export during debounce. |
-| WEB-010 | packages/web/src (no type-specific code) | e2e (all examples) | Second type arrives in P5; then E2E with two types. |
+| WEB-010 | packages/web/src (no type-specific code) | web/e2e/app.spec.ts (all examples; state edit, validate, export) | |
+| TYP-003..005 | core/src/diagrams/state/* | core/test/state.test.ts, golden/state-* | |
+| DM-013, LY-012 | core/src/layout/layered/compound.ts, render/svg/containers.ts | core/test/layout.test.ts (containers: *) | Containers inside lanes are not supported (warning). |
+| LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle, state-composite example | Labels kept in compound layouts. |
 | LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~110 ms. 1000/2000 random graph ~2.4 s. |
 | NF-006 | Dockerfile, CI `docker` job | CI | Image built and served in CI (P3 run green). |
 | EXT-009, AI-004 | core/src/registry/diagram-type.ts (AiAssets), core/src/diagrams/flowchart/ai.ts | core/test/ai-assets.test.ts | Subset lint plus a 300-sample property test: only `pattern` errors survive conversion. |
@@ -253,6 +255,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.9 | 2026-11-11 | P5: state diagrams with composite states. TYP-003..005, DM-013, LY-011, LY-012 and WEB-010 verified. |
 | 0.8.2 | 2026-11-11 | First live run of `pnpm ai:live`: 3/3 pass. AI-011 and AI-016 verified; AI-018 stays partial (no reference corpus or recall metrics). |
 | 0.8.1 | 2026-11-11 | AI-018 partial: live-check script (`pnpm ai:live`). |
 | 0.8 | 2026-11-11 | P4: AI generation. Added API-016. 18 requirements verified; AI-009, AI-011, AI-016, AI-017 and WEB-012 partial; AI-012 implemented. No live API call yet. |

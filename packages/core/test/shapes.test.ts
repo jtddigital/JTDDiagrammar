@@ -12,8 +12,11 @@ describe('shape library (URS-DM-004, URS-TYP-001)', () => {
 
   it.each([...SHAPES.values()])('$id: sizes cover the text and ports stay on the box', (s) => {
     const { w, h } = s.size(120, 34);
-    expect(w).toBeGreaterThanOrEqual(120);
-    expect(h).toBeGreaterThanOrEqual(Math.min(MIN_H, 34));
+    // Pseudostates draw no label, so they keep their fixed size.
+    if (!s.unlabelled) {
+      expect(w).toBeGreaterThanOrEqual(120);
+      expect(h).toBeGreaterThanOrEqual(Math.min(MIN_H, 34));
+    }
     for (const side of sides)
       for (const t of [-1, 0, 1]) {
         const p = s.port(side, w, h, t);

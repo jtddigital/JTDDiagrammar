@@ -13,7 +13,7 @@ describe('scale', () => {
 
   it('normalize handles very many points', () => {
     const points = Array.from({ length: 300_000 }, (_, i) => ({ x: i, y: -i }));
-    const g = normalize({ bands: [], nodes: [], edges: [{ id: 'e', from: 'a', to: 'b', points }] });
+    const g = normalize({ bands: [], containers: [], nodes: [], edges: [{ id: 'e', from: 'a', to: 'b', points }] });
     expect([g.width, g.height]).toEqual([299_999, 299_999]);
   });
 
