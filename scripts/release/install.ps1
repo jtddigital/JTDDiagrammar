@@ -68,33 +68,36 @@ try {
   $expected = ((Get-Content "$file.sha256" -Raw) -split '\s')[0]
   if ((Get-Sha256 $file) -ne $expected.ToLower()) { Fail 'checksum mismatch; download aborted' }
 
+  # Install into a fresh folder and never move it afterwards: pnpm links node_modules on Windows with
+  # junctions, which hold absolute paths, so a renamed folder would point its packages at the old path.
   $versions = Join-Path $JtdHome 'versions'
-  $dest = Join-Path $versions $Tag
-  $staging = "$dest.new"
-  New-Item -ItemType Directory -Force $versions | Out-Null
-  if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
-  New-Item -ItemType Directory $staging | Out-Null
-  & tar -xzf $file -C $staging --strip-components=1
-  if ($LASTEXITCODE -ne 0) { Fail 'could not extract the release' }
-
-  Say 'installing dependencies'
-  Push-Location $staging
+  $name = "$Tag-" + [Guid]::NewGuid().ToString('N').Substring(0, 8)
+  $dest = Join-Path $versions $name
+  New-Item -ItemType Directory -Force $dest | Out-Null
   try {
-    $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
-    $pnpm = @('install', '--prod', '--frozen-lockfile', '--filter', '@jtd/api...', '--reporter=silent')
-    if (Get-Command corepack -ErrorAction SilentlyContinue) { & corepack pnpm @pnpm }
-    elseif (Get-Command pnpm -ErrorAction SilentlyContinue) { & pnpm @pnpm }
-    else { & npx --yes pnpm@10.28.0 @pnpm }
-    if ($LASTEXITCODE -ne 0) { Fail 'dependency install failed (is the npm registry reachable?)' }
-  } finally { Pop-Location }
+    & tar -xzf $file -C $dest --strip-components=1
+    if ($LASTEXITCODE -ne 0) { Fail 'could not extract the release' }
 
-  # `current` is a one-line file naming the active version (no symlink or junction needed).
+    Say 'installing dependencies'
+    Push-Location $dest
+    try {
+      $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
+      $pnpm = @('install', '--prod', '--frozen-lockfile', '--filter', '@jtd/api...', '--reporter=silent')
+      if (Get-Command corepack -ErrorAction SilentlyContinue) { & corepack pnpm @pnpm }
+      elseif (Get-Command pnpm -ErrorAction SilentlyContinue) { & pnpm @pnpm }
+      else { & npx --yes pnpm@10.28.0 @pnpm }
+      if ($LASTEXITCODE -ne 0) { Fail 'dependency install failed (is the npm registry reachable?)' }
+    } finally { Pop-Location }
+  } catch {
+    Remove-Item -Recurse -Force $dest -ErrorAction SilentlyContinue
+    throw
+  }
+
+  # `current` is a one-line file naming the active version folder (no symlink or junction needed).
   $currentFile = Join-Path $JtdHome 'current'
   $prev = if (Test-Path $currentFile) { (Get-Content $currentFile -Raw).Trim() } else { '' }
-  if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
-  Move-Item $staging $dest
-  Set-Content -Path $currentFile -Value $Tag -NoNewline -Encoding ASCII
-  Get-ChildItem $versions -Directory | Where-Object { $_.Name -ne $Tag -and $_.Name -ne $prev } | Remove-Item -Recurse -Force
+  Set-Content -Path $currentFile -Value $name -NoNewline -Encoding ASCII
+  Get-ChildItem $versions -Directory | Where-Object { $_.Name -ne $name -and $_.Name -ne $prev } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
   # User settings (API key, port…) live outside the version folders and survive updates.
   $config = Join-Path $JtdHome 'config.env'

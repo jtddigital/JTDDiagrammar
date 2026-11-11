@@ -64,7 +64,7 @@ const launcher = (...extra: string[]): [string, string[]] =>
   win
     ? [join(home, 'bin', 'jtddiagrammar.cmd'), extra]
     : ps
-      ? [ps, psArgs(join(home, 'versions', TAG, 'bin', 'jtddiagrammar.ps1'), extra)]
+      ? [ps, psArgs(join(home, 'versions', readFileSync(join(home, 'current'), 'utf8').trim(), 'bin', 'jtddiagrammar.ps1'), extra)]
       : [join(home, 'bin', 'jtddiagrammar'), extra];
 /** Async, so the stand-in server in this process keeps answering. */
 async function run(cmd: string, args: string[], extra = {}) {

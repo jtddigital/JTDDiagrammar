@@ -12,4 +12,10 @@ describe('Windows scripts (URS-NF-013)', () => {
     // Defined in 5.1 script modules, which do not load when 5.1 is started from PowerShell 7 (inherited PSModulePath).
     expect(code.join('\n')).not.toMatch(/\b(Get-FileHash|New-Guid|Format-Hex|Import-PowerShellDataFile|ConvertFrom-SddlString)\b/);
   });
+
+  it('install.ps1 never moves an installed folder', () => {
+    // pnpm's Windows junctions hold absolute paths; a moved install cannot resolve its packages.
+    const src = ps1.find(([f]) => f === 'install.ps1')![1].split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+    expect(src).not.toMatch(/\b(Move-Item|Rename-Item)\b/);
+  });
 });
