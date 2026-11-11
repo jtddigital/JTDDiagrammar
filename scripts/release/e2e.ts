@@ -5,7 +5,7 @@
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -66,6 +66,13 @@ const launcher = (...extra: string[]): [string, string[]] =>
     : ps
       ? [ps, psArgs(join(home, 'versions', readFileSync(join(home, 'current'), 'utf8').trim(), 'bin', 'jtddiagrammar.ps1'), extra)]
       : [join(home, 'bin', 'jtddiagrammar'), extra];
+/** Stop the launcher and the server it started. */
+function stop(p: ChildProcess | undefined): void {
+  if (!p?.pid || p.exitCode !== null) return;
+  if (win) spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F']);
+  else process.kill(-p.pid, 'SIGTERM'); // the launcher's whole process group
+}
+
 /** Async, so the stand-in server in this process keeps answering. */
 async function run(cmd: string, args: string[], extra = {}) {
   const p = spawn(cmd, args, { env: { ...env, ...extra }, shell: win && cmd.endsWith('.cmd') });
@@ -105,16 +112,18 @@ try {
   check(denied.status !== 0 && /GITHUB_TOKEN/.test(denied.stderr + denied.stdout), 'explains a refused private repository');
 
   if (ps) {
+    // Users quit the app before uninstalling; a running server could hold files open.
+    stop(app);
+    app = undefined;
+    await new Promise((r) => setTimeout(r, 1000));
     const removed = await run(...launcher('uninstall'));
     let gone = false;
-    for (let i = 0; i < 20 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
+    for (let i = 0; i < 30 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
+    if (!gone) console.error({ uninstall: removed, left: readdirSync(home, { recursive: true }).slice(0, 40) });
     check(removed.status === 0 && gone, 'uninstall removes the installation');
   }
 } finally {
-  if (app?.pid) {
-    if (win) spawnSync('taskkill', ['/pid', String(app.pid), '/T', '/F']);
-    else process.kill(-app.pid, 'SIGTERM'); // the launcher's whole process group
-  }
+  stop(app);
   gh.server.close();
   await new Promise((r) => setTimeout(r, 500));
   rmSync(out, { recursive: true, force: true });
