@@ -5,6 +5,7 @@ import { textBlock } from '../../measure/text.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
 import { BAND_FONT, BAND_TEXT_MAX } from '../../style.ts';
 import { flowOf } from '../flow.ts';
+import { placeLabels } from '../labels.ts';
 import { normalize } from '../normalize.ts';
 import { bands } from './bands.ts';
 import { build, sized } from './build.ts';
@@ -70,7 +71,7 @@ export const layered: LayoutEngine = {
         })
       : { bands: [] };
     return {
-      geometry: normalize({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges }),
+      geometry: normalize(placeLabels({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges })),
       diagnostics: ir.containers.length ? [warning('layout.containers', 'containers cannot be combined with lanes or phases yet; they are not drawn')] : [],
     };
   },

@@ -10,6 +10,8 @@ export interface Vertex {
   cross: number;
   /** Cross-axis centre. */
   pos: number;
+  /** Ordering hint within its layer and lane (URS-DM-008). */
+  hint?: number;
 }
 
 export interface Link {

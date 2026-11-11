@@ -1,5 +1,5 @@
 import { num as n } from '../num.ts';
-import { boxPort, boxSize, midPort, PAD_X, PAD_Y, type Shape } from './shape.ts';
+import { boxPort, boxSize, circlePort, midPort, PAD_X, PAD_Y, type Shape } from './shape.ts';
 
 const rect = (w: number, h: number) => `M0 0H${n(w)}V${n(h)}H0Z`;
 
@@ -15,11 +15,14 @@ const terminator: Shape = {
     const r = h / 2;
     return `M${n(r)} 0H${n(w - r)}A${n(r)} ${n(r)} 0 0 1 ${n(w - r)} ${n(h)}H${n(r)}A${n(r)} ${n(r)} 0 0 1 ${n(r)} 0Z`;
   },
-  port: (side, w, h, t) => (side === 'N' || side === 'S' ? boxPort()(side, w, h, t) : midPort(side, w, h)),
+  // Rounded ends: spread along the arc.
+  port: (side, w, h, t) =>
+    side === 'N' || side === 'S' ? boxPort()(side, w, h, t) : circlePort(side === 'W' ? h / 2 : w - h / 2, h / 2, h / 2, side, t),
 };
 
 const decision: Shape = {
   id: 'decision',
+  tips: true,
   // The text box (tw × th) fits inside the diamond when tw/w + th/h ≤ 1.
   size: (tw, th) => {
     const h = Math.max(56, 2 * (th + PAD_Y));
@@ -83,7 +86,7 @@ const connector: Shape = {
     const r = n(w / 2);
     return `M0 ${r}A${r} ${r} 0 1 1 ${n(w)} ${r}A${r} ${r} 0 1 1 0 ${r}Z`;
   },
-  port: midPort,
+  port: (side, w, _h, t) => circlePort(w / 2, w / 2, w / 2, side, t),
 };
 
 const circle = (cx: number, cy: number, r: number) =>
@@ -102,13 +105,14 @@ const state: Shape = {
 };
 
 /** Initial pseudostate: filled dot. */
-const initial: Shape = { id: 'initial', unlabelled: true, size: fixed(18), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2), port: midPort };
+const round = (side: Parameters<Shape['port']>[0], w: number, _h: number, t: number) => circlePort(w / 2, w / 2, w / 2, side, t);
+const initial: Shape = { id: 'initial', unlabelled: true, size: fixed(18), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2), port: round };
 
 /** Final state: ring around a dot. */
-const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2 - 4), port: midPort };
+const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2 - 4), port: round };
 
 /** Choice pseudostate: small diamond. */
-const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26), port: midPort };
+const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26) };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(

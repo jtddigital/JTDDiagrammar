@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.9 (draft) |
+| Version | 0.10 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -63,9 +63,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-005 | M | With partitions, each node belongs to exactly one lane, and to exactly one phase when phases exist. | A missing or invalid reference gives a diagnostic. | T | Verified |
 | URS-DM-006 | M | Directed edges with an optional label. | The label renders on the edge. | T | Verified |
 | URS-DM-007 | S | Multi-line labels, with auto-wrap at a configurable maximum node width. | `\n` and long text both wrap. | T | Verified |
-| URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Proposed |
+| URS-DM-008 | S | An optional `order` hint on a node overrides automatic ordering. | The hint is respected. | T | Verified |
 | URS-DM-009 | S | Optional edge port hints (`fromSide` / `toSide`). | Ports are respected. | T | Proposed |
-| URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Proposed |
+| URS-DM-010 | S | Styling: a theme plus overrides per lane, node and edge (fill, stroke, font, dash). | Overrides are applied. | T | Verified |
 | URS-DM-011 | C | Nested sub-lanes. | — | T | Proposed |
 | URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Proposed |
 | URS-DM-013 | S | Containers: nestable groups with labels (used by composite states and flowchart groups). | Snapshot. | T | Verified |
@@ -78,9 +78,9 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-LY-003 | M | With partitions, lanes span all phases, phases span all lanes, and band sizes fit their content. | Geometry assertion. | T | Verified |
 | URS-LY-004 | M | Nodes are ordered along the flow axis by edge direction. Cycles are tolerated (back-edges). | A cyclic fixture renders. | T | Verified |
 | URS-LY-005 | M | Orthogonal (right-angle) edge routing. | All segments are horizontal or vertical. | T | Verified |
-| URS-LY-006 | S | Edges do not pass through nodes. | Segment/box intersection test. | T | Proposed |
-| URS-LY-007 | S | Edge crossings and bends are minimised (heuristic). | Crossing count ≤ baseline on fixtures. | T | Partial |
-| URS-LY-008 | S | Edge labels do not overlap nodes. | Box intersection test. | T | Proposed |
+| URS-LY-006 | S | Edges do not pass through nodes. | Segment/box intersection test. | T | Verified |
+| URS-LY-007 | S | Edge crossings and bends are minimised (heuristic). | Crossing count ≤ baseline on fixtures. | T | Verified |
+| URS-LY-008 | S | Edge labels do not overlap nodes. | Box intersection test. | T | Verified |
 | URS-LY-009 | M | Text measurement is identical in Node and the browser (bundled font metrics, no DOM). | Same widths in both runtimes. | T | Verified |
 | URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI. | T | Verified |
 | URS-LY-011 | S | Self-loop edges are routed without overlapping their node. | Geometry assertion. | T | Verified |
@@ -210,7 +210,10 @@ Updated with each change. `—` = not started.
 | LY-001 | core/src/num.ts (stable formatting); no randomness | core/test/layout.test.ts | |
 | LY-002 | core/src/layout/pack.ts, layered/place.ts | core/test/layout.test.ts, pack.test.ts | No overlaps; nodes inside their lane × phase cell, clear of headers. |
 | LY-005 | core/src/layout/layered/route.ts | core/test/layout.test.ts | |
-| LY-007 | core/src/layout/layered/order.ts | — | Barycenter heuristic; no crossing baseline yet (P6). |
+| LY-006, LY-008 | core/src/layout/{metrics,labels,obstacles,grid}.ts | core/test/quality.test.ts (hard zero) | |
+| LY-007 | core/src/layout/layered/{order,route}.ts, test/quality-baseline.json | core/test/quality.test.ts, order.test.ts, tips.test.ts | Ratchet per fixture; crossings 3452 → 3007 at P6. |
+| DM-008 | core/src/layout/layered/order.ts (hints) | core/test/order.test.ts | |
+| DM-010 | core/src/schema/fragments.ts (style, theme), render/styles.ts, render/svg/* | core/test/styles.test.ts, golden/styled, golden/state-dark | |
 | LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Automated in the browser: web/e2e/app.spec.ts (CI `e2e` job). |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts | Well-formed, allowed elements; Chromium render. No DTD/Inkscape check yet. |
 | RN-003..005 | core/src/render/svg/{index,escape,text}.ts | core/test/render.test.ts, golden/* | |
@@ -255,6 +258,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.10 | 2026-11-11 | P6: layout quality and styling. LY-006, LY-007, LY-008, DM-008 and DM-010 verified; DM-009 deferred to P7. |
 | 0.9 | 2026-11-11 | P5: state diagrams with composite states. TYP-003..005, DM-013, LY-011, LY-012 and WEB-010 verified. |
 | 0.8.2 | 2026-11-11 | First live run of `pnpm ai:live`: 3/3 pass. AI-011 and AI-016 verified; AI-018 stays partial (no reference corpus or recall metrics). |
 | 0.8.1 | 2026-11-11 | AI-018 partial: live-check script (`pnpm ai:live`). |

@@ -20,6 +20,8 @@ export interface Shape {
   solid?(w: number, h: number): string;
   /** The shape draws no label (pseudostates). */
   unlabelled?: boolean;
+  /** Edges attach only at the four side midpoints (diamonds); the router allocates them jointly. */
+  tips?: boolean;
   /** Vertical offset of the label centre from the box centre. */
   labelDy?(w: number, h: number): number;
   /** Boundary point on a side; t ∈ [-1, 1] spreads multiple edges along the side where the shape allows. */
@@ -42,6 +44,13 @@ export const boxPort =
         return { x: w - i, y: h / 2 + t * h * 0.3 };
     }
   };
+
+/** Point on a circle of radius r centred at (cx, cy), spread along `side` by t ∈ [-1, 1]. */
+export const circlePort = (cx: number, cy: number, r: number, side: Side, t: number): Point => {
+  const d = t * r * 0.6;
+  const out = Math.sqrt(r * r - d * d);
+  return { N: { x: cx + d, y: cy - out }, S: { x: cx + d, y: cy + out }, W: { x: cx - out, y: cy + d }, E: { x: cx + out, y: cy + d } }[side];
+};
 
 /** Ports fixed at side midpoints (diamond vertices, circle). */
 export const midPort = (side: Side, w: number, h: number): Point =>

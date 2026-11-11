@@ -10,6 +10,7 @@ export interface Flow {
   mainStart: Side;
   mainEnd: Side;
   crossStart: Side;
+  crossEnd: Side;
   /** Size of a w × h box along each axis. */
   main(w: number, h: number): number;
   cross(w: number, h: number): number;
@@ -22,6 +23,7 @@ const LR: Flow = {
   mainStart: 'W',
   mainEnd: 'E',
   crossStart: 'N',
+  crossEnd: 'S',
   main: (w) => w,
   cross: (_w, h) => h,
   local: (p) => ({ m: p.x, c: p.y }),
@@ -32,6 +34,7 @@ const TB: Flow = {
   mainStart: 'N',
   mainEnd: 'S',
   crossStart: 'W',
+  crossEnd: 'E',
   main: (_w, h) => h,
   cross: (w) => w,
   local: (p) => ({ m: p.y, c: p.x }),

@@ -1,9 +1,19 @@
 /** Shared Graph IR: the only structure layout and render may consume (URS-EXT-004). */
 export type Direction = 'LR' | 'TB';
+export type Theme = 'default' | 'dark';
+
+/** Style overrides (URS-DM-010); colours are validated hex strings. */
+export interface Style {
+  fill?: string;
+  stroke?: string;
+  text?: string;
+  dash?: 'solid' | 'dashed' | 'dotted';
+}
 
 /** JSON Pointer to the source element, for diagnostics. */
 interface Sourced {
   src?: string;
+  style?: Style;
 }
 
 export interface IRNode extends Sourced {
@@ -42,6 +52,7 @@ export interface Partitions {
 
 export interface GraphIR {
   title?: string;
+  theme?: Theme;
   direction: Direction;
   nodes: IRNode[];
   edges: IREdge[];

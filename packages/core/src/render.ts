@@ -2,6 +2,7 @@ import { error, type Diagnostic } from './diagnostics.ts';
 import { compile } from './compile.ts';
 import type { Geometry } from './geometry.ts';
 import type { Registry } from './registry/registry.ts';
+import { applyStyles } from './render/styles.ts';
 import { renderSvg } from './render/svg/index.ts';
 
 /** Size limits checked after compiling, before layout (URS-API-006). */
@@ -27,7 +28,9 @@ export function render(doc: unknown, reg: Registry, opts: RenderOptions = {}): R
   if (limits.length) return { diagnostics: [...c.diagnostics, ...limits] };
   const engine = reg.engine(c.type.engine);
   if (!engine) return { diagnostics: [...c.diagnostics, error('layout.engine', `no layout engine '${c.type.engine}' registered`)] };
-  const { geometry, diagnostics } = engine.layout(c.ir);
+  const layout = engine.layout(c.ir);
+  const geometry = applyStyles(layout.geometry, c.ir);
+  const diagnostics = layout.diagnostics;
   const svg = renderSvg(geometry, { ...(c.ir.title !== undefined && { title: c.ir.title }), className: `jtd-${c.type.id}` });
   return { svg, geometry, diagnostics: [...c.diagnostics, ...diagnostics] };
 }

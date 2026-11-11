@@ -1,4 +1,4 @@
-import { direction, envelope, id } from '../../schema/fragments.ts';
+import { direction, envelope, id, style } from '../../schema/fragments.ts';
 import { STATE_KINDS } from './model.ts';
 
 export const stateSchema = {
@@ -17,7 +17,7 @@ export const stateSchema = {
         type: 'object',
         additionalProperties: false,
         required: ['from', 'to'],
-        properties: { id, from: id, to: id, event: { type: 'string' }, guard: { type: 'string' }, action: { type: 'string' } },
+        properties: { id, from: id, to: id, event: { type: 'string' }, guard: { type: 'string' }, action: { type: 'string' }, style },
       },
     },
   },
@@ -31,6 +31,7 @@ export const stateSchema = {
         kind: { type: 'string', enum: STATE_KINDS, default: 'state' },
         label: { type: 'string', description: 'Defaults to the id for ordinary states.' },
         states: { type: 'array', description: 'Nested states make this a composite state.', items: { $ref: '#/$defs/state' } },
+        style,
       },
     },
   },

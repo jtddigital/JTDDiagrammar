@@ -14,9 +14,10 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P3 | REST API + web app (editor, live preview, SVG export) | **Done** |
 | P4 | AI generation from documents (Claude) | **Done** |
 | P5 | State diagrams (composite states) | **Done** |
-| P6–P7 | Layout quality, extras | Next |
+| P6 | Layout quality, styling and themes | **Done** |
+| P7 | Extras (see URS Should/Could items) | Next |
 
-Today you can write **state diagrams** (with composite states) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
+Today you can write **state diagrams** (with composite states) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with live preview and SVG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
 
 ## Diagram types
 
@@ -382,6 +383,7 @@ Every diagram is a JSON object with a common envelope:
 | `version` | yes | Schema version. Major `1` is supported (`"1"`, `"1.2"`). |
 | `type` | yes | Diagram type id, e.g. `flowchart`. |
 | `title` | no | Diagram title. |
+| `theme` | no | `default` or `dark`. |
 | `$schema` | no | Optional schema URL for editor tooling. |
 
 ### `flowchart`
@@ -389,10 +391,10 @@ Every diagram is a JSON object with a common envelope:
 | Field | Description |
 |-------|-------------|
 | `direction` | `LR` (default) or `TB`. |
-| `lanes[]` | `{ id, label }`. Present → cross-functional flowchart. |
-| `phases[]` | `{ id, label }`. Requires `lanes`. |
-| `nodes[]` | `{ id, shape?, label?, lane?, phase?, order? }`. `shape` is one of `process` (default), `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`. `label` defaults to `id`. |
-| `edges[]` | `{ from, to, label?, id? }` |
+| `lanes[]` | `{ id, label, style? }`. Present → cross-functional flowchart. A lane's `style.fill` colours its header. |
+| `phases[]` | `{ id, label, style? }`. Requires `lanes`. |
+| `nodes[]` | `{ id, shape?, label?, lane?, phase?, order?, style? }`. `shape` is one of `process` (default), `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`. `label` defaults to `id`. `order` is a hint: nodes in the same column and lane are placed in ascending `order`. |
+| `edges[]` | `{ from, to, label?, id?, style? }` |
 
 Ids match `^[A-Za-z_][A-Za-z0-9_.-]*$`. With lanes present, every node needs a `lane`. With phases present, every node also needs a `phase`.
 
@@ -401,10 +403,20 @@ Ids match `^[A-Za-z_][A-Za-z0-9_.-]*$`. With lanes present, every node needs a `
 | Field | Description |
 |-------|-------------|
 | `direction` | `LR` (default) or `TB`. |
-| `states[]` | `{ id, kind?, label?, states? }`. `kind` is `state` (default), `initial`, `final` or `choice`. A `state` with nested `states` is a composite state; nesting can go any depth. `label` defaults to the id for ordinary states; pseudostates draw no label. |
-| `transitions[]` | `{ from, to, event?, guard?, action?, id? }`, drawn as `event [guard] / action`. Endpoints can be any state, including a composite state or a state inside one. |
+| `states[]` | `{ id, kind?, label?, states?, style? }`. `kind` is `state` (default), `initial`, `final` or `choice`. A `state` with nested `states` is a composite state; nesting can go any depth. `label` defaults to the id for ordinary states; pseudostates draw no label. |
+| `transitions[]` | `{ from, to, event?, guard?, action?, id?, style? }`, drawn as `event [guard] / action`. Endpoints can be any state, including a composite state or a state inside one. |
 
 Rules: at most one `initial` per region (the top level or a composite), with no incoming transitions; `final` states have no outgoing transitions; pseudostates cannot contain states. Ids are unique across all levels.
+
+### Styling
+
+Any node, edge, lane, phase, state or transition can take a `style`:
+
+```json
+{ "fill": "#dcfce7", "stroke": "#14532d", "text": "#14532d", "dash": "dashed" }
+```
+
+Colours are hex (`#rgb` or `#rrggbb`); `dash` is `solid`, `dashed` or `dotted`. On edges, `stroke` also colours the arrowhead. Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
 
 ### Diagnostics
 
@@ -567,6 +579,7 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/U
 | `pnpm e2e` | Playwright tests: built web app against the real API |
 | `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
 | `pnpm docs:screens` | Regenerate web app screenshots (`docs/img/*.png`) |
+| `pnpm quality` | Layout quality table (crossings, overlaps, label collisions, timing) over all fixtures; `--update` lowers the baseline that CI enforces |
 | `pnpm ai:live` | Live check of AI generation against the real API. Needs `ANTHROPIC_API_KEY`, costs a few cents, never runs in CI; outputs go to `.live/` |
 | `pnpm fonts:metrics` | Regenerate `measure/font-metrics.ts` from Liberation Sans |
 

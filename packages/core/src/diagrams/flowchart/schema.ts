@@ -1,4 +1,4 @@
-import { band, direction, envelope, id } from '../../schema/fragments.ts';
+import { band, direction, envelope, id, style } from '../../schema/fragments.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
 const node = {
@@ -12,6 +12,7 @@ const node = {
     lane: id,
     phase: id,
     order: { type: 'integer', description: 'Ordering hint within a cell (URS-DM-008).' },
+    style,
   },
 } as const;
 
@@ -19,7 +20,7 @@ const edge = {
   type: 'object',
   additionalProperties: false,
   required: ['from', 'to'],
-  properties: { id, from: id, to: id, label: { type: 'string' } },
+  properties: { id, from: id, to: id, label: { type: 'string' }, style },
 } as const;
 
 export const flowchartSchema = {

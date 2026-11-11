@@ -1,4 +1,4 @@
-import type { Direction } from '../../ir/types.ts';
+import type { Direction, Style, Theme } from '../../ir/types.ts';
 
 export const STATE_KINDS = ['state', 'initial', 'final', 'choice'] as const;
 export type StateKind = (typeof STATE_KINDS)[number];
@@ -9,6 +9,7 @@ export interface State {
   kind?: StateKind;
   label?: string;
   states?: State[];
+  style?: Style;
 }
 
 /** UML-style transition, labelled `event [guard] / action` (URS-TYP-003). */
@@ -19,12 +20,14 @@ export interface Transition {
   event?: string;
   guard?: string;
   action?: string;
+  style?: Style;
 }
 
 export interface StateDiagram {
   version: string;
   type: 'state';
   title?: string;
+  theme?: Theme;
   direction?: Direction;
   states: State[];
   transitions?: Transition[];

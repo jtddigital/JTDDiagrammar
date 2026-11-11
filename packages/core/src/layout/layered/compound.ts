@@ -6,6 +6,7 @@ import { textBlock, type TextBlock } from '../../measure/text.ts';
 import type { LayoutResult } from '../../registry/layout-engine.ts';
 import { CONTAINER_FONT, CONTAINER_HEAD_PAD as HEAD_PAD, CONTAINER_TEXT_MAX } from '../../style.ts';
 import type { Flow } from '../flow.ts';
+import { placeLabels } from '../labels.ts';
 import { normalize } from '../normalize.ts';
 import { simplify } from '../simplify.ts';
 import { build, sized } from './build.ts';
@@ -240,5 +241,5 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
       drawn.set(l.edge, { id: e.id, from: e.from, to: e.to, points: p.points, ...(p.label && { label: p.label }) });
     }
   const edges = [...drawn.entries()].sort(([a], [b]) => a - b).map(([, e]) => e);
-  return { geometry: normalize({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges }), diagnostics };
+  return { geometry: normalize(placeLabels({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges })), diagnostics };
 }
