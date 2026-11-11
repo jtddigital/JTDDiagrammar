@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.5 (draft) |
+| Version | 0.6 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -35,7 +35,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
 | URS-TYP-001 | M | `flowchart`: nodes (`process`, `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`) and directed edges. | Each shape has a snapshot. | T | Verified |
-| URS-TYP-002 | M | Cross-functional flowchart = `flowchart` with `lanes` and optional `phases` (URS-DM-001/002). It is not a separate type. | Same nodes render both with and without lanes. | T | Partial |
+| URS-TYP-002 | M | Cross-functional flowchart = `flowchart` with `lanes` and optional `phases` (URS-DM-001/002). It is not a separate type. | Same nodes render both with and without lanes. | T | Verified |
 | URS-TYP-003 | S | `state`: states, pseudostates (`initial`, `final`, `choice`), and transitions labelled `event [guard] / action`. | Snapshot. | T | Proposed |
 | URS-TYP-004 | S | `state`: composite (nested) states. | Snapshot. | T | Proposed |
 | URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Proposed |
@@ -56,8 +56,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 ### 3.4 Common Model (DM) — available to any type that opts in
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
-| URS-DM-001 | M | Partitions: **lanes**, ordered and labelled bands. Each type opts in. | Lanes render in source order. | T | Partial |
-| URS-DM-002 | M | Partitions: **phases**, bands perpendicular to lanes. Optional. | Renders both with and without phases. | T | Partial |
+| URS-DM-001 | M | Partitions: **lanes**, ordered and labelled bands. Each type opts in. | Lanes render in source order. | T | Verified |
+| URS-DM-002 | M | Partitions: **phases**, bands perpendicular to lanes. Optional. | Renders both with and without phases. | T | Verified |
 | URS-DM-003 | M | `direction`: `LR` or `TB` for every type. With partitions, lanes run along the flow direction. | Same model renders in both directions. | T | Verified |
 | URS-DM-004 | M | Shared shape library (a registry). Each type declares which shapes it allows. | A disallowed shape gives a diagnostic. | T | Verified |
 | URS-DM-005 | M | With partitions, each node belongs to exactly one lane, and to exactly one phase when phases exist. | A missing or invalid reference gives a diagnostic. | T | Verified |
@@ -74,8 +74,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
 | URS-LY-001 | M | Deterministic: identical input gives byte-identical SVG. | Repeated renders have equal hashes. | T | Verified |
-| URS-LY-002 | M | Nodes never overlap. With partitions, each node stays inside its lane × phase cell. With containers, each node stays inside its container. | Geometry assertions over fixtures. | T | Partial |
-| URS-LY-003 | M | With partitions, lanes span all phases, phases span all lanes, and band sizes fit their content. | Geometry assertion. | T | Proposed |
+| URS-LY-002 | M | Nodes never overlap. With partitions, each node stays inside its lane × phase cell. With containers, each node stays inside its container. | Geometry assertions over fixtures. | T | Verified |
+| URS-LY-003 | M | With partitions, lanes span all phases, phases span all lanes, and band sizes fit their content. | Geometry assertion. | T | Verified |
 | URS-LY-004 | M | Nodes are ordered along the flow axis by edge direction. Cycles are tolerated (back-edges). | A cyclic fixture renders. | T | Verified |
 | URS-LY-005 | M | Orthogonal (right-angle) edge routing. | All segments are horizontal or vertical. | T | Verified |
 | URS-LY-006 | S | Edges do not pass through nodes. | Segment/box intersection test. | T | Proposed |
@@ -90,7 +90,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
 | URS-RN-001 | M | Output is standalone, valid SVG 1.1. | Opens in Chrome, Firefox and Inkscape; passes a validator. | T/D | Partial |
-| URS-RN-002 | M | Partition header bands and container labels render (Visio CFF style). | Snapshot. | T | Proposed |
+| URS-RN-002 | M | Partition header bands and container labels render (Visio CFF style). | Snapshot. | T | Verified |
 | URS-RN-003 | M | Edge end markers (arrowheads; others via the registry). | Snapshot. | T | Verified |
 | URS-RN-004 | M | All user text is XML-escaped; no script or foreignObject is emitted. | Injection fixtures are escaped. | T | Verified |
 | URS-RN-005 | S | SVG elements carry `id`/`class` values derived from model IDs and the diagram type. | Selector test. | T | Verified |
@@ -190,7 +190,7 @@ Updated with each change. `—` = not started.
 | URS ID | Module(s) | Test(s) | Note |
 |--------|-----------|---------|------|
 | EXT-001, EXT-005 | core/src/registry/ | core/test/registry.test.ts | |
-| EXT-002 | core/src/compile.ts | core/test/extensibility.test.ts | Core only; API/web in P2. |
+| EXT-002 | core/src/compile.ts | core/test/extensibility.test.ts | Core only; API/web in P3. |
 | EXT-003, IN-002 | core/src/validate/envelope.ts | core/test/envelope.test.ts | |
 | EXT-004, NF-001, NF-009 | eslint.config.js, core/tsconfig.json (no DOM/Node types) | test/boundaries.test.ts | |
 | EXT-006 | core/src/schema/combined.ts | core/test/extensibility.test.ts | |
@@ -199,24 +199,25 @@ Updated with each change. `—` = not started.
 | IN-001, IN-004 | core/src/validate/schema.ts, core/src/adapters/json.ts | core/test/schema.test.ts, core/test/json.test.ts | Semantic rules run only once the schema passes. |
 | IN-003 | core/src/diagrams/flowchart/ | core/test/flowchart.test.ts | Flowchart only so far. |
 | IN-005, DM-005 | core/src/validate/common.ts | core/test/common.test.ts | Pointer targets the element, not the field. |
-| DM-001, DM-002, TYP-002 | core/src/diagrams/flowchart/, core/src/ir/types.ts | core/test/flowchart.test.ts | Validated; layout/render in P3 (engine warns). |
+| DM-001, DM-002, TYP-002, LY-003 | core/src/layout/layered/{layering,order,place,main-axis,bands}.ts | core/test/layout.test.ts (partitions: *, URS-TYP-002) | |
+| RN-002 | core/src/render/svg/bands.ts | core/test/render.test.ts, golden/cff-* | |
 | NF-002 | tsconfig.base.json | `pnpm typecheck` | |
 | NF-004 | CLAUDE.md, commit bodies | — | Inspection. |
-| DOC-001 | README.md | — | API/AI/web sections pending P2/P4. |
+| DOC-001 | README.md | — | API/AI/web sections pending P3/P4. |
 | TYP-001, DM-004 | core/src/shapes/, core/src/diagrams/flowchart/ | core/test/shapes.test.ts, golden/shapes | |
 | DM-003, LY-004 | core/src/layout/flow.ts, layout/layered/{cycles,rank}.ts | core/test/layout.test.ts | |
 | DM-006, DM-007 | core/src/measure/text.ts, layout/layered/route.ts | core/test/measure.test.ts, golden/text | |
 | LY-001 | core/src/num.ts (stable formatting); no randomness | core/test/layout.test.ts | |
-| LY-002 | core/src/layout/pack.ts, layered/place.ts | core/test/layout.test.ts, pack.test.ts | No overlaps verified; cell containment comes with P3. |
+| LY-002 | core/src/layout/pack.ts, layered/place.ts | core/test/layout.test.ts, pack.test.ts | No overlaps; nodes inside their lane × phase cell, clear of headers. |
 | LY-005 | core/src/layout/layered/route.ts | core/test/layout.test.ts | |
 | LY-007 | core/src/layout/layered/order.ts | — | Barycenter heuristic; no crossing baseline yet (P6). |
-| LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Chromium checked by hand: within 0.02 px. Not in CI yet (P2, Playwright). |
+| LY-009 | scripts/fonts/metrics.ts → core/src/measure/font-metrics.ts | core/test/measure.test.ts | Chromium checked by hand: within 0.02 px. Not in CI yet (P3, Playwright). |
 | LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle | Basic; no dedicated assertion. |
 | RN-001 | core/src/render/svg/ | core/test/render.test.ts | Well-formed, allowed elements; Chromium render. No DTD/Inkscape check yet. |
 | RN-003..005 | core/src/render/svg/{index,escape,text}.ts | core/test/render.test.ts, golden/* | |
 | RN-006 | core/src/measure/font-metrics.ts (Arial-compatible stack) | — | Fallback stack, no embedding. |
 | NF-003 | vitest + golden SVGs + CI | core/test/golden.test.ts | CI green on P0. |
-| DOC-002..004 | scripts/docs/, docs/img/ | scripts/docs/readme.test.ts, `pnpm docs:check` | Web app screenshots in P2. |
+| DOC-002..004 | scripts/docs/, docs/img/ | scripts/docs/readme.test.ts, `pnpm docs:check` | Web app screenshots in P3. |
 | NF-008 | .env.example, CI `secrets` job | CI | Green on P0. |
 
 ## 5. Change Impact Assessment (required per change)
@@ -232,6 +233,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.6 | 2026-11-11 | Cross-functional layout delivered (now P2; API/web renumbered to P3 at the user's request). TYP-002, DM-001/002, LY-002/003, RN-002 verified. |
 | 0.5 | 2026-11-11 | P1 implemented: flowchart layout and SVG rendering, README images, MIT licence. Statuses and matrix updated. |
 | 0.4 | 2026-11-11 | P0 implemented: statuses and traceability matrix updated. Added the Partial status. |
 | 0.3 | 2026-11-11 | Added AI generation (AI-001..022), documentation (DOC-001..006), EXT-009/010, API-012..015, WEB-011..014, NF-008/009. |

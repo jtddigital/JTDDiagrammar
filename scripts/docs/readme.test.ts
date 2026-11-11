@@ -38,6 +38,7 @@ describe('README images (URS-DOC-002, URS-DOC-003)', () => {
   });
 
   it('surfaces layout warnings next to the image', () => {
-    expect(examplesSection(createRegistry())).toContain('> **Not yet supported:** lanes and phases are not laid out yet');
+    const grouped = { ...checklist, toIR: (m: unknown) => ({ ...checklist.toIR(m as never), containers: [{ id: 'group' }] }) };
+    expect(examplesSection(createRegistry().registerType(grouped))).toContain('> **Not yet supported:** containers are not laid out yet.');
   });
 });

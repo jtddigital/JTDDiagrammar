@@ -1,0 +1,32 @@
+{
+  "version": "1",
+  "type": "flowchart",
+  "title": "Expense claim (top to bottom)",
+  "direction": "TB",
+  "lanes": [
+    { "id": "emp", "label": "Employee" },
+    { "id": "mgr", "label": "Manager" },
+    { "id": "fin", "label": "Finance" }
+  ],
+  "phases": [
+    { "id": "submit", "label": "Submit" },
+    { "id": "approve", "label": "Approve" },
+    { "id": "pay", "label": "Pay" }
+  ],
+  "nodes": [
+    { "id": "start", "shape": "terminator", "label": "Start", "lane": "emp", "phase": "submit" },
+    { "id": "claim", "shape": "document", "label": "Submit claim", "lane": "emp", "phase": "submit" },
+    { "id": "review", "shape": "decision", "label": "Within policy?", "lane": "mgr", "phase": "approve" },
+    { "id": "reject", "label": "Return to employee", "lane": "mgr", "phase": "approve" },
+    { "id": "pay", "label": "Reimburse", "lane": "fin", "phase": "pay" },
+    { "id": "end", "shape": "terminator", "label": "End", "lane": "emp", "phase": "pay" }
+  ],
+  "edges": [
+    { "from": "start", "to": "claim" },
+    { "from": "claim", "to": "review" },
+    { "from": "review", "to": "pay", "label": "Yes" },
+    { "from": "review", "to": "reject", "label": "No" },
+    { "from": "reject", "to": "claim", "label": "revise" },
+    { "from": "pay", "to": "end" }
+  ]
+}

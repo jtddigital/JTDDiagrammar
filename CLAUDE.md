@@ -7,5 +7,5 @@
 - Type-specific logic lives only in `packages/core/src/diagrams/<type>/`. Layout, render, API and web never branch on diagram type.
 - Prefer small single-purpose modules over large files. Keep code succinct.
 - AI code lives only in `packages/ai`. Tests use the mock Claude client; never call the live API in CI.
-- README images are generated (`pnpm docs:images`), never hand-made. Re-run after any render or type change.
+- README images are generated (`pnpm docs:build`), never hand-made. Re-run after any render or type change.
 - Every module has tests; layout/render changes update golden SVGs deliberately, never blindly.

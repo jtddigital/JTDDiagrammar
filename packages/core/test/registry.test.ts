@@ -15,7 +15,7 @@ describe('Registry (URS-EXT-001, URS-EXT-005)', () => {
   });
 
   it('registers and resolves layout engines', () => {
-    const engine = { id: 'fake', layout: () => ({ geometry: { width: 0, height: 0, nodes: [], edges: [] }, diagnostics: [] }) };
+    const engine = { id: 'fake', layout: () => ({ geometry: { width: 0, height: 0, bands: [], nodes: [], edges: [] }, diagnostics: [] }) };
     const reg = new Registry().registerEngine(engine);
     expect(reg.engine('fake')).toBe(engine);
     expect(reg.engine('none')).toBeUndefined();

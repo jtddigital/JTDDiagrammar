@@ -51,7 +51,7 @@ interface GraphIR {
 interface LayoutEngine { id: string; layout(ir: GraphIR, m: Measurer): Geometry }
 interface Shape { id: string; textBox(w, h): Box; outline(w, h): PathData; ports(w, h): PortMap }
 ```
-`Geometry` = positioned nodes, containers, bands, edge polylines and label boxes. The renderer turns it into SVG with no type knowledge.
+`Geometry` = `{ width, height, bands, corner?, nodes, edges }` (`core/src/geometry.ts`): positioned lane/phase bands with header cells, nodes, edge polylines and label boxes. Containers are added in P5. The renderer turns it into SVG with no type knowledge.
 
 ## 4. Repo layout (pnpm workspaces, TypeScript strict)
 ```
@@ -77,9 +77,9 @@ packages/
       flow.ts                 (main, cross) ↔ (x, y) per direction
       pack.ts                 ordered packing (isotonic regression)
       simplify.ts, normalize.ts
-      layered/                graph.ts, cycles.ts, rank.ts, order.ts, place.ts, route.ts, index.ts
-      constraints/            partitions.ts (P3), containers.ts (P5)
-    render/svg/               index.ts, text.ts, escape.ts, theme.ts; bands/containers in P3/P5
+      layered/                graph.ts, constants.ts, cycles.ts, rank.ts, layering.ts (phases), order.ts, place.ts (lanes),
+                              main-axis.ts (phase spans), route.ts, bands.ts, index.ts; containers in P5
+    render/svg/               index.ts, bands.ts, text.ts, escape.ts, theme.ts; containers in P5
     index.ts                  render(src) → { svg, diagnostics }
   ai/src/                     Node only; core never imports it (URS-NF-009)
     client/                   claude.ts (Anthropic SDK), mock.ts, types.ts   (URS-AI-020)
@@ -155,7 +155,9 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 
 **Text measurement** (URS-LY-009), as built in P1: `scripts/fonts/metrics.ts` generates a table of advance widths (code points 32–255, regular and bold) from **Liberation Sans** (OFL), committed as `measure/font-metrics.ts`. Liberation Sans is metric-compatible with Arial, and Arial is close to Helvetica. The SVG declares `Arial, 'Liberation Sans', Helvetica, sans-serif` with kerning and ligatures off, so text measures the same everywhere **without embedding a font**. Chromium measurements match the table to within 0.02 px. Characters outside the table count as 1 em, which over-estimates and is safe. Embedding a font remains an option (URS-RN-006) if a non-Arial font is ever wanted.
 
-**P1 implementation notes.** Ranks come from longest-path layering; sources are then pulled next to their earliest successor. Crossings are reduced with 8 barycenter sweeps, keeping the best result. Cross-axis placement uses neighbour-mean targets packed with isotonic regression (`layout/pack.ts`), which gives no overlaps and least-squares alignment. Routing is orthogonal through the gaps between layers: jogs are assigned to tracks by interval colouring, ports spread along each side, and diamonds use their side tips for branches. Each edge label sits in its edge's first gap. Not yet done: obstacle avoidance beyond the layer grid, label collision handling, and partitions or containers (warnings are emitted).
+**P1 implementation notes.** Ranks come from longest-path layering; sources are then pulled next to their earliest successor. Crossings are reduced with 8 barycenter sweeps, keeping the best result. Cross-axis placement uses neighbour-mean targets packed with isotonic regression (`layout/pack.ts`), which gives no overlaps and least-squares alignment. Routing is orthogonal through the gaps between layers: jogs are assigned to tracks by interval colouring, ports spread along each side, and diamonds use their side tips for branches. Each edge label sits in its edge's first gap. Not yet done: obstacle avoidance beyond the layer grid, label collision handling, and containers (a warning is emitted).
+
+**Partitions, as built in P2.** Phases are hard column groups: `layering.ts` reverses links that point into an earlier phase, ranks each phase on its own, and offsets the ranks, so every phase owns at least one layer (empty phases included). `main-axis.ts` pads each phase, enforces a minimum length that fits its header label, and puts phase boundaries inside the gaps between layers. Lanes are hard row groups: ordering sorts by lane first, then by barycenter. `place.ts` places each lane on its own (alignment uses only same-lane neighbours), then stacks the lanes as bands, each at least as tall as its header label, with the content centred. Dummy vertices join the lane of their chain's first vertex, so a cross-lane edge stays in its source lane until its last gap. `bands.ts` builds the lane and phase boxes and their header cells in flow coordinates. Lane headers sit at the flow start and phase headers at the cross start, so `LR` gets lanes on the left and phases on top, and `TB` the reverse, from the same code. Lane labels are horizontal and wrap at 140 px.
 
 ## 7. API (Fastify)
 | Method | Path | Out |
@@ -199,19 +201,19 @@ files/text ─ingest─▶ content blocks ─(type=auto? select)─▶ Claude + 
 |-------|-------|---------|
 | **P0** Foundations | monorepo, CI, registry, IR, schema composition, common validation, README skeleton + docs-image pipeline | EXT-001..007, EXT-010, IN-001..005, NF-001..004, NF-008, DOC-001, DOC-003/004 |
 | **P1** Flowchart | measuring, layered engine, basic router, flowchart shapes, SVG, README example | TYP-001, DM-003..006, LY-001..005, LY-009, RN-001..005, DOC-002 |
-| **P2** API + Web (thin) | render/validate/types/schema routes, editor, preview, export | API-001..009, API-011, WEB-001..004, WEB-010, DOC-005 |
-| **P3** Cross-functional | partitions constraint, band rendering | TYP-002, DM-001/002/005, LY-002/003, RN-002 |
+| **P2** Cross-functional | partitions constraint, band rendering | TYP-002, DM-001/002/005, LY-002/003, RN-002 |
+| **P3** API + Web (thin) | render/validate/types/schema routes, editor, preview, export | API-001..009, API-011, WEB-001..004, WEB-010, DOC-005 |
 | **P4** AI generation | `ai` package, ingest, generation schemas, repair loop, generate API, generate panel, mock + eval | AI-001..012, AI-020, EXT-009, API-012/015, WEB-011, NF-009 |
 | **P5** State | containers, compound layout, self-loops, state shapes | TYP-003..005, DM-013, LY-011/012 |
 | **P6** Layout quality | obstacle avoidance, crossing minimisation, label placement, wrapping, styling | LY-006..008, LY-010, DM-007..010 |
 | **P7** Extras | AI refine/provenance/streaming/eval, XML/YAML adapters, autocomplete, share links, PNG/PDF | AI-013..019, API-013/014, WEB-005..009, WEB-012..014, IN-006..008, RN-007, DOC-006 |
 
-P1 → P2 gets a working end-to-end slice early. AI generation (P4) comes after cross-functional so the main target type exists first. P5 then tests the plugin seams, generation included, with a very different type. Each phase updates the README images; CI enforces it.
+Cross-functional (P2) was moved ahead of the API and web app (P3) at the user's request, so the main target type exists first. AI generation (P4) follows them. P5 then tests the plugin seams, generation included, with a very different type. Each phase updates the README images; CI enforces it.
 
 ## 12. Risks
 | Risk | Mitigation |
 |------|------------|
-| The IR is shaped around flowcharts and doesn't fit later types | Build P3 (partitions) and P4 (containers) before stabilising the IR. Add new engines rather than bending `layered`. |
+| The IR is shaped around flowcharts and doesn't fit later types | Build partitions (P2) and containers (P5) before stabilising the IR. Add new engines rather than bending `layered`. |
 | Edge routing quality makes or breaks the product | Keep it isolated behind the `route/` interface; maintain a fixture suite of hard cases. |
 | Font metrics drift between runtimes | Generated width table for an Arial-compatible font; never measure through the DOM. Residual risk: a viewer with no Arial or Liberation Sans falls back to Helvetica or another sans-serif (small width differences). |
 | Schema churn breaks users | `version` field per document, plus adapters from older major versions. |

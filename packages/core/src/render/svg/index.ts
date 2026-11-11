@@ -3,6 +3,7 @@ import { FONT_FAMILY, lineHeight, textBlock } from '../../measure/text.ts';
 import { num } from '../../num.ts';
 import { shape } from '../../shapes/library.ts';
 import { LABEL_FONT, NODE_FONT, TITLE_FONT } from '../../style.ts';
+import { bands } from './bands.ts';
 import { esc } from './escape.ts';
 import { lines } from './text.ts';
 import { THEME as T } from './theme.ts';
@@ -57,6 +58,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     `<g font-family="${esc(FONT_FAMILY)}" font-size="${NODE_FONT.size}" fill="${T.text}" style="font-kerning:none;font-variant-ligatures:none">` +
     titleSvg +
     `<g transform="translate(${num(T.margin + (innerW - g.width) / 2)} ${num(T.margin + titleH)})">` +
+    bands(g.bands, g.corner) +
     g.edges.map(edge).join('') +
     g.nodes.map(node).join('') +
     `</g></g></svg>\n`

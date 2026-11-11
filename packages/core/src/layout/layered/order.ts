@@ -13,7 +13,10 @@ function crossings(layers: readonly number[][], idx: readonly number[], segs: re
   return count;
 }
 
-/** Barycenter crossing reduction; keeps the best ordering seen (URS-LY-007). Mutates `layers`. */
+/**
+ * Barycenter crossing reduction; keeps the best ordering seen (URS-LY-007).
+ * Vertices stay grouped by lane in lane order (URS-DM-001). Mutates `layers`.
+ */
 export function order(layers: number[][], verts: readonly Vertex[], chains: readonly Chain[], sweeps = 8): void {
   const segs = segments(chains);
   const up: number[][] = verts.map(() => []);
@@ -23,21 +26,22 @@ export function order(layers: number[][], verts: readonly Vertex[], chains: read
     up[b]!.push(a);
   }
   const idx = new Array<number>(verts.length).fill(0);
-  const index = () => layers.forEach((l) => l.forEach((v, i) => (idx[v] = i)));
   const layerOf = (v: number) => verts[v]!.layer;
+  const sortLayer = (li: number, key: (v: number) => number) => {
+    layers[li] = layers[li]!.map((v) => [verts[v]!.group, key(v), v] as const)
+      .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+      .map(([, , v]) => v);
+    layers[li]!.forEach((v, i) => (idx[v] = i));
+  };
 
-  index();
+  layers.forEach((l, li) => sortLayer(li, (v) => l.indexOf(v)));
   let best = { score: crossings(layers, idx, segs, layerOf), layers: layers.map((l) => [...l]) };
   for (let s = 0; s < sweeps && best.score > 0; s++) {
     const isDown = s % 2 === 0;
+    const nbrs = isDown ? up : down;
     const range = isDown ? [...layers.keys()].slice(1) : [...layers.keys()].reverse().slice(1);
-    for (const li of range) {
-      const nbrs = isDown ? up : down;
-      const bary = (v: number) => (nbrs[v]!.length ? nbrs[v]!.reduce((s, u) => s + idx[u]!, 0) / nbrs[v]!.length : idx[v]!);
-      const keyed = layers[li]!.map((v) => [bary(v), v] as const);
-      layers[li] = keyed.sort((a, b) => a[0] - b[0]).map(([, v]) => v);
-      layers[li]!.forEach((v, i) => (idx[v] = i));
-    }
+    for (const li of range)
+      sortLayer(li, (v) => (nbrs[v]!.length ? nbrs[v]!.reduce((sum, u) => sum + idx[u]!, 0) / nbrs[v]!.length : idx[v]!));
     const score = crossings(layers, idx, segs, layerOf);
     if (score < best.score) best = { score, layers: layers.map((l) => [...l]) };
   }

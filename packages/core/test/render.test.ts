@@ -38,6 +38,14 @@ describe('SVG output', () => {
     expect(out).toContain('<g id="e-edge:2" class="jtd-edge" data-id="edge:2" data-from="known" data-to="send"');
   });
 
+  it('draws lane and phase bands with headers (URS-RN-002)', () => {
+    const out = svg(reg.type('flowchart')!.examples[1]!.source);
+    expect(out.match(/class="jtd-lane"/g)).toHaveLength(3);
+    expect(out.match(/class="jtd-phase"/g)).toHaveLength(2);
+    expect(out).toContain('<g id="l-sales" class="jtd-lane" data-id="sales">');
+    expect(out).toMatch(/<g id="p-order" class="jtd-phase" data-id="order">.*>Order<\/text><\/g>/);
+  });
+
   it('reports a missing layout engine instead of throwing', () => {
     const r = render({ version: '1', type: 'flowchart', nodes: [] }, new Registry().registerType(flowchart));
     expect(r.svg).toBeUndefined();

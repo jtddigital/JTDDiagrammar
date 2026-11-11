@@ -6,10 +6,10 @@ import type { Side } from '../../shapes/shape.ts';
 import { LABEL_FONT, LABEL_TEXT_MAX } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { simplify } from '../simplify.ts';
+import { RANK_GAP, TRACK_SEP } from './constants.ts';
 import { isDummy, type Chain, type Vertex } from './graph.ts';
+import { mainAxis, type MainAxis, type PhaseLayers } from './main-axis.ts';
 
-export const RANK_GAP = 56;
-export const TRACK_SEP = 12;
 const LABEL_PAD = 12;
 const LOOP = 16;
 
@@ -29,6 +29,7 @@ interface Ctx {
   chains: readonly Chain[];
   edges: readonly IREdge[];
   loops: readonly { edge: number; node: number }[];
+  phases?: readonly PhaseLayers[];
 }
 
 type MC = { m: number; c: number };
@@ -63,7 +64,7 @@ function ports({ flow, nodes, verts, chains }: Ctx): MC[][] {
 const labelOf = (e: IREdge) => (e.label ? textBlock(e.label, LABEL_TEXT_MAX, LABEL_FONT) : undefined);
 
 /** Orthogonal routing through the gaps between layers (URS-LY-005). */
-export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[] } {
+export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axis: MainAxis } {
   const { flow, nodes, verts, layers, chains, edges } = ctx;
   const port = ports(ctx);
   const extent = layers.map((l) => Math.max(0, ...l.map((v) => verts[v]!.main)));
@@ -103,12 +104,14 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[] } {
     if (b) labelMain[verts[ch.verts[0]!]!.layer] = Math.max(labelMain[verts[ch.verts[0]!]!.layer]!, flow.main(b.width + 8, b.height + 4));
   }
   const gap = layers.map((_, g) => Math.max(RANK_GAP, TRACK_SEP * (tracks[g]! + 1), labelMain[g]! + 2 * LABEL_PAD));
-  const start: number[] = [];
-  layers.forEach((_, l) => start.push(l ? start[l - 1]! + extent[l - 1]! + gap[l - 1]! : 0));
+  const axis = mainAxis(extent, gap, ctx.phases);
+  const start = axis.start;
   const gapStart = (l: number) => start[l]! + extent[l]!;
+  // Actual gap: phase padding can make it wider than `gap`.
+  const gapLen = (l: number) => start[l + 1]! - gapStart(l);
   const trackM = (l: number, key: string) => {
     const k = track.get(key);
-    return gapStart(l) + (k === undefined ? gap[l]! / 2 : ((k + 1) * gap[l]!) / (tracks[l]! + 1));
+    return gapStart(l) + (k === undefined ? gapLen(l) / 2 : ((k + 1) * gapLen(l)) / (tracks[l]! + 1));
   };
 
   const mainStart = (v: number) => start[verts[v]!.layer]! + (extent[verts[v]!.layer]! - verts[v]!.main) / 2;
@@ -134,7 +137,7 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[] } {
         const m = trackM(l, `${ci}:${i}`);
         pts.push({ m, c: c1 }, { m, c: c2 });
         if (i === 0) label = { m, c: (c1 + c2) / 2 };
-      } else if (i === 0) label = { m: gapStart(l) + gap[l]! / 2, c: c1 };
+      } else if (i === 0) label = { m: gapStart(l) + gapLen(l) / 2, c: c1 };
       pts.push(entry);
       if (isDummy(verts[b]!)) pts.push({ m: gapStart(l + 1), c: c2 });
     }
@@ -178,5 +181,5 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[] } {
     const p = xy({ m: mainStart(i), c: crossStart(i) });
     return [{ id: n.id, shape: n.shape, lines: n.lines, x: p.x, y: p.y, w: n.w, h: n.h }];
   });
-  return { nodes: placed, edges: routed };
+  return { nodes: placed, edges: routed, axis };
 }

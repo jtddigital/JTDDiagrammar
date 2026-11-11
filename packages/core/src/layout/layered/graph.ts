@@ -3,6 +3,8 @@ export interface Vertex {
   /** Index into IR nodes, or -1 for a dummy. */
   node: number;
   layer: number;
+  /** Lane index (0 when unpartitioned). Ordering and placement never mix groups. */
+  group: number;
   /** Extent along the flow (main) and across it (cross). Dummies: 0 × 0. */
   main: number;
   cross: number;
@@ -18,10 +20,15 @@ export interface Link {
 
 export interface Chain {
   edge: number;
-  /** Drawn against the layer order (cycle back-edge). */
+  /** Drawn against the layer order (cycle back-edge or edge into an earlier phase). */
   reversed: boolean;
   /** Vertex indices in ascending layer order. */
   verts: number[];
+}
+
+export interface Span {
+  start: number;
+  end: number;
 }
 
 export const isDummy = (v: Vertex) => v.node < 0;

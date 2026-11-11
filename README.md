@@ -10,13 +10,13 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 |-------|-------|-------|
 | P0 | Monorepo, CI, type registry, Graph IR, schemas, validation, README pipeline | **Done** |
 | P1 | Flowchart layout + SVG rendering, README images | **Done** |
-| P2 | REST API + web app (editor, live preview, SVG export) | Next |
-| P3 | Cross-functional layout (lanes × phases) | Planned |
+| P2 | Cross-functional layout (lanes × phases) | **Done** |
+| P3 | REST API + web app (editor, live preview, SVG export) | Next |
 | P4 | AI generation from documents (Claude) | Planned |
 | P5 | State diagrams | Planned |
 | P6–P7 | Layout quality, extras | Planned |
 
-Today the core library **validates and renders flowcharts to SVG**. Lanes and phases are validated but not laid out until P3. Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
+Today the core library **validates and renders flowcharts to SVG, including cross-functional flowcharts** (lanes × phases, `LR` or `TB`). Layout quality is basic: edges can cross more than needed, and labels can overlap lines (P6).
 
 ## Diagram types
 
@@ -97,8 +97,6 @@ The examples and images below are generated from the registered types (`pnpm doc
 `type: flowchart` · The same flowchart type with `lanes` (functions) and `phases`.
 
 ![Cross-functional flowchart](docs/img/flowchart-cross-functional.svg)
-
-> **Not yet supported:** lanes and phases are not laid out yet; nodes are drawn without them.
 
 <details><summary>Source</summary>
 
@@ -260,7 +258,7 @@ const { svg, diagnostics } = render(value, createRegistry()); // svg is undefine
 
 Output is standalone SVG 1.1. Text uses `Arial, Liberation Sans, Helvetica, sans-serif`; the first two have identical metrics, so text fits its boxes without embedding a font. Elements carry ids and classes for styling and scripting: `n-<id>` / `jtd-node jtd-shape-<shape>` for nodes, and `e-<id>` / `jtd-edge` for edges.
 
-## API (planned, P2)
+## API (planned, P3)
 
 | Method | Path | Returns |
 |--------|------|---------|

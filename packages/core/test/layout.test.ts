@@ -54,9 +54,64 @@ describe('layered engine', () => {
     expect(n[0]!.x < n[1]!.x && n[1]!.x < n[2]!.x).toBe(true);
     expect(geometry(doc).edges).toHaveLength(3);
   });
+});
 
-  it('warns that lanes are not laid out yet', () => {
-    const ex = reg.type('flowchart')!.examples[1]!.source;
-    expect(render(ex, reg).diagnostics.map((d) => [d.severity, d.code])).toEqual([['warning', 'layout.partitions']]);
+interface Src {
+  direction?: string;
+  lanes?: { id: string }[];
+  phases?: { id: string }[];
+  nodes: { id: string; lane?: string; phase?: string }[];
+}
+const partitioned = fixtures().filter(([, d]) => (d as Src).lanes) as [string, Src][];
+const inside = (a: Box, b: Box) => a.x >= b.x - 1e-6 && a.y >= b.y - 1e-6 && a.x + a.w <= b.x + b.w + 1e-6 && a.y + a.h <= b.y + b.h + 1e-6;
+const intersect = (a: Box, b: Box): Box => {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  return { x, y, w: Math.min(a.x + a.w, b.x + b.w) - x, h: Math.min(a.y + a.h, b.y + b.h) - y };
+};
+
+describe.each(partitioned)('partitions: %s', (_name, doc) => {
+  const g = geometry(doc);
+  const band = (kind: string, id: string) => g.bands.find((b) => b.kind === kind && b.id === id)!;
+  const lanes = g.bands.filter((b) => b.kind === 'lane');
+  const phases = g.bands.filter((b) => b.kind === 'phase');
+
+  it('draws one band per lane and phase, in source order (URS-DM-001/002)', () => {
+    expect(lanes.map((b) => b.id)).toEqual(doc.lanes!.map((l) => l.id));
+    expect(phases.map((b) => b.id)).toEqual((doc.phases ?? []).map((p) => p.id));
+  });
+
+  it('keeps every node inside its lane x phase cell, clear of headers (URS-LY-002)', () => {
+    for (const n of g.nodes) {
+      const src = doc.nodes.find((s) => s.id === n.id)!;
+      const cells = [band('lane', src.lane!), ...(src.phase ? [band('phase', src.phase)] : [])];
+      for (const c of cells) {
+        expect(inside(n, c), `${n.id} in ${c.id}`).toBe(true);
+        expect(overlap(n, c.header), `${n.id} clear of ${c.id} header`).toBe(false);
+      }
+    }
+  });
+
+  it('lanes span all phases and phases span all lanes (URS-LY-003)', () => {
+    const lr = doc.direction !== 'TB';
+    for (const l of lanes)
+      for (const p of phases) {
+        const cell = intersect(l, p);
+        expect(lr ? cell.h : cell.w, `${l.id} x ${p.id} cross`).toBeCloseTo(lr ? l.h : l.w);
+        expect(lr ? cell.w : cell.h, `${l.id} x ${p.id} main`).toBeCloseTo(lr ? p.w : p.h);
+      }
+    const ends = lanes.map((l) => (lr ? l.x + l.w : l.y + l.h));
+    expect(new Set(ends.map((e) => e.toFixed(2))).size).toBe(1);
+  });
+});
+
+describe('cross-functional is a flowchart with lanes (URS-TYP-002)', () => {
+  it('renders the same nodes with and without lanes and phases', () => {
+    const cff = reg.type('flowchart')!.examples[1]!.source as Src;
+    const plain = { ...cff, lanes: undefined, phases: undefined, nodes: cff.nodes.map((n) => Object.fromEntries(Object.entries(n).filter(([k]) => k !== 'lane' && k !== 'phase'))) };
+    const [a, b] = [render(cff, reg), render(JSON.parse(JSON.stringify(plain)), reg)];
+    expect([a.diagnostics, b.diagnostics]).toEqual([[], []]);
+    expect(a.geometry!.nodes.map((n) => n.id).sort()).toEqual(b.geometry!.nodes.map((n) => n.id).sort());
+    expect([a.geometry!.bands.length, b.geometry!.bands.length]).toEqual([5, 0]);
   });
 });

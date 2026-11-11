@@ -6,3 +6,5 @@ export const LABEL_FONT: Font = { size: 12 };
 export const TITLE_FONT: Font = { size: 18, bold: true };
 export const NODE_TEXT_MAX = 180;
 export const LABEL_TEXT_MAX = 140;
+export const BAND_FONT: Font = { size: 13, bold: true };
+export const BAND_TEXT_MAX = 140;
