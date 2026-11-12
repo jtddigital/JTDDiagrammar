@@ -62,6 +62,14 @@ describe('generate (URS-AI-003..008)', () => {
     expect(r.diagnostics.map((d) => d.code)).toEqual(['ref.lane']);
   });
 
+  it('checks the reply against the generation schema and repairs mismatches (URS-AI-004)', async () => {
+    const { nodes: _n, ...noNodes } = good;
+    const { client, run } = setup([{ json: noNodes }, { json: good }]);
+    const r = await run();
+    expect(r).toMatchObject({ valid: true, attempts: 2 });
+    expect(JSON.stringify(client.requests[1]!.messages[2]!.content)).toContain("(schema.required): generated output: must have required property 'nodes'");
+  });
+
   it('treats unparseable replies as a validation failure', async () => {
     const r = await setup([{ text: '{"title":' }], { maxRepairs: 0 }).run();
     expect(r).toMatchObject({ valid: false, source: null, diagnostics: [{ code: 'ai.json' }] });

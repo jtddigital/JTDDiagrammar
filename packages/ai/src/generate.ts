@@ -1,4 +1,4 @@
-import { compile, error, hasErrors, type Diagnostic, type DiagramType, type Registry } from '@jtd/core';
+import { compile, error, hasErrors, validateSchema, type Diagnostic, type DiagramType, type Registry } from '@jtd/core';
 import type { ClaudeClient, ClaudeReply, InputBlock, Turn, Usage } from './client.ts';
 import { AiError } from './errors.ts';
 import { ingest, type IngestLimits, type InputFile } from './ingest/files.ts';
@@ -108,8 +108,14 @@ async function attempts(t: DiagramType, first: Turn, o: GenerateOptions, meter: 
     req.onProgress?.({ stage: 'validate', attempt });
     let r: { source: unknown; diagnostics: Diagnostic[]; svg?: string };
     try {
-      const source = finish(JSON.parse(reply.text));
-      r = { source, ...(await o.render(source)) };
+      const generated: unknown = JSON.parse(reply.text);
+      // Checked here too: a schema the API refused to compile is sent as instructions, not enforced (URS-AI-004).
+      const shape = validateSchema(t.ai.schema, generated);
+      if (shape.length) r = { source: undefined, diagnostics: shape.map((d) => ({ ...d, message: `generated output: ${d.message}` })) };
+      else {
+        const source = finish(generated);
+        r = { source, ...(await o.render(source)) };
+      }
     } catch {
       r = { source: undefined, diagnostics: [error('ai.json', 'the reply was not valid JSON')] };
     }
