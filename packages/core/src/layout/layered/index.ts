@@ -3,7 +3,7 @@ import { warning } from '../../diagnostics.ts';
 import type { Band as IRBand, GraphIR } from '../../ir/types.ts';
 import { textBlock } from '../../measure/text.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
-import { BAND_FONT, BAND_TEXT_MAX } from '../../style.ts';
+import { BAND_FONT, BAND_TEXT_MAX, fontOf } from '../../style.ts';
 import { flowOf } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
 import { normalize } from '../normalize.ts';
@@ -17,7 +17,7 @@ import { order } from './order.ts';
 import { place } from './place.ts';
 import { route, type SizedNode } from './route.ts';
 
-const headerLabels = (bs: readonly IRBand[] | undefined) => (bs ?? []).map((b) => textBlock(b.label, BAND_TEXT_MAX, BAND_FONT));
+const headerLabels = (bs: readonly IRBand[] | undefined) => (bs ?? []).map((b) => textBlock(b.label, BAND_TEXT_MAX, fontOf(BAND_FONT, b.style)));
 
 /** Layered (Sugiyama-style) engine with lane/phase constraints (URS-LY-001..005, URS-DM-001/002) and compound containers (URS-LY-012). */
 export const layered: LayoutEngine = {

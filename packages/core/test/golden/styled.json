@@ -3,18 +3,84 @@
   "type": "flowchart",
   "title": "Styled cross-functional flowchart",
   "lanes": [
-    { "id": "cs", "label": "Support", "style": { "fill": "#dbeafe", "text": "#1e3a8a" } },
-    { "id": "eng", "label": "Engineering", "style": { "fill": "#dcfce7", "text": "#14532d" } }
+    {
+      "id": "cs",
+      "label": "Support",
+      "style": {
+        "fill": "#dbeafe",
+        "text": "#1e3a8a"
+      }
+    },
+    {
+      "id": "eng",
+      "label": "Engineering",
+      "style": {
+        "fill": "#dcfce7",
+        "text": "#14532d",
+        "lineWidth": 2
+      }
+    }
   ],
   "nodes": [
-    { "id": "report", "shape": "terminator", "label": "Bug reported", "lane": "cs" },
-    { "id": "triage", "shape": "decision", "label": "Reproducible?", "lane": "eng", "style": { "fill": "#fef9c3", "stroke": "#a16207" } },
-    { "id": "fix", "label": "Fix", "lane": "eng", "style": { "fill": "#16a34a", "stroke": "#14532d", "text": "#ffffff" } },
-    { "id": "close", "shape": "terminator", "label": "Close as cannot reproduce", "lane": "cs", "style": { "dash": "dashed" } }
-  ],
-  "edges": [
-    { "from": "report", "to": "triage" },
-    { "from": "triage", "to": "fix", "label": "Yes", "style": { "stroke": "#16a34a", "text": "#166534" } },
-    { "from": "triage", "to": "close", "label": "No", "style": { "stroke": "#dc2626", "dash": "dotted" } }
+    {
+      "id": "report",
+      "shape": "terminator",
+      "label": "Bug reported",
+      "lane": "cs",
+      "to": [
+        {
+          "node": "triage"
+        }
+      ]
+    },
+    {
+      "id": "triage",
+      "shape": "decision",
+      "label": "Reproducible?",
+      "lane": "eng",
+      "style": {
+        "fill": "#fef9c3",
+        "stroke": "#a16207"
+      },
+      "to": [
+        {
+          "node": "fix",
+          "label": "Yes",
+          "style": {
+            "stroke": "#16a34a",
+            "text": "#166534",
+            "lineWidth": 2.5
+          }
+        },
+        {
+          "node": "close",
+          "label": "No",
+          "style": {
+            "stroke": "#dc2626",
+            "dash": "dotted"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "label": "Fix",
+      "lane": "eng",
+      "style": {
+        "fill": "#16a34a",
+        "stroke": "#14532d",
+        "text": "#ffffff",
+        "lineWidth": 3
+      }
+    },
+    {
+      "id": "close",
+      "shape": "terminator",
+      "label": "Close as cannot reproduce",
+      "lane": "cs",
+      "style": {
+        "dash": "dashed"
+      }
+    }
   ]
 }

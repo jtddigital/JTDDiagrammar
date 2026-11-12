@@ -10,7 +10,7 @@ function placeGroup(layers: readonly number[][], verts: Vertex[], up: number[][]
       if (!i) return 0;
       const a = verts[l[i - 1]!]!;
       const b = verts[v]!;
-      return (a.cross + b.cross) / 2 + (isDummy(a) || isDummy(b) ? EDGE_GAP : NODE_GAP);
+      return (a.cross + b.cross) / 2 + (a.after ?? 0) + (isDummy(a) || isDummy(b) ? EDGE_GAP : NODE_GAP);
     }),
   );
   const packLayer = (li: number, want: (v: number) => number) => {
@@ -56,7 +56,7 @@ export function place(layers: readonly number[][], verts: Vertex[], chains: read
     placeGroup(sub, verts, up, down, sweeps);
     const vs = sub.flat().map((v) => verts[v]!);
     const lo = min(vs.map((v) => v.pos - v.cross / 2));
-    const hi = max(vs.map((v) => v.pos + v.cross / 2));
+    const hi = max(vs.map((v) => v.pos + v.cross / 2 + (v.after ?? 0)));
     const size = Math.max(hi - lo + 2 * LANE_PAD, minSize);
     const shift = at + (size - (hi - lo)) / 2 - lo;
     for (const v of vs) v.pos += shift;

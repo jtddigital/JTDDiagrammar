@@ -18,7 +18,7 @@ describe('scale', () => {
   });
 
   it('enforces node and edge limits before layout (URS-API-006)', () => {
-    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 'a' }, { id: 'b' }], edges: [{ from: 'a', to: 'b' }] };
+    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 'a', to: [{ node: 'b' }] }, { id: 'b' }] };
     expect(render(doc, reg, { maxNodes: 1, maxEdges: 0 }).diagnostics.map((d) => d.code)).toEqual(['limit.nodes', 'limit.edges']);
     expect(render(doc, reg, { maxNodes: 2, maxEdges: 1 }).svg).toBeDefined();
   });
@@ -26,10 +26,10 @@ describe('scale', () => {
   it('lays out 200 nodes / 300 edges within budget (URS-LY-010)', () => {
     let seed = 7;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const nodes = Array.from({ length: 200 }, (_, i) => ({ id: `n${i}`, label: `Step ${i}` }));
-    const edges = Array.from({ length: 300 }, () => ({ from: `n${Math.floor(rnd() * 200)}`, to: `n${Math.floor(rnd() * 200)}` }));
+    const nodes = Array.from({ length: 200 }, (_, i) => ({ id: `n${i}`, label: `Step ${i}`, to: [] as { node: string }[] }));
+    for (let i = 0; i < 300; i++) nodes[Math.floor(rnd() * 200)]!.to.push({ node: `n${Math.floor(rnd() * 200)}` });
     const t = performance.now();
-    const r = render({ version: '1', type: 'flowchart', nodes, edges }, reg);
+    const r = render({ version: '1', type: 'flowchart', nodes }, reg);
     expect(r.svg).toBeDefined();
     expect(performance.now() - t).toBeLessThan(500);
   });

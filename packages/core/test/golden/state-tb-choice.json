@@ -4,19 +4,61 @@
   "title": "Login (top to bottom, choice)",
   "direction": "TB",
   "states": [
-    { "id": "start", "kind": "initial" },
-    { "id": "entering", "label": "Entering credentials" },
-    { "id": "check", "kind": "choice" },
-    { "id": "locked", "label": "Locked" },
-    { "id": "in", "label": "Signed in" },
-    { "id": "end", "kind": "final" }
-  ],
-  "transitions": [
-    { "from": "start", "to": "entering" },
-    { "from": "entering", "to": "check", "event": "submit" },
-    { "from": "check", "to": "in", "guard": "valid" },
-    { "from": "check", "to": "entering", "guard": "invalid", "action": "count attempt" },
-    { "from": "check", "to": "locked", "guard": "attempts > 3" },
-    { "from": "in", "to": "end", "event": "sign out" }
+    {
+      "id": "start",
+      "kind": "initial",
+      "to": [
+        {
+          "state": "entering"
+        }
+      ]
+    },
+    {
+      "id": "entering",
+      "label": "Entering credentials",
+      "to": [
+        {
+          "state": "check",
+          "event": "submit"
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "kind": "choice",
+      "to": [
+        {
+          "state": "in",
+          "guard": "valid"
+        },
+        {
+          "state": "entering",
+          "guard": "invalid",
+          "action": "count attempt"
+        },
+        {
+          "state": "locked",
+          "guard": "attempts > 3"
+        }
+      ]
+    },
+    {
+      "id": "locked",
+      "label": "Locked"
+    },
+    {
+      "id": "in",
+      "label": "Signed in",
+      "to": [
+        {
+          "state": "end",
+          "event": "sign out"
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "kind": "final"
+    }
   ]
 }

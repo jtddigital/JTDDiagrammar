@@ -10,6 +10,20 @@ export interface Style {
   stroke?: string;
   text?: string;
   dash?: 'solid' | 'dashed' | 'dotted';
+  /** Line thickness in px, 0.5–8 (URS-DM-014). */
+  lineWidth?: number;
+  /** Text (URS-DM-016). */
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  opacity?: number;
+  /** Edges (URS-DM-016). */
+  arrowhead?: 'triangle' | 'open' | 'diamond' | 'circle' | 'none';
+  labelFill?: string;
+  /** Nodes: label placement and fixed size (URS-DM-017). */
+  label?: 'inside' | 'callout' | 'auto';
+  width?: number;
+  height?: number;
 }
 
 /** JSON Pointer to the source element, for diagnostics. */

@@ -26,17 +26,15 @@ describe('XML adapter', () => {
 <diagram version="1" type="flowchart" title="Hand &amp; written">
   <nodes>
     <node id="a" order="2"><label>Two
-lines</label><style fill="#ffeeee"/></node>
+lines</label><style fill="#ffeeee"/><to><link node="b" label="go"/></to></node>
     <node id="b"/>
   </nodes>
-  <edges><edge from="a" to="b" label="go"/></edges>
 </diagram>`;
     expect(parseXml(xml, reg).value).toEqual({
       version: '1',
       type: 'flowchart',
       title: 'Hand & written',
-      nodes: [{ id: 'a', order: 2, label: 'Two\nlines', style: { fill: '#ffeeee' } }, { id: 'b' }],
-      edges: [{ from: 'a', to: 'b', label: 'go' }],
+      nodes: [{ id: 'a', order: 2, label: 'Two\nlines', style: { fill: '#ffeeee' }, to: [{ node: 'b', label: 'go' }] }, { id: 'b' }],
     });
   });
 

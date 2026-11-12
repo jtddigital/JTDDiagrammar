@@ -16,5 +16,7 @@ export interface OrgChart {
   title?: string;
   theme?: Theme;
   direction?: Direction;
+  /** Default style for people and for reporting lines (URS-DM-015). */
+  styles?: Partial<Record<'people' | 'lines', Style>>;
   people: Person[];
 }

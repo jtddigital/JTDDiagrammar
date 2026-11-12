@@ -12,6 +12,8 @@ const restrict = (patterns) => ({ 'no-restricted-imports': ['error', { patterns 
 export default tseslint.config(
   { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/test-results/**'] },
   ...tseslint.configs.recommended,
+  // `{ dropped: _x, ...rest }` is how fields are removed from an object; the dropped names are intentionally unused.
+  { rules: { '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }] } },
   { files: ['**/*.ts', '**/*.tsx'], ignores: ['packages/ai/**'], rules: restrict([sdk]) },
   { files: ['packages/core/src/**/*.ts'], rules: restrict(corePatterns) },
   {

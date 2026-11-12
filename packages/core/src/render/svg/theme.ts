@@ -52,3 +52,6 @@ export const METRICS = { stroke: 1.5, margin: 24, titleGap: 16 } as const;
 
 const DASH = { solid: '', dashed: ' stroke-dasharray="6 4"', dotted: ' stroke-dasharray="1.5 3" stroke-linecap="round"' } as const;
 export const dash = (d: keyof typeof DASH | undefined) => (d ? DASH[d] : '');
+
+/** Whole-element opacity (URS-DM-016). */
+export const opacity = (o: number | undefined) => (o !== undefined && o < 1 ? ` opacity="${o}"` : '');

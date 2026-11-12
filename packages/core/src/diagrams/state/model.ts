@@ -11,13 +11,15 @@ export interface State {
   states?: State[];
   quote?: string;
   style?: Style;
+  /** Outgoing transitions (URS-IN-009). */
+  to?: StateLink[];
 }
 
-/** UML-style transition, labelled `event [guard] / action` (URS-TYP-003). */
-export interface Transition {
+/** UML-style transition from the state it is nested under, labelled `event [guard] / action` (URS-TYP-003, URS-IN-009). */
+export interface StateLink {
   id?: string;
-  from: string;
-  to: string;
+  /** Target state id. */
+  state: string;
   event?: string;
   guard?: string;
   action?: string;
@@ -30,9 +32,19 @@ export interface StateDiagram {
   type: 'state';
   title?: string;
   theme?: Theme;
+  /** Default style for every state (URS-DM-015). */
+  styles?: Partial<Record<'states', Style>>;
+  /** Default style for every transition; each one's `style` overrides it (URS-DM-015). */
+  transitionStyle?: Style;
   direction?: Direction;
   states: State[];
-  transitions?: Transition[];
+}
+
+/** A transition with its source, generated id and JSON Pointer. */
+export interface Transition extends StateLink {
+  id: string;
+  from: string;
+  src: string;
 }
 
 /** Depth-first walk with each state's JSON Pointer and parent id. */
@@ -45,5 +57,9 @@ export function* walk(states: readonly State[], base = '/states', parent?: strin
 
 export const isComposite = (s: State) => (s.states?.length ?? 0) > 0;
 
-export const transitionLabel = (t: Transition): string | undefined =>
+/** Every transition in source order. Generated ids contain ':' so they cannot collide with user ids. */
+export const transitionsOf = (states: readonly State[]): Transition[] =>
+  [...walk(states)].flatMap(({ state: s, path }) => (s.to ?? []).map((l, j) => ({ ...l, id: l.id ?? `edge:${s.id}:${j}`, from: s.id, src: `${path}/to/${j}` })));
+
+export const transitionLabel = (t: StateLink): string | undefined =>
   [t.event, t.guard && `[${t.guard}]`, t.action && `/ ${t.action}`].filter(Boolean).join(' ') || undefined;

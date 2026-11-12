@@ -21,8 +21,7 @@ describe('order hints (URS-DM-008)', () => {
     version: '1',
     type: 'flowchart',
     direction: 'TB',
-    nodes: [{ id: 'root' }, ...orders.map((o, i) => ({ id: `c${i}`, ...(o !== undefined && { order: o }) }))],
-    edges: orders.map((_, i) => ({ from: 'root', to: `c${i}` })),
+    nodes: [{ id: 'root', to: orders.map((_, i) => ({ node: `c${i}` })) }, ...orders.map((o, i) => ({ id: `c${i}`, ...(o !== undefined && { order: o }) }))],
   });
   const xs = (d: unknown) => Object.fromEntries(render(d, reg).geometry!.nodes.map((n) => [n.id, n.x]));
 

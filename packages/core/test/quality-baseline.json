@@ -1,4 +1,12 @@
 {
+  "callouts-tb": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "cff-lanes": {
     "crossings": 0,
     "overlaps": 0,
@@ -71,6 +79,14 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0
   },
+  "state-callouts": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "state-dark": {
     "crossings": 0,
     "overlaps": 0,
@@ -127,6 +143,14 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0
   },
+  "flowchart-styled-callouts": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "state-basic": {
     "crossings": 0,
     "overlaps": 0,
@@ -152,12 +176,12 @@
     "edgeThroughLabel": 0
   },
   "random-30": {
-    "crossings": 41,
+    "crossings": 42,
     "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 1
   },
   "random-60-lanes": {
     "crossings": 323,
@@ -168,11 +192,11 @@
     "edgeThroughLabel": 2
   },
   "random-200": {
-    "crossings": 2643,
+    "crossings": 2814,
     "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 7
+    "edgeThroughLabel": 6
   }
 }

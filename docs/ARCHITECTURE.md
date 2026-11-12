@@ -99,20 +99,18 @@ README.md
 ## 5. Source formats (schema v1, drafts)
 Each type picks the source structure that fits it best; the IR is what they share (URS-IN-003).
 
-**Flowchart, with lanes = cross-functional** (URS-TYP-001/002). The format is flat with ID references: edges cross lanes, and diffs stay small.
+**Flowchart, with lanes = cross-functional** (URS-TYP-001/002). Nodes are a flat list with ID references, so edges can cross lanes and diffs stay small. Since v0.22 each node lists its outgoing connections in `to` (URS-IN-009), so a node and where it leads read together; `edgeStyle` is the default style for all of them.
 ```json
 {
   "version": "1", "type": "flowchart", "direction": "LR",
   "lanes":  [{ "id": "cust", "label": "Customer" }, { "id": "wh", "label": "Warehouse" }],
   "phases": [{ "id": "order", "label": "Order" }, { "id": "fulfil", "label": "Fulfil" }],
   "nodes": [
-    { "id": "start", "shape": "terminator", "label": "Start",     "lane": "cust", "phase": "order" },
-    { "id": "stock", "shape": "decision",   "label": "In stock?", "lane": "wh",   "phase": "order" },
+    { "id": "start", "shape": "terminator", "label": "Start",     "lane": "cust", "phase": "order",
+      "to": [{ "node": "stock" }] },
+    { "id": "stock", "shape": "decision",   "label": "In stock?", "lane": "wh",   "phase": "order",
+      "to": [{ "node": "ship", "label": "Yes", "exitSide": "S" }] },
     { "id": "ship",  "shape": "process",    "label": "Ship",      "lane": "wh",   "phase": "fulfil" }
-  ],
-  "edges": [
-    { "from": "start", "to": "stock" },
-    { "from": "stock", "to": "ship", "label": "Yes" }
   ]
 }
 ```
@@ -123,22 +121,19 @@ Drop `lanes`/`phases` and the same file is a plain flowchart.
 {
   "version": "1", "type": "state", "direction": "LR",
   "states": [
-    { "id": "init", "kind": "initial" },
-    { "id": "idle", "label": "Idle" },
-    { "id": "active", "label": "Active", "states": [
-        { "id": "a0", "kind": "initial" }, { "id": "run", "label": "Running" }, { "id": "paused", "label": "Paused" } ] },
+    { "id": "init", "kind": "initial", "to": [{ "state": "idle" }] },
+    { "id": "idle", "label": "Idle", "to": [{ "state": "active", "event": "start", "guard": "ready", "action": "boot()" }] },
+    { "id": "active", "label": "Active", "to": [{ "state": "done", "event": "stop" }], "states": [
+        { "id": "a0", "kind": "initial", "to": [{ "state": "run" }] },
+        { "id": "run", "label": "Running", "to": [{ "state": "paused", "event": "pause" }, { "state": "run", "event": "tick" }] },
+        { "id": "paused", "label": "Paused" } ] },
     { "id": "done", "kind": "final" }
-  ],
-  "transitions": [
-    { "from": "init", "to": "idle" },
-    { "from": "idle", "to": "active", "event": "start", "guard": "ready", "action": "boot()" },
-    { "from": "run", "to": "paused", "event": "pause" },
-    { "from": "run", "to": "run", "event": "tick" },
-    { "from": "active", "to": "done", "event": "stop" }
   ]
 }
 ```
-`toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts.
+`toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts. Transitions are nested under their source state (`to`), at any depth; `transitionStyle` is their default style.
+
+Both types flatten their nested connections with one helper (`linksOf`, `transitionsOf`). Each connection keeps its source, a generated id (`edge:<source>:<n>` unless the author set `id`) and its JSON Pointer (`/nodes/2/to/0`), so diagnostics point at the right entry. AI generation keeps flat `edges`/`transitions` (`from`, `to`), which are easier for a model to produce reliably; `fromGenerated` nests them and `toGenerated` flattens them again (URS-AI-004).
 
 ## 6. Layout
 One engine at first, `layered` (Sugiyama-style), with optional constraint modules. Types turn features on by populating the IR. Engines never check the type.
@@ -230,6 +225,9 @@ files/text ─ingest─▶ content blocks ─(type=auto? select)─▶ Claude + 
 - `README.md` contains overview, quick start, API with `curl`, a per-type section (source + rendered image), AI usage and config, architecture and workflow. (URS-DOC-001/002)
 - `pnpm docs:images` renders every type's README fixture through core into `docs/img/<type>.svg` and captures the web app (editor, generate panel) to PNG with Playwright. (URS-DOC-003/005)
 - A CI job re-runs the script and fails on any diff, or when a registered type has no fixture. That ties the docs to the registry, so a new type can't ship undocumented. (URS-DOC-004, URS-EXT-010)
+
+### Styling engine (URS-DM-010, DM-014..017)
+Styles reach the IR already merged: each type's `toIR` lays the item's `style` over its section default from `styles` (`diagrams/section-styles.ts`). Layout reads only the IR style fields that change geometry: font size and weight through `fontOf`, `width`/`height`, and `label`. Render reads the rest. For `label: callout | auto`, `sized()` keeps the shape's standard size, judged by each shape's `inner(w, h)` text area, and records the callout's size. The vertex reserves room for it (`after` across the flow, `reach` along it), so spacing, lane bands and layer widths include the callout while ports and centres still use the shape. After routing, `placeLabels` starts each callout in its reserved spot and moves it only when something blocks it, then places edge labels around it.
 
 ## 10a. Distribution
 A release is one archive, `jtddiagrammar.tar.gz`. It holds the same files as the Docker image: the TypeScript sources of `core`, `ai` and `api`, the built web app, and the lockfile, plus the launchers. The installers (`install.sh`, `install.ps1`) take the latest or a named GitHub release, using the API asset URLs so private repos work with a token. They verify the SHA-256 and extract into `versions/<tag>`, then run `pnpm install --prod --frozen-lockfile` there through corepack. `current` (a symlink, or a one-line file on Windows) selects the version; the previous version is kept. `config.env` sits outside the version directories, so updates keep it. The `jtddiagrammar` launcher loads it, binds to 127.0.0.1, waits for `/health`, then opens the browser. Installing dependencies on the target avoids shipping pnpm's symlinked `node_modules`, which Windows tar cannot extract reliably. The cost is that the npm registry must be reachable at install time. Windows is the primary target (URS-NF-013). `install.ps1` runs under Windows PowerShell 5.1 and PowerShell 7, installs Node.js LTS with winget when it is missing, and adds Start Menu and desktop shortcuts plus a user PATH entry. It writes a `.cmd` shim that runs the launcher with `-ExecutionPolicy Bypass`. `uninstall` deletes files from a detached `cmd` after exit, because the shim is still open while it runs. (URS-NF-010..013)

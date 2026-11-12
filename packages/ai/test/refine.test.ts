@@ -23,8 +23,7 @@ const current = {
   type: 'flowchart',
   title: 'Refunds',
   theme: 'dark',
-  nodes: [{ id: 'ask', label: 'Request', style: { fill: '#ff0000' } }, { id: 'pay', label: 'Pay' }],
-  edges: [{ from: 'ask', to: 'pay', fromSide: 'S', style: { stroke: '#00ff00' } }],
+  nodes: [{ id: 'ask', label: 'Request', style: { fill: '#ff0000' }, to: [{ node: 'pay', exitSide: 'S', style: { stroke: '#00ff00' } }] }, { id: 'pay', label: 'Pay' }],
 };
 const refined = {
   title: 'Refunds',
@@ -44,7 +43,9 @@ describe('refine (URS-AI-013)', () => {
     const src = r.source as typeof current;
     expect(src.theme).toBe('dark');
     expect(src.nodes.find((n) => n.id === 'ask')!.style).toEqual({ fill: '#ff0000' });
-    expect(src.edges.find((e) => e.from === 'ask' && e.to === 'pay')).toMatchObject({ fromSide: 'S', style: { stroke: '#00ff00' } });
+    const ask = src.nodes.find((n) => n.id === 'ask') as { to: { node: string }[] };
+    expect(ask.to.map((l) => l.node)).toEqual(['check', 'pay']);
+    expect(ask.to.find((l) => l.node === 'pay')).toMatchObject({ exitSide: 'S', style: { stroke: '#00ff00' } });
   });
 
   it('refuses empty instructions and structurally invalid sources', async () => {
@@ -55,7 +56,7 @@ describe('refine (URS-AI-013)', () => {
   });
 
   it('accepts semantically invalid sources, since fixing them can be the instruction', async () => {
-    const broken = { ...current, edges: [{ from: 'ask', to: 'ghost' }] };
+    const broken = { ...current, nodes: [{ id: 'ask', to: [{ node: 'ghost' }] }] };
     const r = await refine({ source: broken, instruction: 'fix the dangling edge' }, opts(new MockClaude([{ json: refined }])));
     expect(r.valid).toBe(true);
   });

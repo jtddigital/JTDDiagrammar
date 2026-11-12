@@ -1,10 +1,10 @@
 import { max } from '../../math.ts';
-import type { Box, PlacedNode, RoutedEdge } from '../../geometry.ts';
+import type { Box, PlacedNode, Point, RoutedEdge } from '../../geometry.ts';
 import type { IREdge } from '../../ir/types.ts';
 import { textBlock } from '../../measure/text.ts';
 import { shape } from '../../shapes/library.ts';
 import type { Side } from '../../shapes/shape.ts';
-import { LABEL_FONT, LABEL_TEXT_MAX } from '../../style.ts';
+import { CALLOUT_GAP, fontOf, LABEL_FONT, LABEL_TEXT_MAX } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { simplify } from '../simplify.ts';
 import { RANK_GAP, TRACK_SEP } from './constants.ts';
@@ -23,6 +23,8 @@ export interface SizedNode {
   w: number;
   h: number;
   order?: number;
+  /** Label drawn beside the node; positioned after routing (URS-DM-017). */
+  callout?: { lines: string[]; w: number; h: number };
 }
 
 interface Ctx {
@@ -177,13 +179,13 @@ export function allocateTips(entries: readonly (Entry & { align: number })[], po
   return best?.tips;
 }
 
-const labelOf = (e: IREdge) => (e.label ? textBlock(e.label, LABEL_TEXT_MAX, LABEL_FONT) : undefined);
+const labelOf = (e: IREdge) => (e.label ? textBlock(e.label, LABEL_TEXT_MAX, fontOf(LABEL_FONT, e.style)) : undefined);
 
 /** Orthogonal routing through the gaps between layers (URS-LY-005). */
 export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axis: MainAxis } {
   const { flow, nodes, verts, layers, chains, edges } = ctx;
   const { chains: port, loops: loopPort, hints } = ports(ctx);
-  const extent = layers.map((l) => max(l.map((v) => verts[v]!.main)));
+  const extent = layers.map((l) => max(l.map((v) => Math.max(verts[v]!.main, verts[v]!.reach ?? 0))));
   const crossStart = (v: number) => verts[v]!.pos - verts[v]!.cross / 2;
 
   /** Cross coordinate a side-hinted end runs along once clear of its node: just outside the hinted side, or, for the far main side, outside the cross side facing its neighbour. */
@@ -336,7 +338,11 @@ export function route(ctx: Ctx): { nodes: PlacedNode[]; edges: RoutedEdge[]; axi
     if (isDummy(v)) return [];
     const n = nodes[v.node]!;
     const p = xy({ m: mainStart(i), c: crossStart(i) });
-    return [{ id: n.id, shape: n.shape, lines: n.lines, x: p.x, y: p.y, w: n.w, h: n.h }];
+    // Callouts start in the room reserved past the node (URS-DM-017); placeLabels moves them only if that spot is blocked.
+    const c = n.callout;
+    const at = c && xy({ m: mainStart(i) + (v.main - flow.main(c.w, c.h)) / 2, c: crossStart(i) + v.cross + CALLOUT_GAP });
+    const callout = c && at && { ...c, ...at, leader: [p, p] as [Point, Point] };
+    return [{ id: n.id, shape: n.shape, lines: n.lines, x: p.x, y: p.y, w: n.w, h: n.h, ...(callout && { callout }) }];
   });
   return { nodes: placed, edges: routed, axis };
 }

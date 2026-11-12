@@ -1,4 +1,4 @@
-import { envelope, id, ref, style } from '../../schema/fragments.ts';
+import { envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
 
 export const orgchartSchema = {
   $id: 'urn:jtd:schema:v1:orgchart',
@@ -9,6 +9,7 @@ export const orgchartSchema = {
   properties: {
     ...envelope('orgchart'),
     direction: { type: 'string', enum: ['TB', 'LR'], default: 'TB', description: 'Top to bottom (default) or left to right.' },
+    styles: sectionStyles(['people', 'lines']),
     people: {
       type: 'array',
       description: 'Everyone in the chart.',

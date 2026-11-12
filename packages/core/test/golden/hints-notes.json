@@ -3,24 +3,81 @@
   "type": "flowchart",
   "title": "Port hints and notes",
   "nodes": [
-    { "id": "start", "shape": "terminator", "label": "Start" },
-    { "id": "check", "shape": "decision", "label": "Valid?" },
-    { "id": "fix", "label": "Fix input" },
-    { "id": "save", "label": "Save" },
-    { "id": "audit", "label": "Audit log" },
-    { "id": "end", "shape": "terminator", "label": "End" }
-  ],
-  "edges": [
-    { "from": "start", "to": "check" },
-    { "from": "check", "to": "save", "label": "Yes" },
-    { "from": "check", "to": "fix", "label": "No", "fromSide": "S" },
-    { "from": "fix", "to": "check", "fromSide": "W", "toSide": "S", "label": "retry" },
-    { "from": "save", "to": "end" },
-    { "from": "save", "to": "audit", "fromSide": "N", "toSide": "W" },
-    { "from": "audit", "to": "end", "toSide": "N" }
+    {
+      "id": "start",
+      "shape": "terminator",
+      "label": "Start",
+      "to": [
+        {
+          "node": "check"
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "shape": "decision",
+      "label": "Valid?",
+      "to": [
+        {
+          "node": "save",
+          "label": "Yes"
+        },
+        {
+          "node": "fix",
+          "label": "No",
+          "exitSide": "S"
+        }
+      ]
+    },
+    {
+      "id": "fix",
+      "label": "Fix input",
+      "to": [
+        {
+          "node": "check",
+          "label": "retry",
+          "exitSide": "W",
+          "entrySide": "S"
+        }
+      ]
+    },
+    {
+      "id": "save",
+      "label": "Save",
+      "to": [
+        {
+          "node": "end"
+        },
+        {
+          "node": "audit",
+          "exitSide": "N",
+          "entrySide": "W"
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "label": "Audit log",
+      "to": [
+        {
+          "node": "end",
+          "entrySide": "N"
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "shape": "terminator",
+      "label": "End"
+    }
   ],
   "notes": [
-    { "text": "Validation rules\nlive in policy.md", "for": "check" },
-    { "text": "Free-standing note" }
+    {
+      "text": "Validation rules\nlive in policy.md",
+      "for": "check"
+    },
+    {
+      "text": "Free-standing note"
+    }
   ]
 }

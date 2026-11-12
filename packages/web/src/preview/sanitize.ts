@@ -10,8 +10,8 @@ const ELEMENTS: Record<string, string[]> = {
   marker: ['id', 'viewBox', 'refX', 'refY', 'markerWidth', 'markerHeight', 'markerUnits', 'orient'],
   path: ['d', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap', 'marker-end'],
   rect: ['x', 'y', 'width', 'height', 'rx', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray'],
-  g: ['id', 'class', 'transform', 'font-family', 'font-size', 'fill', 'style'],
-  text: ['x', 'y', 'text-anchor', 'font-size', 'font-weight', 'fill', 'class'],
+  g: ['id', 'class', 'transform', 'font-family', 'font-size', 'fill', 'style', 'opacity'],
+  text: ['x', 'y', 'text-anchor', 'font-size', 'font-weight', 'font-style', 'fill', 'class'],
 };
 
 const SAFE: Record<string, RegExp> = {
@@ -20,6 +20,13 @@ const SAFE: Record<string, RegExp> = {
   'marker-end': /^url\(#[\w-]+\)$/,
   style: /^[a-z-]+:[a-z-]+(;[a-z-]+:[a-z-]+)*$/,
   transform: /^translate\([-\d.]+ [-\d.]+\)$/,
+  'stroke-width': /^\d+(\.\d+)?$/,
+  opacity: /^(0|1)?(\.\d+)?$/,
+  'font-size': /^\d+(\.\d+)?$/,
+  'font-weight': /^(bold|normal)$/,
+  'font-style': /^italic$/,
+  markerWidth: /^\d+(\.\d+)?$/,
+  markerHeight: /^\d+(\.\d+)?$/,
 };
 
 function clean(el: Element): void {

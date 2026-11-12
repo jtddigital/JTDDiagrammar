@@ -56,7 +56,7 @@ describe('language reference (URS-DOC-006)', () => {
     const reg = createRegistry().registerType(checklist);
     const ref = referenceSection(reg);
     for (const t of reg.types()) expect(ref).toContain(`### \`${t.id}\``);
-    for (const f of ['`nodes[].shape`', '`nodes[].style`', '`edges[].from`', '`states[].kind`', '`transitions[].guard`', '`items[].label`', '`theme`']) expect(ref).toContain(f);
+    for (const f of ['`nodes[].shape`', '`nodes[].style`', '`nodes[].to[].node`', '`edgeStyle`', '`states[].kind`', '`states[].to[].guard`', '`transitionStyle`', '`items[].label`', '`theme`']) expect(ref).toContain(f);
     expect(ref).toContain('Same fields as `states[]`');
   });
 });

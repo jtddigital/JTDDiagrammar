@@ -12,6 +12,9 @@ export interface Vertex {
   pos: number;
   /** Ordering hint within its layer and lane (URS-DM-008). */
   hint?: number;
+  /** Room reserved past the shape on the cross axis, and the length needed along the flow, for a callout (URS-DM-017). */
+  after?: number;
+  reach?: number;
 }
 
 export interface Link {

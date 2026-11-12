@@ -11,13 +11,37 @@ export const direction = { type: 'string', enum: ['LR', 'TB'], default: 'LR', de
 /** Hex colours only, so nothing but a colour can reach an SVG attribute. */
 export const color = { type: 'string', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$', description: 'Hex colour, `#rgb` or `#rrggbb`.' } as const;
 
-/** Per-element style overrides (URS-DM-010). */
+/** Per-element style overrides (URS-DM-010, URS-DM-014, URS-DM-016, URS-DM-017). */
 export const style = {
   type: 'object',
-  description: 'Colour and dash overrides (see Styling).',
+  description: 'Colours, lines, text and node sizing (see Styling).',
   additionalProperties: false,
-  properties: { fill: color, stroke: color, text: color, dash: { type: 'string', enum: ['solid', 'dashed', 'dotted'], description: 'Line style.' } },
+  properties: {
+    fill: color,
+    stroke: color,
+    text: color,
+    dash: { type: 'string', enum: ['solid', 'dashed', 'dotted'], description: 'Line style.' },
+    lineWidth: { type: 'number', minimum: 0.5, maximum: 8, description: 'Line thickness in pixels, 0.5 to 8.' },
+    fontSize: { type: 'number', minimum: 8, maximum: 32, description: 'Text size in pixels, 8 to 32.' },
+    bold: { type: 'boolean', description: 'Bold text.' },
+    italic: { type: 'boolean', description: 'Italic text.' },
+    opacity: { type: 'number', minimum: 0.1, maximum: 1, description: 'Whole-element opacity, 0.1 to 1.' },
+    arrowhead: { type: 'string', enum: ['triangle', 'open', 'diamond', 'circle', 'none'], description: 'Edges: arrowhead shape (default `triangle`).' },
+    labelFill: { ...color, description: 'Background of edge labels and callouts.' },
+    label: { type: 'string', enum: ['inside', 'callout', 'auto'], description: 'Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit).' },
+    width: { type: 'number', minimum: 16, maximum: 600, description: 'Nodes: fixed width in pixels.' },
+    height: { type: 'number', minimum: 16, maximum: 400, description: 'Nodes: fixed height in pixels.' },
+  },
 } as const;
+
+/** Diagram-level default style for each named section; an item's own `style` overrides it field by field (URS-DM-015). */
+export const sectionStyles = (sections: readonly string[]) =>
+  ({
+    type: 'object',
+    additionalProperties: false,
+    description: 'Default style per section; each item’s own `style` overrides it field by field.',
+    properties: Object.fromEntries(sections.map((s) => [s, { ...style, description: `Default style for every item in \`${s}\`.` }])),
+  }) as const;
 
 export const band = {
   type: 'object',

@@ -26,6 +26,8 @@ export interface Shape {
   tips?: boolean;
   /** Default fill from the theme palette instead of the node fill (e.g. notes). */
   paint?: 'noteFill';
+  /** Text area inside a w × h box, for fixed-size nodes (URS-DM-017). Default: the box less padding. */
+  inner?(w: number, h: number): { w: number; h: number };
   /** Vertical offset of the label centre from the box centre. */
   labelDy?(w: number, h: number): number;
   /** Boundary point on a side; t ∈ [-1, 1] spreads multiple edges along the side where the shape allows. */
@@ -64,3 +66,6 @@ export const boxSize = (extraW = 0, extraH = 0) => (tw: number, th: number) => (
   w: Math.max(MIN_W, tw + 2 * PAD_X + extraW),
   h: Math.max(MIN_H, th + 2 * PAD_Y) + extraH,
 });
+
+/** Text area of a shape at a fixed size (URS-DM-017). */
+export const innerOf = (s: Shape, w: number, h: number) => s.inner?.(w, h) ?? { w: w - 2 * PAD_X, h: h - 2 * PAD_Y };

@@ -24,7 +24,7 @@ describe('schema validation (URS-IN-001, URS-IN-004, URS-DM-004)', () => {
   });
 
   it('skips semantic rules until the schema passes', () => {
-    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 1 }], edges: [{ from: 'x', to: 'y' }] };
+    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 1, to: [{ node: 'y' }] }] };
     expect(compile(doc, reg).diagnostics.map((d) => d.code)).toEqual(['schema.type']);
   });
 });

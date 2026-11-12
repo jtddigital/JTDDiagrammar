@@ -3,16 +3,57 @@
   "type": "flowchart",
   "title": "Hints top to bottom with lanes",
   "direction": "TB",
-  "lanes": [{ "id": "a", "label": "Requester" }, { "id": "b", "label": "Approver" }],
+  "lanes": [
+    {
+      "id": "a",
+      "label": "Requester"
+    },
+    {
+      "id": "b",
+      "label": "Approver"
+    }
+  ],
   "nodes": [
-    { "id": "ask", "label": "Ask", "lane": "a" },
-    { "id": "ok", "shape": "decision", "label": "Approve?", "lane": "b" },
-    { "id": "done", "label": "Done", "lane": "a" }
+    {
+      "id": "ask",
+      "label": "Ask",
+      "lane": "a",
+      "to": [
+        {
+          "node": "ok",
+          "exitSide": "E",
+          "entrySide": "W"
+        }
+      ]
+    },
+    {
+      "id": "ok",
+      "shape": "decision",
+      "label": "Approve?",
+      "lane": "b",
+      "to": [
+        {
+          "node": "done",
+          "label": "yes"
+        },
+        {
+          "node": "ask",
+          "label": "no",
+          "exitSide": "E",
+          "entrySide": "E"
+        }
+      ]
+    },
+    {
+      "id": "done",
+      "label": "Done",
+      "lane": "a"
+    }
   ],
-  "edges": [
-    { "from": "ask", "to": "ok", "fromSide": "E", "toSide": "W" },
-    { "from": "ok", "to": "done", "label": "yes" },
-    { "from": "ok", "to": "ask", "label": "no", "fromSide": "E", "toSide": "E" }
-  ],
-  "notes": [{ "text": "SLA: 2 days", "for": "ok" }]
+  "notes": [
+    {
+      "text": "SLA: 2 days",
+      "for": "ok"
+    }
+  ]
 }
