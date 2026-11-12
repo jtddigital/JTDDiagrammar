@@ -26,6 +26,11 @@ function subsetProblems(s: JsonSchema, path = '#'): string[] {
  */
 const OPTIONAL_MAX = 24;
 const UNION_MAX = 16;
+/**
+ * Well under the hard limit: each optional property roughly doubles part of the compiled grammar, and
+ * the API also refuses schemas whose grammar is too large ("Schema is too complex for compilation").
+ */
+const OPTIONAL_TARGET = 8;
 function complexity(s: JsonSchema): { optional: number; unions: number } {
   const req = new Set((s.required ?? []) as string[]);
   const kids = [
@@ -68,7 +73,7 @@ describe.each(reg.types().map((t) => [t.id, t] as const))('AI assets: %s (URS-EX
   it('generation schema uses only the structured-outputs subset, within its limits', () => {
     expect(subsetProblems(t.ai.schema)).toEqual([]);
     const c = complexity(t.ai.schema);
-    expect(c.optional, 'optional properties').toBeLessThanOrEqual(OPTIONAL_MAX);
+    expect(c.optional, 'optional properties').toBeLessThanOrEqual(Math.min(OPTIONAL_MAX, OPTIONAL_TARGET));
     expect(c.unions, 'union-typed parameters').toBeLessThanOrEqual(UNION_MAX);
     expect(() => new Ajv2020({ strict: true }).compile(t.ai.schema)).not.toThrow();
   });

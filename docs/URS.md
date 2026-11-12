@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.28 (draft) |
+| Version | 0.29 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -170,7 +170,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-001 | M | Generate diagram source from pasted text and from uploaded documents (PDF, DOCX, TXT, MD, HTML). | One fixture per format. | T | Verified |
 | URS-AI-002 | M | Claude is called through the official Anthropic TypeScript SDK. The model is configurable (default `claude-opus-5-5`), and so is effort. | Config test. | T | Verified |
 | URS-AI-003 | M | Output is constrained with structured outputs (`output_config.format`) using the type's generation schema. | Request includes the format; mock asserts it. | T | Verified |
-| URS-AI-004 | M | Generation schemas use only the JSON Schema subset that structured outputs support: no recursion, no numeric or length constraints, `additionalProperties: false` on every object, at most 24 optional properties and at most 16 union-typed parameters (the API rejects larger schemas with HTTP 400). Fields that would push past that are required, with an empty value meaning "not set". Each type converts generated output to its authoring source deterministically, e.g. flat `parent` refs into nested composite states. | A lint test checks each generation schema against the supported subset. A property test confirms that any schema-valid generation output converts to an authoring-valid source shape. | T | Verified |
+| URS-AI-004 | M | Generation schemas use only the JSON Schema subset that structured outputs support: no recursion, no numeric or length constraints, `additionalProperties: false` on every object, at most 24 optional properties and at most 16 union-typed parameters (the API rejects larger schemas with HTTP 400). Types keep to 8 optional properties or fewer, well under the 24 limit: each optional property roughly doubles part of the compiled grammar, and the API also refuses grammars that are too large. Where needed, fields are required, with an empty value meaning "not set". The lifecycle schema has none optional. A refused request reports the API's own explanation. Each type converts generated output to its authoring source deterministically, e.g. flat `parent` refs into nested composite states. | A lint test checks each generation schema against the supported subset. A property test confirms that any schema-valid generation output converts to an authoring-valid source shape. | T | Verified |
 | URS-AI-005 | M | Every generated source passes the full pipeline: authoring schema (Ajv), common and type semantic rules, and a successful layout. Nothing that fails is returned as `valid: true`. | Mock returns invalid output and the response has `valid: false`. | T | Verified |
 | URS-AI-006 | M | Repair loop: when validation fails, the diagnostics go back to Claude for correction, up to N retries (default 2). A final failure returns the best attempt, its diagnostics and `valid: false`. | Mock: invalid → valid on retry 1; invalid ×3 → `valid: false`. | T | Verified |
 | URS-AI-007 | M | The caller sets `type`, or `auto` lets the model choose from the registered types and return its reason. | Mock test for both. | T | Verified |
@@ -331,6 +331,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.29 | 2026-11-12 | Fix (user report: still "AI service failed (400)" with an object lifecycle on v1.0.5): the lifecycle generation schema has no optional properties (was 17) and no nested optional object. AI-004 target is now 8 optional properties or fewer per type. Upstream errors show the API's own message. |
 | 0.28 | 2026-11-12 | Fix (user report: "AI service failed (400)"): the lifecycle generation schema had grown to 27 optional properties, over the API limit of 24. Step and verdict details are now required with empty values. AI-004 now states the limits, and the AI-asset test enforces them for every type. |
 | 0.27 | 2026-11-12 | Added TYP-009 (Vault lifecycle detail), TYP-010 (role lanes), DM-025 (icons, badges), DM-026 (legend), DM-027 (title block), DM-028 (bar shape); all verified. Lifecycle state type `cancelled`; examples `roles` and `summary`. Vault configuration import (IN-010) stays on the backlog. At the owner's request. |
 | 0.26 | 2026-11-12 | Added DM-021 (owner under a divider), DM-022 (hexagon / system action), DM-023 (`styleBy`), DM-024 (positioned edge labels, tighter boxes), LY-013 (fewer bends, perpendicular entries with visible stub); bends now gated (LY-007). TYP-008: `role` → `owner`, `system` step kind, state-change label without the arrow. All at the owner's request. |
