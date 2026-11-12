@@ -2,14 +2,15 @@ name: Release
 
 # URS-NF-012: a v* tag publishes the app bundle, its checksum and the installers.
 # If the release already exists (e.g. drafted on the releases page), the files are attached to it.
-# "Run workflow" rebuilds and re-attaches them for an existing tag.
+# "Run workflow" builds the given tag; if the tag does not exist yet, it is created on the commit
+# the run was started from (normally main).
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to build and attach the release files for (e.g. v1.0.1)
+        description: Version tag, e.g. v1.2.3. Created on the selected branch if it does not exist.
         required: true
 
 permissions:
@@ -20,10 +21,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Resolve the tag
+        id: tag
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]] || { echo "::error::tag must look like v1.2.3, got '$TAG'"; exit 1; }
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "ref=refs/tags/$TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::tag $TAG does not exist; it will be created on ${{ github.sha }}"
+            echo "ref=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "create=1" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ steps.tag.outputs.ref }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -32,14 +45,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm release:pack "$TAG"
-      - name: Attach to the release, creating it if needed
+      - name: Attach to the release, creating the release (and tag) if needed
         env:
-          GH_TOKEN: ${{ github.token }}
+          CREATE_TAG: ${{ steps.tag.outputs.create }}
         run: |
           cd dist-release
           files=(jtddiagrammar.tar.gz jtddiagrammar.tar.gz.sha256 install.sh install.ps1)
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
+          elif [ -n "$CREATE_TAG" ]; then
+            gh release create "$TAG" "${files[@]}" --title "JTDDiagrammar $TAG" --generate-notes --target "${{ github.sha }}"
           else
             gh release create "$TAG" "${files[@]}" --title "JTDDiagrammar $TAG" --generate-notes --verify-tag
           fi

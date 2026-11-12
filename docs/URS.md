@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.24 (draft) |
+| Version | 0.25 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -294,7 +294,7 @@ Updated with each change. `—` = not started.
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
 | NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
-| NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Attaches to an existing release (made on the releases page) or creates one; `workflow_dispatch` re-attaches for a tag. Verified on the first tagged release. |
+| NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Attaches to an existing release (made on the releases page) or creates one; `workflow_dispatch` re-attaches for an existing tag, or creates a missing tag on the selected branch's commit (tag format checked first). Verified on the first tagged release. |
 
 ## 5. Change Impact Assessment (required per change)
 ```
@@ -309,6 +309,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.25 | 2026-11-12 | NF-012: Run workflow with a new version creates the tag on the selected branch instead of failing at checkout (user report). |
 | 0.24 | 2026-11-12 | Added TYP-008 (lifecycle type), DM-019 (band groups), DM-020 (header detail), all verified; IN-010 (Vault configuration import) on the backlog. XML adapter now writes lists of plain values. |
 | 0.23 | 2026-11-12 | Added DM-018 (org chart `lineStyle`), Proposed: backlog, at the owner's request. |
 | 0.22 | 2026-11-11 | Added IN-009: connections nest under their source node or state (`to`), replacing top-level `edges` and `transitions`; `edgeStyle` and `transitionStyle` replace `styles.edges` and `styles.transitions`; side hints renamed `exitSide`/`entrySide` (DM-009). Breaking change kept at version 1, as decided by the owner. |
