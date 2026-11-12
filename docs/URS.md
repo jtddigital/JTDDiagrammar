@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.22 (draft) |
+| Version | 0.23 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -76,6 +76,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-015 | S | Section defaults: a top-level `styles` object sets a default style per section (a type's top-level lists, e.g. `nodes`, `lanes`, `phases`). Connections have their own top-level default: `edgeStyle` (flowchart), `transitionStyle` (state). An item's own `style` overrides any default field by field. | Defaults and overrides applied for every type; unknown sections rejected; kept through XML and AI refine. | T | Verified |
 | URS-DM-016 | S | More style options: font size, bold, italic, opacity, arrowhead shape (triangle, open, diamond, circle, none) and edge-label background. Layout measures styled text. | Each option rendered; nodes and headers resize for font size; out-of-range values rejected. | T | Verified |
 | URS-DM-017 | S | Standard-size nodes: `label: callout | auto` (or a fixed `width`/`height`) keeps nodes at a standard size. Labels that do not fit go into a callout beside the node, joined by a leader line. The layout reserves room for it in the node's lane, phase and container. | Same size per shape; callouts clear of nodes and labels, inside their lane or container, in LR and TB; pseudostates unchanged. | T | Verified |
+| URS-DM-018 | C | Org charts: a top-level `lineStyle` for reporting lines, consistent with `edgeStyle` and `transitionStyle`, replacing `styles.lines`. | Default applied to every reporting line; `styles.lines` removed. | T | Proposed |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
 | URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
 | URS-DM-012 | C | Free annotations and notes attached to nodes. | — | T | Verified |
@@ -302,6 +303,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.23 | 2026-11-12 | Added DM-018 (org chart `lineStyle`), Proposed: backlog, at the owner's request. |
 | 0.22 | 2026-11-11 | Added IN-009: connections nest under their source node or state (`to`), replacing top-level `edges` and `transitions`; `edgeStyle` and `transitionStyle` replace `styles.edges` and `styles.transitions`; side hints renamed `exitSide`/`entrySide` (DM-009). Breaking change kept at version 1, as decided by the owner. |
 | 0.21 | 2026-11-11 | Added DM-015 (section defaults), DM-016 (more style options), DM-017 (standard-size nodes, callouts); all verified. |
 | 0.20 | 2026-11-11 | Added DM-014 (line thickness, `style.lineWidth`); verified. |
