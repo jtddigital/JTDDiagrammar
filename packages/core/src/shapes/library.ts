@@ -133,12 +133,25 @@ const note: Shape = {
   port: boxPort(),
 };
 
+const NOTCH = (h: number) => h / 3;
+/** Chevron: a step that moves something on, e.g. a lifecycle state change (URS-TYP-008). */
+const chevron: Shape = {
+  id: 'chevron',
+  size: (tw, th) => {
+    const { h } = boxSize()(tw, th);
+    return { w: Math.max(112, tw + 2 * PAD_X + 2 * NOTCH(h)), h };
+  },
+  inner: (w, h) => ({ w: w - 2 * NOTCH(h) - 2 * PAD_X, h: h - 2 * PAD_Y }),
+  outline: (w, h) => `M0 0H${n(w - NOTCH(h))}L${n(w)} ${n(h / 2)}L${n(w - NOTCH(h))} ${n(h)}H0L${n(NOTCH(h))} ${n(h / 2)}Z`,
+  port: (side, w, h, t) => (side === 'E' ? { x: w, y: h / 2 } : side === 'W' ? { x: NOTCH(h), y: h / 2 } : boxPort()(side, w, h, t)),
+};
+
 /** Card: rounded rectangle for people and entities. */
 const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

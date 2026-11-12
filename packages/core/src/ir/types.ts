@@ -64,12 +64,24 @@ export interface IRContainer extends Sourced {
 export interface Band extends Sourced {
   id: string;
   label: string;
+  /** Smaller text under the header label, e.g. entry criteria (URS-DM-020). */
+  detail?: string;
+}
+
+/** A header spanning adjacent lanes or phases, e.g. a lifecycle stage over its states (URS-DM-019). */
+export interface BandGroup extends Sourced {
+  id: string;
+  label: string;
+  /** Member band ids, adjacent and in band order. */
+  members: string[];
 }
 
 /** Lanes × phases (URS-DM-001/002). When present, every node must name a lane (URS-DM-005). */
 export interface Partitions {
   lanes: Band[];
   phases?: Band[];
+  laneGroups?: BandGroup[];
+  phaseGroups?: BandGroup[];
 }
 
 export interface GraphIR {

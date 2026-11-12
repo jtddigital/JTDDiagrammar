@@ -4,7 +4,7 @@ import { sanitizeSvg } from './sanitize.ts';
 interface Props {
   svg?: string;
   current: boolean;
-  /** Called with the kind prefix (n, c, e, l, p) and model id of a clicked element (URS-WEB-009). */
+  /** Called with the kind prefix (n, c, e, l, p, lg, pg) and model id of a clicked element (URS-WEB-009). */
   onPick?(kind: string, id: string): void;
 }
 
@@ -80,7 +80,8 @@ export function Preview({ svg, current, onPick }: Props) {
         drag.current = null;
         if (moved) return;
         const g = (e.target as Element).closest('g[id]');
-        if (g) onPick?.(g.id[0]!, g.id.slice(2));
+        const dash = g?.id.indexOf('-') ?? -1;
+        if (g && dash > 0) onPick?.(g.id.slice(0, dash), g.id.slice(dash + 1));
       }}
     >
       {!current && svg && <p className="stale">Showing the last valid diagram</p>}

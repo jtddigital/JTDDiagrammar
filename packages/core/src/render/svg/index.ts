@@ -120,7 +120,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     `<g font-family="${esc(FONT_FAMILY)}" font-size="${NODE_FONT.size}" fill="${P.text}" style="font-kerning:none;font-variant-ligatures:none">` +
     titleSvg +
     `<g transform="translate(${num(M.margin + (innerW - g.width) / 2)} ${num(M.margin + titleH)})">` +
-    bands(g.bands, P, g.corner) +
+    bands(g.bands, P, g.corner, g.fillers) +
     containers(g.containers, P) +
     g.edges.map((e) => edge(e, P)).join('') +
     g.nodes.map((n) => node(n, P)).join('') +

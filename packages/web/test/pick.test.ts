@@ -9,7 +9,8 @@ describe('click to source (URS-WEB-009)', () => {
     for (const ex of examples) {
       const ir = compile(ex.source, registry).ir!;
       const text = pretty(ex.source);
-      const all: [string, { id: string }[]][] = [['n', ir.nodes], ['c', ir.containers], ['e', ir.edges], ['l', ir.partitions?.lanes ?? []], ['p', ir.partitions?.phases ?? []]];
+      const p = ir.partitions;
+      const all: [string, { id: string }[]][] = [['n', ir.nodes], ['c', ir.containers], ['e', ir.edges], ['l', p?.lanes ?? []], ['p', p?.phases ?? []], ['lg', p?.laneGroups ?? []], ['pg', p?.phaseGroups ?? []]];
       for (const [kind, list] of all)
         for (const x of list) {
           const path = pointerOf(ir, kind, x.id);

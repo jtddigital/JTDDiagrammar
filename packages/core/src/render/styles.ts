@@ -5,7 +5,10 @@ import type { GraphIR, Style } from '../ir/types.ts';
 export function applyStyles(g: Geometry, ir: GraphIR): Geometry {
   const by = (items: readonly { id: string; style?: Style }[]) => new Map(items.filter((i) => i.style).map((i) => [i.id, i.style!]));
   const [nodes, edges, containers] = [by(ir.nodes), by(ir.edges), by(ir.containers)];
-  const bands = by([...(ir.partitions?.lanes ?? []), ...(ir.partitions?.phases ?? [])]);
+  // Keyed by kind as well: a group may share an id with a band.
+  const p = ir.partitions;
+  const keyed = (kind: string, bs: readonly { id: string; style?: Style }[] | undefined) => (bs ?? []).map((x) => ({ ...x, id: `${kind}:${x.id}` }));
+  const bands = by([...keyed('lane', p?.lanes), ...keyed('phase', p?.phases), ...keyed('laneGroup', p?.laneGroups), ...keyed('phaseGroup', p?.phaseGroups)]);
   const markers = new Set(ir.edges.filter((e) => e.marker === 'none').map((e) => e.id));
   const quotes = new Map([...ir.nodes, ...ir.edges].filter((i) => i.quote).map((i) => [i.id, i.quote!]));
   const withStyle = <T extends { id: string }>(x: T, m: Map<string, Style>): T => {
@@ -21,6 +24,9 @@ export function applyStyles(g: Geometry, ir: GraphIR): Geometry {
       return markers.has(e.id) ? { ...styled, marker: 'none' as const } : styled;
     }),
     containers: g.containers.map((c) => withStyle(c, containers)),
-    bands: g.bands.map((b) => withStyle(b, bands)),
+    bands: g.bands.map((b) => {
+      const s = bands.get(`${b.kind}:${b.id}`);
+      return s ? { ...b, style: s } : b;
+    }),
   };
 }

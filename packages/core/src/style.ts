@@ -22,6 +22,11 @@ export const CALLOUT_GAP = 16;
 export const LABEL_TEXT_MAX = 140;
 export const BAND_FONT: Font = { size: 13, bold: true };
 export const BAND_TEXT_MAX = 140;
+/** Group headers span several bands, so their labels may run wider (URS-DM-019). */
+export const GROUP_TEXT_MAX = 480;
+/** Header detail text, e.g. entry criteria (URS-DM-020). */
+export const DETAIL_FONT: Font = { size: 11 };
+export const DETAIL_GAP = 4;
 export const CONTAINER_FONT: Font = { size: 13, bold: true };
 export const CONTAINER_TEXT_MAX = 220;
 /** Space above and below a container's label. */

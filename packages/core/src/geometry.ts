@@ -44,8 +44,11 @@ export interface RoutedEdge {
 export interface PlacedBand extends Box {
   id: string;
   style?: Style;
-  kind: 'lane' | 'phase';
+  /** Groups are header cells only: their box equals their header (URS-DM-019). */
+  kind: 'lane' | 'phase' | 'laneGroup' | 'phaseGroup';
   lines: string[];
+  /** Smaller text under the label (URS-DM-020). */
+  detail?: string[];
   header: Box;
 }
 
@@ -66,6 +69,8 @@ export interface Geometry {
   bands: PlacedBand[];
   /** Empty header cell where lane and phase headers meet. */
   corner?: Box;
+  /** Empty group-header cells over ungrouped bands (URS-DM-019). */
+  fillers?: Box[];
   containers: PlacedContainer[];
   nodes: PlacedNode[];
   edges: RoutedEdge[];

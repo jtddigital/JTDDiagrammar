@@ -1,5 +1,5 @@
 import { error, type Diagnostic } from '../diagnostics.ts';
-import type { Band, GraphIR } from '../ir/types.ts';
+import type { Band, BandGroup, GraphIR } from '../ir/types.ts';
 
 const duplicates = (items: readonly { id: string; src?: string }[], what: string): Diagnostic[] => {
   const seen = new Set<string>();
@@ -7,6 +7,30 @@ const duplicates = (items: readonly { id: string; src?: string }[], what: string
 };
 
 const ids = (bands: readonly Band[] | undefined) => new Set(bands?.map((b) => b.id));
+
+/** Groups span adjacent bands in band order, each band in at most one group (URS-DM-019). */
+function groupRules(groups: readonly BandGroup[] | undefined, bands: readonly Band[], what: string): Diagnostic[] {
+  const order = bands.map((b) => b.id);
+  const owner = new Map<string, string>();
+  return [
+    ...duplicates(groups ?? [], `${what} group`),
+    ...(groups ?? []).flatMap((g) => {
+      const out: Diagnostic[] = [];
+      const idx: number[] = [];
+      for (const m of g.members) {
+        const i = order.indexOf(m);
+        if (i < 0) out.push(error('ref.group', `${what} group '${g.id}' references unknown ${what} '${m}'`, g.src));
+        else if (owner.has(m)) out.push(error('group.overlap', `${what} '${m}' is in groups '${owner.get(m)}' and '${g.id}'`, g.src));
+        else {
+          owner.set(m, g.id);
+          idx.push(i);
+        }
+      }
+      if (idx.some((v, k) => k > 0 && v !== idx[k - 1]! + 1)) out.push(error('group.adjacent', `${what} group '${g.id}' must list adjacent ${what}s in order`, g.src));
+      return out;
+    }),
+  ];
+}
 
 /** Type-agnostic semantic rules over the IR (URS-IN-005, URS-DM-005). */
 export function validateIR(ir: GraphIR): Diagnostic[] {
@@ -37,6 +61,7 @@ export function validateIR(ir: GraphIR): Diagnostic[] {
   const p = ir.partitions;
   if (p) {
     out.push(...duplicates(p.lanes, 'lane'), ...duplicates(p.phases ?? [], 'phase'));
+    out.push(...groupRules(p.laneGroups, p.lanes, 'lane'), ...groupRules(p.phaseGroups, p.phases ?? [], 'phase'));
     const lanes = ids(p.lanes);
     const phases = ids(p.phases);
     for (const n of ir.nodes) {

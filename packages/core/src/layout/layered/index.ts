@@ -1,9 +1,7 @@
 import { max } from '../../math.ts';
 import { warning } from '../../diagnostics.ts';
-import type { Band as IRBand, GraphIR } from '../../ir/types.ts';
-import { textBlock } from '../../measure/text.ts';
+import type { Band as IRBand, BandGroup, GraphIR } from '../../ir/types.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
-import { BAND_FONT, BAND_TEXT_MAX, fontOf } from '../../style.ts';
 import { flowOf } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
 import { normalize } from '../normalize.ts';
@@ -11,13 +9,14 @@ import { bands } from './bands.ts';
 import { build, sized } from './build.ts';
 import { compound } from './compound.ts';
 import { HEADER_PAD } from './constants.ts';
+import { fitGroups, headerBlock } from './headers.ts';
 import type { Link } from './graph.ts';
 import { layering } from './layering.ts';
 import { order } from './order.ts';
 import { place } from './place.ts';
 import { route, type SizedNode } from './route.ts';
 
-const headerLabels = (bs: readonly IRBand[] | undefined) => (bs ?? []).map((b) => textBlock(b.label, BAND_TEXT_MAX, fontOf(BAND_FONT, b.style)));
+const headerLabels = (bs: readonly (IRBand | BandGroup)[] | undefined) => (bs ?? []).map(headerBlock);
 
 /** Layered (Sugiyama-style) engine with lane/phase constraints (URS-LY-001..005, URS-DM-001/002) and compound containers (URS-LY-012). */
 export const layered: LayoutEngine = {
@@ -46,8 +45,27 @@ export const layered: LayoutEngine = {
     const pad = (n: number) => n + 2 * HEADER_PAD;
     const laneLabels = headerLabels(part?.lanes);
     const phaseLabels = headerLabels(part?.phases);
-    const laneMin = part && laneLabels.map((b) => pad(flow.cross(b.width, b.height)));
-    const phaseMin = phaseLabels.map((b) => pad(flow.main(b.width, b.height)));
+    const laneGroupLabels = headerLabels(part?.laneGroups);
+    const phaseGroupLabels = headerLabels(part?.phaseGroups);
+    const ids = (bs: readonly IRBand[] | undefined) => (bs ?? []).map((b) => b.id);
+    const groupNeed = (labels: typeof laneGroupLabels, groups: readonly BandGroup[] | undefined, along: (w: number, h: number) => number) => (g: BandGroup) => {
+      const b = labels[groups!.indexOf(g)]!;
+      return pad(along(b.width, b.height));
+    };
+    const laneMin =
+      part &&
+      fitGroups(
+        laneLabels.map((b) => pad(flow.cross(b.width, b.height))),
+        ids(part.lanes),
+        part.laneGroups,
+        groupNeed(laneGroupLabels, part.laneGroups, flow.cross),
+      );
+    const phaseMin = fitGroups(
+      phaseLabels.map((b) => pad(flow.main(b.width, b.height))),
+      ids(part?.phases),
+      part?.phaseGroups,
+      groupNeed(phaseGroupLabels, part?.phaseGroups, flow.main),
+    );
 
     const lay = layering(nodes.length, links, phaseOf, part?.phases?.length ?? 1);
     const layerCount = lay.phases.at(-1)!.last + 1;
@@ -63,10 +81,14 @@ export const layered: LayoutEngine = {
           partitions: part,
           laneLabels,
           phaseLabels,
+          laneGroupLabels,
+          phaseGroupLabels,
           lanes: laneSpans,
           phases: routed.axis.spans,
           laneHeader: pad(max(laneLabels.map((b) => flow.main(b.width, b.height)))),
           phaseHeader: phaseLabels.length ? pad(max(phaseLabels.map((b) => flow.cross(b.width, b.height)))) : 0,
+          laneGroupHeader: laneGroupLabels.length ? pad(max(laneGroupLabels.map((b) => flow.main(b.width, b.height)))) : 0,
+          phaseGroupHeader: phaseGroupLabels.length ? pad(max(phaseGroupLabels.map((b) => flow.cross(b.width, b.height)))) : 0,
           length: routed.axis.length,
         })
       : { bands: [] };
