@@ -32,6 +32,13 @@ const desc = (description: string) => ({ type: 'string', description }) as const
 /** Flat for generation (URS-AI-004): steps name their workflow; connections, verdicts and user actions are from/to lists. */
 const schema = obj({
   title: str,
+  display: obj({
+    direction: { type: 'string', enum: ['LR', 'TB'], description: 'Flow direction; "LR" unless asked otherwise.' },
+    statesAs: { type: 'string', enum: ['columns', 'rows'], description: 'States as columns (default) or rows.' },
+    view: { type: 'string', enum: ['detailed', 'summary'], description: '"summary": states and transitions only.' },
+    roleLanes: { type: 'boolean', description: 'Split each workflow into one band per role (step owner).' },
+    legend: { type: 'boolean', description: 'Show the legend; true unless asked otherwise.' },
+  }),
   stages: { type: 'array', description: 'Lifecycle stage groups, each over adjacent states.', items: obj({ id: str, label: str, states: strs }) },
   states: {
     type: 'array',
@@ -46,6 +53,7 @@ const schema = obj({
       startState: desc('State the workflow is started in; empty if the material does not say.'),
       startAction: desc('User action that starts it; empty if none.'),
       startBy: { type: 'string', enum: TRIGGERS, description: 'What starts it: a "user" action, "entry" into the state, or a scheduled "job".' },
+      roles: { ...strs, description: 'With roleLanes: role bands in order; owners not listed follow. Empty for order of appearance.' },
     }),
   },
   steps: {
@@ -76,11 +84,14 @@ const schema = obj({
 });
 
 type GLink = { from: string; to: string; label?: string; quote?: string };
+type Display = Required<Pick<Lifecycle, 'direction' | 'statesAs' | 'view' | 'roleLanes' | 'legend'>>;
+const DISPLAY: Display = { direction: 'LR', statesAs: 'columns', view: 'detailed', roleLanes: false, legend: true };
 interface G {
   title: string;
+  display: Display;
   stages: LcStage[];
   states: { id: string; label: string; stateType: LcState['stateType']; entryCriteria?: string[]; entryActions?: string[]; quote?: string }[];
-  workflows: { id: string; label: string; startState: string; startAction: string; startBy: NonNullable<LcWorkflow['start']>['by'] }[];
+  workflows: { id: string; label: string; startState: string; startAction: string; startBy: NonNullable<LcWorkflow['start']>['by']; roles: string[] }[];
   steps: (Omit<LcStep, 'to' | 'verdicts' | 'order' | 'style' | 'completion'> & { workflow: string; completion?: LcStep['completion'] | 'none' })[];
   connections: GLink[];
   verdicts: (Omit<LcVerdict, 'step' | 'labels' | 'exitSide' | 'entrySide' | 'main' | 'id' | 'style'> & { task: string; to: string })[];
@@ -98,6 +109,7 @@ const actionsOf = (m: Lifecycle) => m.states.flatMap((s) => (s.to ?? []).map((a)
 
 const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault object).
 - "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; a cancelled or withdrawn end state is "cancelled"; the rest "steady". Put entry criteria and entry actions on the state they belong to.
+- "display" sets how the chart is drawn; keep the defaults unless asked. "roleLanes" splits each workflow into bands by step owner (e.g. Owner, Approver); a workflow's "roles" orders them.
 - "stages" group adjacent states into lifecycle stages; omit if the material names none.
 - "workflows" are the named workflows; each step belongs to one. Set "startState" (and "startAction", "startBy") when the material says which state, and which user action, entry into the state or scheduled job, starts it.
 - Step kinds: "start" and "end"; "task" for work by a person or group (set "owner" to the role or group; "fields" for fields they complete; "signature", "due", "completion" when stated); "system" for automated actions such as setting field values or creating records (list them in "fields" as "Field = value"); "decision" only for a choice no task verdict makes; "notification" (owner = recipients); "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty); "parallel" and "join" where branches split and meet.
@@ -112,6 +124,7 @@ const examples = [
       'A deviation starts in Draft; the owner submits it, which starts the investigation workflow and moves it to In Investigation. QA investigates and approves (eSignature) or rejects it back to Draft. Approval closes it. Users can cancel an open deviation.',
     output: {
       title: 'Deviation lifecycle',
+      display: { direction: 'LR', statesAs: 'columns', view: 'detailed', roleLanes: false, legend: true },
       stages: [],
       states: [
         { id: 'draft', label: 'Draft', stateType: 'initial', entryCriteria: [], entryActions: [], quote: '' },
@@ -119,7 +132,7 @@ const examples = [
         { id: 'closed', label: 'Closed', stateType: 'final', entryCriteria: [], entryActions: [], quote: '' },
         { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled', entryCriteria: [], entryActions: [], quote: '' },
       ],
-      workflows: [{ id: 'handle', label: 'Deviation handling', startState: 'draft', startAction: 'Submit', startBy: 'user' }],
+      workflows: [{ id: 'handle', label: 'Deviation handling', startState: 'draft', startAction: 'Submit', startBy: 'user', roles: [] }],
       steps: [
         { id: 'start', workflow: 'handle', kind: 'start', label: '', owner: '', state: 'draft', target: '', fields: [], signature: false, due: '', completion: 'none', quote: '' },
         { id: 'submit', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'investigation', fields: [], signature: false, due: '', completion: 'none', quote: '' },
@@ -147,9 +160,10 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
   examples,
   toGenerated: (m) => ({
     title: m.title ?? m.object ?? '',
+    display: { ...DISPLAY, ...pick(m, 'direction', 'statesAs', 'view', 'roleLanes', 'legend') },
     stages: (m.stages ?? []).map((g) => pick(g, 'id', 'label', 'states')),
     states: m.states.map((s) => ({ id: s.id, label: s.label ?? s.id, stateType: s.stateType ?? 'steady', entryCriteria: s.entryCriteria ?? [], entryActions: s.entryActions ?? [], quote: s.quote ?? '' })),
-    workflows: (m.workflows ?? []).map((w) => ({ id: w.id, label: w.label, startState: w.start?.state ?? '', startAction: w.start?.action ?? '', startBy: w.start?.by ?? 'user' })),
+    workflows: (m.workflows ?? []).map((w) => ({ id: w.id, label: w.label, startState: w.start?.state ?? '', startAction: w.start?.action ?? '', startBy: w.start?.by ?? 'user', roles: w.roles ?? [] })),
     steps: (m.workflows ?? []).flatMap((w) =>
       w.steps.map((s) => ({
         id: s.id,
@@ -191,6 +205,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
     const workflows: LcWorkflow[] = g.workflows.map((w) => ({
       id: w.id,
       label: w.label,
+      ...list('roles', w.roles),
       ...(w.startState && { start: { state: w.startState, ...text('action', w.startAction), ...(w.startBy && w.startBy !== 'user' && { by: w.startBy }) } }),
       steps: g.steps
         .filter((s) => s.workflow === w.id)
@@ -216,17 +231,20 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
         }),
     }));
     const sharedActions: LcSharedAction[] = g.sharedActions.map((a) => ({ state: a.to, ...text('label', a.label), ...list('from', a.from), ...list('except', a.except), ...text('quote', a.quote) }));
+    // Defaults are left out, so the source stays as small as the author would write it.
+    const display = Object.fromEntries(Object.entries(g.display).filter(([k, v]) => DISPLAY[k as keyof Display] !== v));
     return {
       version: '1',
       type: 'lifecycle',
       title: g.title,
+      ...display,
       ...(g.stages.length && { stages: g.stages }),
       states,
       ...(sharedActions.length && { sharedActions }),
       ...(workflows.length && { workflows }),
     };
   },
-  // Restore what generation cannot express: options, title block, security, styles, main path, order and side hints, author-set ids.
+  // Restore what generation cannot express: theme and lane options, title block, security, styles, main path, order and side hints, author-set ids.
   merge: (prev, next) => {
     const [stages, states, workflows] = [byId(prev.stages ?? []), byId(prev.states), byId(prev.workflows ?? [])];
     const steps = byId((prev.workflows ?? []).flatMap((w) => w.steps));
@@ -243,7 +261,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
     const linkLook = ['id', 'labels', 'exitSide', 'entrySide', 'main', 'style'] as const;
     return {
       ...next,
-      ...pick(prev, 'theme', 'object', 'info', 'direction', 'statesAs', 'view', 'actionsLane', 'roleLanes', 'legend', 'styles', 'edgeStyle', 'styleBy'),
+      ...pick(prev, 'theme', 'object', 'info', 'actionsLane', 'styles', 'edgeStyle', 'styleBy'),
       ...(next.stages && { stages: next.stages.map((g) => ({ ...g, ...pick(stages.get(g.id) ?? ({} as LcStage), 'style') })) }),
       states: next.states.map((s) => ({
         ...s,
@@ -254,7 +272,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
       ...(next.workflows && {
         workflows: next.workflows.map((w) => ({
           ...w,
-          ...pick(workflows.get(w.id) ?? ({} as LcWorkflow), 'roles', 'style'),
+          ...pick(workflows.get(w.id) ?? ({} as LcWorkflow), 'style'),
           steps: w.steps.map((s) => ({
             ...s,
             ...pick(steps.get(s.id) ?? ({} as LcStep), 'order', 'style'),
