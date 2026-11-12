@@ -117,9 +117,18 @@ try {
     app = undefined;
     await new Promise((r) => setTimeout(r, 1000));
     const removed = await run(...launcher('uninstall'));
+    // Windows deletes in a detached process once the launcher exits; a node_modules tree can take a while on a busy runner.
     let gone = false;
-    for (let i = 0; i < 30 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
-    if (!gone) console.error({ uninstall: removed, left: readdirSync(home, { recursive: true }).slice(0, 40) });
+    for (let i = 0; i < 120 && !(gone = !existsSync(home)); i++) await new Promise((r) => setTimeout(r, 500));
+    // The listing can race a deletion still in progress, so it must not throw.
+    const left = () => {
+      try {
+        return readdirSync(home, { recursive: true }).slice(0, 40);
+      } catch (e) {
+        return String(e);
+      }
+    };
+    if (!gone) console.error({ uninstall: removed, left: left() });
     check(removed.status === 0 && gone, 'uninstall removes the installation');
   }
 } finally {
