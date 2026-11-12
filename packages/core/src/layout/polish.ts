@@ -17,6 +17,14 @@ const OPPOSITE: Record<Side, Side> = { N: 'S', S: 'N', E: 'W', W: 'E' };
 const across = (s: Side): Side[] => (s === 'N' || s === 'S' ? ['E', 'W'] : ['N', 'S']);
 const flat = (s: Side) => s === 'N' || s === 'S';
 const SPREAD = [0, -0.5, 0.5, -1, 1];
+/**
+ * Search effort: bend classes tried (fewer than this many bends) and ports sampled per side. Large
+ * graphs search less, so a 200-node layout stays well inside URS-LY-010's budget; ordinary diagrams
+ * get the full search.
+ */
+const FULL = { classes: 4, spread: SPREAD.length };
+const CHEAP = { classes: 3, spread: 3 };
+const LARGE = 150;
 /** Lines closer than this read as one. */
 const NEAR = 4;
 /** Ends of different edges on one node keep this far apart. */
@@ -80,7 +88,7 @@ const FURTHER = [0, 16, 40];
  * the same side) or three. Each leaves and enters perpendicular to its sides with legs of at least the
  * exit stub and `entry`.
  */
-function candidates(a: PlacedNode, b: PlacedNode, hint: Ports | undefined, entry: number, k: number): Candidate[] {
+function candidates(a: PlacedNode, b: PlacedNode, hint: Ports | undefined, entry: number, k: number, spread: number): Candidate[] {
   const out: Candidate[] = [];
   // Shapes lying across the flow (bars) take edges on their long sides only.
   const long = (n: PlacedNode, sd: Side) => !shape(n.shape).across || (flat(sd) ? n.w >= n.h : n.h >= n.w);
@@ -103,8 +111,8 @@ function candidates(a: PlacedNode, b: PlacedNode, hint: Ports | undefined, entry
     for (const sa of SIDES)
       for (const sb of across(sa)) {
         if (!ok(sa, sb)) continue;
-        const qs = ports(b, sb);
-        for (const p of ports(a, sa))
+        const qs = ports(b, sb).slice(0, spread);
+        for (const p of ports(a, sa).slice(0, spread))
           for (const q of qs) {
             const corner = flat(sa) ? { x: p.x, y: q.y } : { x: q.x, y: p.y };
             if (dot(p, corner, DIR[sa]) >= EXIT_STUB && dot(q, corner, DIR[sb]) >= entry) add([p, corner, q], sa, sb);
@@ -168,6 +176,7 @@ const crossesBorder = ([p, q]: Seg, r: Box) => strictlyIn(p, r) !== strictlyIn(q
 export function polish(g: Content, irEdges: readonly IREdge[]): Content {
   // Side hints and arrowhead sizes come from the IR: layout output carries no styles yet.
   const info = new Map(irEdges.map((e) => [e.id, e]));
+  const effort = g.edges.length > LARGE ? CHEAP : FULL;
   const byId = new Map(g.nodes.map((n) => [n.id, n]));
   const obs = new Grid<Box & { id: string }>();
   for (const o of obstacles(g)) obs.add(o, o);
@@ -221,7 +230,7 @@ export function polish(g: Content, irEdges: readonly IREdge[]): Content {
     // In the order of the ranking below without crossings, so the first clean route without any wins outright.
     // One bend count at a time, fewest first: a class with a clean route ends the search.
     const ranked = function* () {
-      for (let k = 0; k < Math.min(bends, 4) && !best; k++) yield* candidates(a, b, info.get(e.id)?.ports, entry, k).sort((x, y) => turned(x) - turned(y) || x.len - y.len);
+      for (let k = 0; k < Math.min(bends, effort.classes) && !best; k++) yield* candidates(a, b, info.get(e.id)?.ports, entry, k, effort.spread).sort((x, y) => turned(x) - turned(y) || x.len - y.len);
     };
     for (const c of ranked()) {
       if (best && (c.pts.length > best.pts.length || best.key[1] === 0)) break;
