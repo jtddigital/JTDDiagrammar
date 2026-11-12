@@ -14,11 +14,17 @@ export interface AnthropicOptions {
 
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
+/** The API's own explanation of a refused request, e.g. which field it rejected. It names no credentials. */
+function reason(e: InstanceType<typeof Anthropic.APIError>): string {
+  const m = (e.error as { error?: { message?: unknown } } | undefined)?.error?.message;
+  return typeof m === 'string' && m ? `: ${m.slice(0, 300)}` : '';
+}
+
 function mapError(e: unknown): unknown {
   if (e instanceof Anthropic.APIUserAbortError) return e;
   if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) return new AiError('ai.config', 'the AI service rejected the configured credentials');
   if (e instanceof Anthropic.RateLimitError) return new AiError('ai.rate-limit', 'the AI service is rate limiting requests; try again shortly');
-  if (e instanceof Anthropic.APIError) return new AiError('ai.upstream', `the AI service failed (${e.status ?? 'network'})`);
+  if (e instanceof Anthropic.APIError) return new AiError('ai.upstream', `the AI service failed (${e.status ?? 'network'})${reason(e)}`);
   return e;
 }
 

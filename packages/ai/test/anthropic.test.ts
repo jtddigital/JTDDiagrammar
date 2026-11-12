@@ -70,4 +70,12 @@ describe('Anthropic client (URS-AI-002, URS-AI-003, URS-AI-008, URS-AI-016)', ()
     expect(err).toBeInstanceOf(AiError);
     expect((err as AiError).code).toBe(code);
   });
+
+  it("passes on the API's explanation of a refused request", async () => {
+    const body = { type: 'error', error: { type: 'invalid_request_error', message: 'output_config.format.schema: too many optional properties' } };
+    const e = Object.assign(Object.create(Anthropic.BadRequestError.prototype) as Error, { status: 400, message: '400', error: body });
+    const { sdk } = fakeSdk(e);
+    const err = await anthropicClient({ model: 'm', effort: 'high', fallbacks: true, sdk }).complete(req).catch((x: unknown) => x);
+    expect((err as AiError).message).toBe('the AI service failed (400): output_config.format.schema: too many optional properties');
+  });
 });

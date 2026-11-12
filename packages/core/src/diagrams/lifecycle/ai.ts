@@ -19,56 +19,59 @@ import {
 const str = { type: 'string' } as const;
 const strs = { type: 'array', items: str } as const;
 const bool = { type: 'boolean' } as const;
-const quote = { type: 'string', description: 'Short verbatim excerpt from the material supporting this item.' } as const;
-const obj = (required: string[], properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required, properties }) as const;
+const quote = { type: 'string', description: 'Short verbatim excerpt from the material supporting this item; empty if none.' } as const;
+/**
+ * Every property is required: an empty value ("", [], false, "none") means "not set". Optional
+ * properties each roughly double part of the grammar structured outputs compile, and a schema can be
+ * refused (HTTP 400) as too complex well before the 24-optional limit (URS-AI-004).
+ */
+const obj = (properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties }) as const;
 const by = { type: 'string', enum: ['user', 'job'], description: '"job" when a scheduled job makes the change.' } as const;
+const desc = (description: string) => ({ type: 'string', description }) as const;
 
 /** Flat for generation (URS-AI-004): steps name their workflow; connections, verdicts and user actions are from/to lists. */
-const schema = obj(['title', 'stages', 'states', 'workflows', 'steps', 'connections', 'verdicts', 'userActions', 'sharedActions'], {
+const schema = obj({
   title: str,
-  stages: { type: 'array', description: 'Lifecycle stage groups, each over adjacent states.', items: obj(['id', 'label', 'states'], { id: str, label: str, states: strs }) },
+  stages: { type: 'array', description: 'Lifecycle stage groups, each over adjacent states.', items: obj({ id: str, label: str, states: strs }) },
   states: {
     type: 'array',
     description: 'Object states in lifecycle order.',
-    items: obj(['id', 'label', 'stateType'], { id: str, label: str, stateType: { type: 'string', enum: STATE_TYPES }, entryCriteria: strs, entryActions: strs, quote }),
+    items: obj({ id: str, label: str, stateType: { type: 'string', enum: STATE_TYPES }, entryCriteria: strs, entryActions: strs, quote }),
   },
   workflows: {
     type: 'array',
-    items: obj(['id', 'label'], {
+    items: obj({
       id: str,
       label: str,
-      start: obj(['state'], { state: { type: 'string', description: 'State the workflow is started in.' }, action: { type: 'string', description: 'User action that starts it.' }, by: { type: 'string', enum: TRIGGERS } }),
+      startState: desc('State the workflow is started in; empty if the material does not say.'),
+      startAction: desc('User action that starts it; empty if none.'),
+      startBy: { type: 'string', enum: TRIGGERS, description: 'What starts it: a "user" action, "entry" into the state, or a scheduled "job".' },
     }),
   },
   steps: {
     type: 'array',
-    // Required with empty values for "not set": structured outputs allow at most 24 optional properties (URS-AI-004).
-    items: obj(['id', 'workflow', 'kind', 'label', 'owner', 'state', 'target', 'fields', 'signature', 'due', 'completion'], {
+    items: obj({
       id: str,
-      workflow: { type: 'string', description: 'Workflow id.' },
+      workflow: desc('Workflow id.'),
       kind: { type: 'string', enum: STEP_KINDS },
-      label: { type: 'string', description: 'Empty for start, end, state changes and parallel bars to use the defaults.' },
-      owner: { type: 'string', description: 'Role or group performing a task, or receiving a notification; empty if none.' },
-      state: { type: 'string', description: 'State the record is in during the step; empty for state changes.' },
-      target: { type: 'string', description: 'State changes only: the new state; empty otherwise.' },
+      label: desc('Empty for start, end, state changes and parallel bars to use the defaults.'),
+      owner: desc('Role or group performing a task, or receiving a notification; empty if none.'),
+      state: desc('State the record is in during the step; empty for state changes.'),
+      target: desc('State changes only: the new state; empty otherwise.'),
       fields: { type: 'array', items: str, description: 'Task: fields to complete. System action: fields set, as "Field = value". Empty if none.' },
       signature: { type: 'boolean', description: 'Task needs an eSignature.' },
-      due: { type: 'string', description: 'Task: time allowed, e.g. "5d"; empty if not stated.' },
+      due: desc('Task: time allowed, e.g. "5d"; empty if not stated.'),
       completion: { type: 'string', enum: [...COMPLETIONS, 'none'], description: 'Task with several participants; "none" otherwise.' },
       quote,
     }),
   },
-  connections: { type: 'array', items: obj(['from', 'to'], { from: str, to: str, label: { type: 'string', description: 'Text on the connection, e.g. a decision outcome.' }, quote }) },
-  verdicts: {
-    type: 'array',
-    description: 'Task outcomes, each leading to a step.',
-    items: obj(['task', 'name', 'to', 'signature', 'reasons', 'comment'], { task: str, name: str, to: str, signature: bool, reasons: strs, comment: bool, quote }),
-  },
-  userActions: { type: 'array', items: obj(['from', 'to'], { from: str, to: str, label: { type: 'string', description: 'Action name.' }, by, after: { type: 'string', description: 'For a job: when, e.g. "2 years".' }, quote }) },
+  connections: { type: 'array', items: obj({ from: str, to: str, label: desc('Text on the connection, e.g. a decision outcome; empty if none.'), quote }) },
+  verdicts: { type: 'array', description: 'Task outcomes, each leading to a step.', items: obj({ task: str, name: str, to: str, signature: bool, reasons: strs, comment: bool, quote }) },
+  userActions: { type: 'array', items: obj({ from: str, to: str, label: desc('Action name.'), by, after: desc('For a job: when, e.g. "2 years"; empty otherwise.'), quote }) },
   sharedActions: {
     type: 'array',
     description: 'One user action available in several states, e.g. Cancel.',
-    items: obj(['to', 'label'], { to: str, label: str, from: { ...strs, description: 'Source states; omit for every active state.' }, except: strs, quote }),
+    items: obj({ to: str, label: str, from: { ...strs, description: 'Source states; empty for every active state.' }, except: strs, quote }),
   },
 });
 
@@ -77,7 +80,7 @@ interface G {
   title: string;
   stages: LcStage[];
   states: { id: string; label: string; stateType: LcState['stateType']; entryCriteria?: string[]; entryActions?: string[]; quote?: string }[];
-  workflows: { id: string; label: string; start?: LcWorkflow['start'] }[];
+  workflows: { id: string; label: string; startState: string; startAction: string; startBy: NonNullable<LcWorkflow['start']>['by'] }[];
   steps: (Omit<LcStep, 'to' | 'verdicts' | 'order' | 'style' | 'completion'> & { workflow: string; completion?: LcStep['completion'] | 'none' })[];
   connections: GLink[];
   verdicts: (Omit<LcVerdict, 'step' | 'labels' | 'exitSide' | 'entrySide' | 'main' | 'id' | 'style'> & { task: string; to: string })[];
@@ -85,7 +88,6 @@ interface G {
   sharedActions: { to: string; label: string; from?: string[]; except?: string[]; quote?: string }[];
 }
 
-const some = <T>(xs: T[] | undefined) => (xs?.length ? xs : undefined);
 const text = <K extends string>(k: K, v: string | undefined) => (v ? ({ [k]: v } as Record<K, string>) : {});
 const list = <K extends string, T>(k: K, v: T[] | undefined) => (v?.length ? ({ [k]: v } as Record<K, T[]>) : {});
 
@@ -97,12 +99,12 @@ const actionsOf = (m: Lifecycle) => m.states.flatMap((s) => (s.to ?? []).map((a)
 const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault object).
 - "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; a cancelled or withdrawn end state is "cancelled"; the rest "steady". Put entry criteria and entry actions on the state they belong to.
 - "stages" group adjacent states into lifecycle stages; omit if the material names none.
-- "workflows" are the named workflows; each step belongs to one. Set "start" when the material says which state (and user action, entry into the state, or scheduled job) starts it.
+- "workflows" are the named workflows; each step belongs to one. Set "startState" (and "startAction", "startBy") when the material says which state, and which user action, entry into the state or scheduled job, starts it.
 - Step kinds: "start" and "end"; "task" for work by a person or group (set "owner" to the role or group; "fields" for fields they complete; "signature", "due", "completion" when stated); "system" for automated actions such as setting field values or creating records (list them in "fields" as "Field = value"); "decision" only for a choice no task verdict makes; "notification" (owner = recipients); "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty); "parallel" and "join" where branches split and meet.
 - Every step except a state change has the "state" the record is in while it happens.
 - "verdicts" are a task's outcomes, each leading to the next step (e.g. Approve, Reject); prefer them to a decision after a task. "connections" link the other steps in order.
 - "userActions" are state changes users (or scheduled jobs, by "job") make outside workflows, labelled with the action name. Use "sharedActions" for one action available in many states, such as Cancel.
-- Where the material supports an item directly, set "quote" to a short verbatim excerpt (at most 20 words).`;
+- Where the material supports an item directly, set "quote" to a short verbatim excerpt (at most 20 words). Use "" , [], false or "none" for anything not stated.`;
 
 const examples = [
   {
@@ -112,29 +114,29 @@ const examples = [
       title: 'Deviation lifecycle',
       stages: [],
       states: [
-        { id: 'draft', label: 'Draft', stateType: 'initial' },
-        { id: 'investigation', label: 'In Investigation', stateType: 'steady' },
-        { id: 'closed', label: 'Closed', stateType: 'final' },
-        { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled' },
+        { id: 'draft', label: 'Draft', stateType: 'initial', entryCriteria: [], entryActions: [], quote: '' },
+        { id: 'investigation', label: 'In Investigation', stateType: 'steady', entryCriteria: [], entryActions: [], quote: '' },
+        { id: 'closed', label: 'Closed', stateType: 'final', entryCriteria: [], entryActions: [], quote: '' },
+        { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled', entryCriteria: [], entryActions: [], quote: '' },
       ],
-      workflows: [{ id: 'handle', label: 'Deviation handling', start: { state: 'draft', action: 'Submit' } }],
+      workflows: [{ id: 'handle', label: 'Deviation handling', startState: 'draft', startAction: 'Submit', startBy: 'user' }],
       steps: [
-        { id: 'start', workflow: 'handle', kind: 'start', label: '', owner: '', state: 'draft', target: '', fields: [], signature: false, due: '', completion: 'none' },
-        { id: 'submit', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'investigation', fields: [], signature: false, due: '', completion: 'none' },
-        { id: 'investigate', workflow: 'handle', kind: 'task', label: 'Investigate', owner: 'QA', state: 'investigation', target: '', fields: [], signature: false, due: '', completion: 'none' },
-        { id: 'close', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'closed', fields: [], signature: false, due: '', completion: 'none' },
-        { id: 'back', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'draft', fields: [], signature: false, due: '', completion: 'none' },
+        { id: 'start', workflow: 'handle', kind: 'start', label: '', owner: '', state: 'draft', target: '', fields: [], signature: false, due: '', completion: 'none', quote: '' },
+        { id: 'submit', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'investigation', fields: [], signature: false, due: '', completion: 'none', quote: '' },
+        { id: 'investigate', workflow: 'handle', kind: 'task', label: 'Investigate', owner: 'QA', state: 'investigation', target: '', fields: [], signature: false, due: '', completion: 'none', quote: '' },
+        { id: 'close', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'closed', fields: [], signature: false, due: '', completion: 'none', quote: '' },
+        { id: 'back', workflow: 'handle', kind: 'stateChange', label: '', owner: '', state: '', target: 'draft', fields: [], signature: false, due: '', completion: 'none', quote: '' },
       ],
       connections: [
-        { from: 'start', to: 'submit' },
-        { from: 'submit', to: 'investigate' },
+        { from: 'start', to: 'submit', label: '', quote: '' },
+        { from: 'submit', to: 'investigate', label: '', quote: '' },
       ],
       verdicts: [
-        { task: 'investigate', name: 'Approve', to: 'close', signature: true, reasons: [], comment: false },
-        { task: 'investigate', name: 'Reject', to: 'back', signature: false, reasons: [], comment: false },
+        { task: 'investigate', name: 'Approve', to: 'close', signature: true, reasons: [], comment: false, quote: '' },
+        { task: 'investigate', name: 'Reject', to: 'back', signature: false, reasons: [], comment: false, quote: '' },
       ],
       userActions: [],
-      sharedActions: [{ to: 'cancelled', label: 'Cancel' }],
+      sharedActions: [{ to: 'cancelled', label: 'Cancel', from: [], except: [], quote: '' }],
     },
   },
 ];
@@ -146,8 +148,8 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
   toGenerated: (m) => ({
     title: m.title ?? m.object ?? '',
     stages: (m.stages ?? []).map((g) => pick(g, 'id', 'label', 'states')),
-    states: m.states.map((s) => ({ id: s.id, label: s.label ?? s.id, stateType: s.stateType ?? 'steady', ...pick(s, 'entryCriteria', 'entryActions', 'quote') })),
-    workflows: (m.workflows ?? []).map((w) => pick(w, 'id', 'label', 'start')),
+    states: m.states.map((s) => ({ id: s.id, label: s.label ?? s.id, stateType: s.stateType ?? 'steady', entryCriteria: s.entryCriteria ?? [], entryActions: s.entryActions ?? [], quote: s.quote ?? '' })),
+    workflows: (m.workflows ?? []).map((w) => ({ id: w.id, label: w.label, startState: w.start?.state ?? '', startAction: w.start?.action ?? '', startBy: w.start?.by ?? 'user' })),
     steps: (m.workflows ?? []).flatMap((w) =>
       w.steps.map((s) => ({
         id: s.id,
@@ -161,13 +163,13 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
         signature: s.signature ?? false,
         due: s.due ?? '',
         completion: s.completion ?? 'none',
-        ...pick(s, 'quote'),
+        quote: s.quote ?? '',
       })),
     ),
-    connections: linksOf(m).map((l) => pick(l, 'from', 'to', 'label', 'quote')),
-    verdicts: verdictsOf(m).map((v) => ({ task: v.task, name: v.name, to: v.to, signature: v.signature ?? false, reasons: v.reasons ?? [], comment: v.comment ?? false, ...pick(v, 'quote') })),
-    userActions: actionsOf(m).map((a) => pick(a, 'from', 'to', 'label', 'by', 'after', 'quote')),
-    sharedActions: (m.sharedActions ?? []).map((a) => ({ to: a.state, label: a.label ?? '', ...pick(a, 'from', 'except', 'quote') })),
+    connections: linksOf(m).map((l) => ({ from: l.from, to: l.to, label: l.label ?? '', quote: l.quote ?? '' })),
+    verdicts: verdictsOf(m).map((v) => ({ task: v.task, name: v.name, to: v.to, signature: v.signature ?? false, reasons: v.reasons ?? [], comment: v.comment ?? false, quote: v.quote ?? '' })),
+    userActions: actionsOf(m).map((a) => ({ from: a.from, to: a.to, label: a.label ?? '', by: a.by ?? 'user', after: a.after ?? '', quote: a.quote ?? '' })),
+    sharedActions: (m.sharedActions ?? []).map((a) => ({ to: a.state, label: a.label ?? '', from: a.from ?? [], except: a.except ?? [], quote: a.quote ?? '' })),
   }),
   // Steps from unknown workflows, and connections, verdicts or actions from unknown sources, are dropped.
   fromGenerated: (generated) => {
@@ -189,7 +191,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
     const workflows: LcWorkflow[] = g.workflows.map((w) => ({
       id: w.id,
       label: w.label,
-      ...(w.start && { start: w.start }),
+      ...(w.startState && { start: { state: w.startState, ...text('action', w.startAction), ...(w.startBy && w.startBy !== 'user' && { by: w.startBy }) } }),
       steps: g.steps
         .filter((s) => s.workflow === w.id)
         .map(({ workflow: _w, label, owner, state, target, due, quote: q, fields, signature, completion, ...s }) => {
@@ -213,7 +215,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
           };
         }),
     }));
-    const sharedActions: LcSharedAction[] = g.sharedActions.map((a) => ({ state: a.to, ...text('label', a.label), ...list('from', some(a.from)), ...list('except', some(a.except)), ...text('quote', a.quote) }));
+    const sharedActions: LcSharedAction[] = g.sharedActions.map((a) => ({ state: a.to, ...text('label', a.label), ...list('from', a.from), ...list('except', a.except), ...text('quote', a.quote) }));
     return {
       version: '1',
       type: 'lifecycle',
