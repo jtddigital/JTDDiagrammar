@@ -1,4 +1,4 @@
-import type { Style, Theme } from './ir/types.ts';
+import type { Badge, Icon, Style, Theme } from './ir/types.ts';
 
 /** Positioned output of a layout engine; the renderer's only input (URS-EXT-004). */
 export interface Point {
@@ -29,6 +29,7 @@ export interface PlacedNode extends Box {
   lines: string[];
   /** Secondary text under a divider (URS-DM-021). */
   sub?: string[];
+  badges?: Badge[];
   callout?: Callout;
 }
 
@@ -36,6 +37,7 @@ export interface PlacedNode extends Box {
 export interface LabelBox extends Box {
   lines: string[];
   at?: number;
+  icon?: Icon;
 }
 
 export interface RoutedEdge {
@@ -83,4 +85,10 @@ export interface Geometry {
   containers: PlacedContainer[];
   nodes: PlacedNode[];
   edges: RoutedEdge[];
+  legend?: PlacedLegend;
+}
+
+/** The legend box under the diagram (URS-DM-026): each entry's sample box and text. */
+export interface PlacedLegend extends Box {
+  items: { sample: Box; text: Box & { lines: string[] }; label: string; shape?: string; icon?: Icon; line?: Style; style?: Style }[];
 }

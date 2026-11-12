@@ -204,7 +204,25 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 1
+    "bends": 6
+  },
+  "lifecycle-roles": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 12
+  },
+  "lifecycle-summary": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 0
   },
   "lifecycle-states-as-rows": {
     "crossings": 0,
@@ -213,7 +231,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 0
+    "bends": 2
   },
   "random-30": {
     "crossings": 34,

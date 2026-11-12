@@ -11,7 +11,9 @@ const ir = (d: unknown) => {
   expect(r.diagnostics.filter((x) => x.severity === 'error')).toEqual([]);
   return r.ir!;
 };
-const codes = (d: unknown) => compile(d, reg).diagnostics.map((x) => [x.code, x.path]);
+/** Whole-lifecycle checks (URS-TYP-009) have their own test; the rest of the rules are checked without them. */
+const LINT = new Set(['lifecycle.unreachable', 'lifecycle.deadEnd', 'lifecycle.noStateChange']);
+const codes = (d: unknown) => compile(d, reg).diagnostics.filter((x) => !LINT.has(x.code)).map((x) => [x.code, x.path]);
 const inside = (o: Box, b: Box) => b.x >= o.x - 0.5 && b.y >= o.y - 0.5 && b.x + b.w <= o.x + o.w + 0.5 && b.y + b.h <= o.y + o.h + 0.5;
 
 const tiny = {
@@ -44,10 +46,10 @@ describe('lifecycle type (URS-TYP-008)', () => {
 
   it('maps steps to shapes and states, defaulting labels; state changes sit in their target state', () => {
     const nodes = new Map(ir(ex).nodes.map((n) => [n.id, n]));
-    expect(nodes.get('r_review')).toMatchObject({ shape: 'process', label: 'Review change', sub: 'QA Reviewer', phase: 'in_review', lane: 'review' });
-    expect(nodes.get('c_fields')!.shape).toBe('hexagon');
+    expect(nodes.get('r_review')).toMatchObject({ shape: 'process', label: 'Review change', sub: 'QA Reviewer\nComplete: Risk level', phase: 'in_review', lane: 'review' });
+    expect(nodes.get('c_fields')).toMatchObject({ shape: 'hexagon', sub: 'Closure date = today' });
     expect(nodes.get('r_approve')).toMatchObject({ shape: 'chevron', label: 'Approved', phase: 'approved' });
-    expect(nodes.get('r_ok')!.shape).toBe('decision');
+    expect(nodes.get('c_split')).toMatchObject({ shape: 'bar', label: '' });
     expect(nodes.get('r_notify')!.shape).toBe('document');
     expect(nodes.get('c_end')).toMatchObject({ shape: 'terminator', label: 'End' });
   });
@@ -73,9 +75,9 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(exec.x).toBeCloseTo(band('phase', 'approved').x);
     expect(exec.x + exec.w).toBeCloseTo(band('phase', 'in_progress').x + band('phase', 'in_progress').w);
     expect(exec.y + exec.h).toBeCloseTo(band('phase', 'approved').header.y);
-    expect(g.fillers).toHaveLength(1);
-    expect(g.fillers![0]!.x).toBeCloseTo(band('phase', 'cancelled').x);
-    expect(band('phase', 'in_review').detail).toEqual(['Entry criteria: Impact', 'assessed']);
+    const ungrouped = render(doc({ stages: [{ id: 'closure', label: 'Closure', states: ['closed'] }] }), reg).geometry!;
+    expect(ungrouped.fillers!.map((f) => f.x)).toContainEqual(ungrouped.bands.find((b) => b.kind === 'phase' && b.id === 'cancelled')!.x);
+    expect(band('phase', 'in_review').detail).toEqual(['Entry criteria: Impact', 'assessed', 'Security: Owner Read · QA', 'Reviewer Edit']);
     const svg = render(ex, reg).svg!;
     expect(svg).toContain('<g id="pg-execution" class="jtd-phaseGroup">');
     expect(svg).toMatch(/class="jtd-detail"[^>]*>Entry actions: Lock record</);
@@ -84,8 +86,8 @@ describe('lifecycle type (URS-TYP-008)', () => {
   it('shows the lifecycle actions band with state pills, the initial marker and user actions; it can be toggled', () => {
     const r = ir(ex);
     expect(r.partitions!.lanes[0]).toMatchObject({ id: 'lifecycle:actions', label: 'Lifecycle actions' });
-    expect(r.nodes.filter((n) => n.lane === 'lifecycle:actions').map((n) => n.id)).toEqual(['state:start', 'state:draft', 'state:in_review', 'state:approved', 'state:in_progress', 'state:closed', 'state:cancelled']);
-    expect(r.edges.find((e) => e.id === 'action:draft:0')).toMatchObject({ from: 'state:draft', to: 'state:cancelled', labels: [{ text: 'Cancel' }], src: '/states/0/to/0' });
+    expect(r.nodes.filter((n) => n.lane === 'lifecycle:actions').map((n) => n.id)).toEqual(['state:start', 'state:draft', 'state:in_review', 'state:approved', 'state:in_progress', 'state:closed', 'state:cancelled', 'shared:0:from']);
+    expect(r.edges.find((e) => e.id === 'action:approved:0')).toMatchObject({ from: 'state:approved', to: 'state:in_progress', labels: [{ text: 'Start work' }], src: '/states/2/to/0' });
     expect(ir(doc({ actionsLane: false })).partitions!.lanes.map((l) => l.id)).toEqual(['review', 'closure']);
     expect(ir({ ...tiny, actionsLane: true }).nodes.some((n) => n.id === 'state:b')).toBe(true);
     expect(ir(tiny).nodes.some((n) => n.id.startsWith('state:'))).toBe(false);
@@ -126,7 +128,7 @@ describe('lifecycle type (URS-TYP-008)', () => {
 
   it('warns about workflows without one start and about unreachable steps', () => {
     const d = { ...tiny, workflows: [{ id: 'w', label: 'W', steps: [{ id: 's', kind: 'start', state: 'a' }, { id: 'lost', state: 'b' }] }, { id: 'v', label: 'V', steps: [{ id: 't', state: 'a' }] }] };
-    expect(compile(d, reg).diagnostics.map((x) => [x.severity, x.code, x.path])).toEqual([
+    expect(compile(d, reg).diagnostics.filter((x) => !LINT.has(x.code)).map((x) => [x.severity, x.code, x.path])).toEqual([
       ['warning', 'lifecycle.reach', '/workflows/0/steps/1'],
       ['warning', 'lifecycle.start', '/workflows/1'],
     ]);

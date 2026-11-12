@@ -4,7 +4,7 @@ import type { Band as IRBand, BandGroup, GraphIR } from '../../ir/types.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
 import { flowOf } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
-import { hintsOf, polish } from '../polish.ts';
+import { polish } from '../polish.ts';
 import { normalize } from '../normalize.ts';
 import { bands } from './bands.ts';
 import { build, sized } from './build.ts';
@@ -26,7 +26,7 @@ export const layered: LayoutEngine = {
     const flow = flowOf(ir.direction);
     const part = ir.partitions;
     if (ir.containers.length && !part) return compound(ir, flow);
-    const nodes: SizedNode[] = ir.nodes.map(sized);
+    const nodes: SizedNode[] = ir.nodes.map((n) => sized(n, flow));
     const indexOf = (bs: readonly IRBand[] | undefined) => new Map((bs ?? []).map((b, i) => [b.id, i]));
     const [laneIdx, phaseIdx] = [indexOf(part?.lanes), indexOf(part?.phases)];
     const laneOf = ir.nodes.map((n) => laneIdx.get(n.lane ?? '') ?? 0);
@@ -94,7 +94,7 @@ export const layered: LayoutEngine = {
         })
       : { bands: [] };
     return {
-      geometry: normalize(placeLabels(polish({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges }, hintsOf(ir)))),
+      geometry: normalize(placeLabels(polish({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges }, ir.edges))),
       diagnostics: ir.containers.length ? [warning('layout.containers', 'containers cannot be combined with lanes or phases yet; they are not drawn')] : [],
     };
   },

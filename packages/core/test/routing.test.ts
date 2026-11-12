@@ -49,9 +49,11 @@ describe('routing (URS-LY-013)', () => {
     expect(corner!.y - tip!.y).toBeGreaterThanOrEqual(arrowSize() + ENTRY_LINE - 0.5);
   });
 
-  it('lines nodes up so the lifecycle example runs straight', () => {
-    const ex = reg.type('lifecycle')!.examples[0]!.source;
-    expect(quality(geo(ex)).bends).toBeLessThanOrEqual(2);
+  it('lines nodes up so lifecycle examples run (nearly) straight', () => {
+    const bends = (name: string) => quality(geo(reg.type('lifecycle')!.examples.find((e) => e.name === name)!.source)).bends;
+    expect(bends('summary')).toBe(0);
+    // Only the parallel split and join turn.
+    expect(bends('change-control')).toBeLessThanOrEqual(6);
   });
 
   it('keeps side hints when shortening routes', () => {

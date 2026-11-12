@@ -82,7 +82,9 @@ const FURTHER = [0, 16, 40];
  */
 function candidates(a: PlacedNode, b: PlacedNode, hint: Ports | undefined, entry: number, k: number): Candidate[] {
   const out: Candidate[] = [];
-  const ok = (sa: Side, sb: Side) => (!hint?.from || hint.from === sa) && (!hint?.to || hint.to === sb);
+  // Shapes lying across the flow (bars) take edges on their long sides only.
+  const long = (n: PlacedNode, sd: Side) => !shape(n.shape).across || (flat(sd) ? n.w >= n.h : n.h >= n.w);
+  const ok = (sa: Side, sb: Side) => (!hint?.from || hint.from === sa) && (!hint?.to || hint.to === sb) && long(a, sa) && long(b, sb);
   const add = (pts: Point[], from: Side, to: Side) => orthogonal(pts) && out.push({ pts, from, to, len: lengthOf(pts) });
   if (k === 0)
     for (const sa of SIDES) {
@@ -143,8 +145,6 @@ function near([a, b]: Seg, [c, d]: Seg): boolean {
   return Math.abs(k1 - k2) < NEAR && Math.min(Math.max(a0, a1), Math.max(b0, b1)) - Math.max(Math.min(a0, a1), Math.min(b0, b1)) > NEAR;
 }
 
-/** Side hints by edge id, for `polish`. */
-export const hintsOf = (ir: { edges: readonly IREdge[] }): Map<string, Ports> => new Map(ir.edges.flatMap((e) => (e.ports ? [[e.id, e.ports] as const] : [])));
 
 /** Lexicographic comparison. */
 const less = (x: readonly number[], y: readonly number[]) => {
@@ -165,7 +165,9 @@ const crossesBorder = ([p, q]: Seg, r: Box) => strictlyIn(p, r) !== strictlyIn(q
  * Among clean routes the fewest bends win, then the fewest crossings, then the one keeping the
  * router's exit and entry sides, then the shortest.
  */
-export function polish(g: Content, hints: ReadonlyMap<string, Ports>): Content {
+export function polish(g: Content, irEdges: readonly IREdge[]): Content {
+  // Side hints and arrowhead sizes come from the IR: layout output carries no styles yet.
+  const info = new Map(irEdges.map((e) => [e.id, e]));
   const byId = new Map(g.nodes.map((n) => [n.id, n]));
   const obs = new Grid<Box & { id: string }>();
   for (const o of obstacles(g)) obs.add(o, o);
@@ -183,7 +185,7 @@ export function polish(g: Content, hints: ReadonlyMap<string, Ports>): Content {
     const [a, b] = [byId.get(e.from), byId.get(e.to)];
     const bends = e.points.length - 2;
     if (!a || !b || a === b || bends < 1) return;
-    const entry = entryStub(e.style, e.marker);
+    const entry = entryStub(info.get(e.id)?.style, info.get(e.id)?.marker);
     const [taken, sides] = [[...endsAt(a.id, edge), ...endsAt(b.id, edge)], [exitSide(e.points), entrySide(e.points)]];
     const walls = g.containers.filter((c) => contains(c, a) === contains(c, b));
     const before = crossings(edge, segsOf(e.points));
@@ -215,7 +217,7 @@ export function polish(g: Content, hints: ReadonlyMap<string, Ports>): Content {
     // In the order of the ranking below without crossings, so the first clean route without any wins outright.
     // One bend count at a time, fewest first: a class with a clean route ends the search.
     const ranked = function* () {
-      for (let k = 0; k < Math.min(bends, 4) && !best; k++) yield* candidates(a, b, hints.get(e.id), entry, k).sort((x, y) => turned(x) - turned(y) || x.len - y.len);
+      for (let k = 0; k < Math.min(bends, 4) && !best; k++) yield* candidates(a, b, info.get(e.id)?.ports, entry, k).sort((x, y) => turned(x) - turned(y) || x.len - y.len);
     };
     for (const c of ranked()) {
       if (best && (c.pts.length > best.pts.length || best.key[1] === 0)) break;

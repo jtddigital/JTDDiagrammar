@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.26 (draft) |
+| Version | 0.27 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -46,6 +46,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-TYP-005 | S | `state`: self-transitions. | Snapshot. | T | Verified |
 | URS-TYP-006 | C | Org chart type, as a plugin. | README example; validation and layout tests. | T | Verified |
 | URS-TYP-008 | S | `lifecycle`: an object lifecycle chart (e.g. a Veeva Vault object). States are bands in lifecycle order, grouped by lifecycle stage. Workflows take the other axis, holding steps (start, task with owner, decision, notification, system action, state change, end). A state change is labelled with its target state's name. An optional lifecycle actions band shows the states and the user actions between them. `statesAs: columns \| rows` places the states independently of `direction`, which still sets the flow. Entry criteria and entry actions show under each state's header. | All four orientation combinations; stage groups; actions band toggle; rules worded in lifecycle terms, each reported once; README examples; AI assets. | T | Verified |
+| URS-TYP-009 | S | Vault lifecycle detail: Task verdicts as labelled branches, with eSignature, reasons and comment. Task fields, system-action field updates, eSignature, due time and participant completion (all / any / each). Parallel split and join; notification recipients. User actions shared by several states, drawn once; scheduled-job state changes. What starts each workflow (user action, entry or job). Main-path emphasis; security per state; state colours by type (initial, final, cancelled). A summary view of states and transitions only. Lifecycle checks: unreachable states, dead ends, workflows that never change state, decisions with fewer than two exits, verdicts on non-tasks. | Each feature mapped to IR (verdict edges, badges, bars, shared pill, dashed starts, bold/faded edges, tints, summary edges); checks reported with pointers; examples free of warnings; AI round trip lossless. | T | Verified |
+| URS-TYP-010 | S | Role lanes: `roleLanes` splits each workflow into one band per role (step owner), grouped under the workflow. Order: listed `roles`, then owners as they appear, then System for unowned steps. Role headers take the owner's colour. Works with states as columns or rows. | Group members and order; steps inside their role band in both orientations. | T | Verified |
 | URS-TYP-007 | W | Sequence and ER diagram types. | — | T | Proposed |
 
 ### 3.3 Input / Language (IN)
@@ -84,6 +86,10 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-022 | S | Hexagon shape for automated or system actions (e.g. setting field values): flowchart `shape: hexagon`, lifecycle step `kind: system`. | Sizes cover text; ports on the points and the flat sides. | T | Verified |
 | URS-DM-023 | S | Style rules: `styleBy` styles every item with a given shape (flowchart) or kind (lifecycle), and every item with a given owner. Precedence: section default, then shape or kind, then owner, then the item's own `style`. | Precedence per field; unknown shapes or kinds rejected; owner names of any text survive the XML round trip; kept through AI refine. | T | Verified |
 | URS-DM-024 | S | Edge labels: a tight background box (text plus a 3 × 1 px margin). Besides `label`, a connection may have `labels`. Each is pinned at `at` percent of the connection's length (`50` is the middle) or, without `at`, placed automatically clear of nodes and other labels. The layout leaves room for all of an edge's labels. | Pinned labels centred exactly at the percentage; free labels keep clear of pinned ones; out-of-range `at` rejected; order kept. | T | Verified |
+| URS-DM-025 | S | Icons (eSignature, clock, timer, all / any / each participants) in node badges and edge labels. Badges are small pills on a node's top edge, each with an icon and/or short text. | Badge and label icons rendered with valid paths; label boxes widen for the icon. | T | Verified |
+| URS-DM-026 | S | Legend: a type lists what a chart uses (shape, icon or line sample plus text). It is drawn in a box under the diagram, in rows no wider than the diagram, independent of the layout engine. | Only used items; inside the drawing; can be switched off. | T | Verified |
+| URS-DM-027 | S | Title block: key–value pairs on one line under the title. | Rendered under the title; drawing grows for it. | T | Verified |
+| URS-DM-028 | S | Bar shape for parallel splits and joins. It lies across the flow in both directions and takes edges only on its long sides. | Turned for TB; polish never enters a short side. | T | Verified |
 | URS-DM-018 | C | Org charts: a top-level `lineStyle` for reporting lines, consistent with `edgeStyle` and `transitionStyle`, replacing `styles.lines`. | Default applied to every reporting line; `styles.lines` removed. | T | Proposed |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
 | URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
@@ -250,6 +256,12 @@ Updated with each change. `—` = not started.
 | DM-022 | shapes/library.ts (`hexagon`), diagrams/{flowchart,lifecycle} | core/test/shapes.test.ts (all shapes), lifecycle.test.ts | |
 | DM-023 | diagrams/section-styles.ts (`ruled`), schema/fragments.ts (`styleBy`), adapters/xml.ts (`<entry key>` for map keys) | core/test/style-sections.test.ts, lifecycle.test.ts | |
 | DM-024 | ir/types.ts (`EdgeLabel`), geometry.ts (`LabelBox`), diagrams/edge-labels.ts, layout/labels.ts (`along`, pinned first), layout/layered/route.ts | core/test/edge-labels.test.ts | IR and geometry carry label lists; `label` stays as shorthand in sources. |
+| TYP-009 | core/src/diagrams/lifecycle/{model,schema,to-ir,steps,legend,state-style,validate,ai,examples}.ts | core/test/lifecycle-vault.test.ts, lifecycle.test.ts, ai-assets (round trip), adapters (XML: `<entry key>` for role-named map keys) | `role` → `owner` kept; checks are warnings. |
+| TYP-010 | diagrams/lifecycle/to-ir.ts (`rolesOf`, band groups on the workflow axis) | core/test/lifecycle-vault.test.ts (role lanes), README example | Reuses DM-019 band groups; DM-011 (nested sub-lanes) stays open for other types. |
+| DM-025 | ir/types.ts (`Icon`, `Badge`), render/svg/{icons,index}.ts, render/styles.ts, layout/layered/route.ts (label width) | core/test/lifecycle-vault.test.ts | Icons are plain paths: no new SVG elements or attributes. |
+| DM-026 | layout/legend.ts, render/svg/legend.ts, render.ts | core/test/lifecycle-vault.test.ts (legend) | |
+| DM-027 | ir/types.ts (`meta`), render/svg/index.ts | core/test/lifecycle-vault.test.ts | |
+| DM-028 | shapes/library.ts (`bar`, `across`), layout/layered/build.ts, layout/polish.ts | core/test/lifecycle-vault.test.ts | |
 | LY-013 | layout/layered/place.ts (`straighten`), layout/layered/route.ts (tip hints, `clear`), layout/polish.ts | core/test/routing.test.ts, quality ratchet (bends), goldens | random-200 bends 3590 → 1791, crossings 2814 → 2319. hints-notes now honours its S-side hints on a diamond (they had landed on the E/W tips): one more line through a label. |
 | DM-019, DM-020 | ir/types.ts (`BandGroup`, `Band.detail`), layout/layered/{headers,bands,index}.ts, render/svg/bands.ts, render/styles.ts, validate/common.ts | core/test/lifecycle.test.ts (band groups) | Group ids render as `lg-`/`pg-`; web click-to-source handles them. |
 | IN-009 | diagrams/flowchart/{model (`linksOf`),schema,to-ir,ai}.ts, diagrams/state/{model (`transitionsOf`),schema,to-ir,validate,ai}.ts, adapters/xml.ts | core/test/{flowchart,state,adapters,style-sections,sweep-c}.test.ts, all goldens (converted; drawings identical except one track swap in state-dark), ai/test/refine.test.ts | Generated ids `edge:<source>:<n>`. AI generation stays flat and is nested on the way in; generated edges from unknown sources are dropped. Random quality graphs re-baselined (input order changed, layout code unchanged). |
@@ -319,6 +331,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.27 | 2026-11-12 | Added TYP-009 (Vault lifecycle detail), TYP-010 (role lanes), DM-025 (icons, badges), DM-026 (legend), DM-027 (title block), DM-028 (bar shape); all verified. Lifecycle state type `cancelled`; examples `roles` and `summary`. Vault configuration import (IN-010) stays on the backlog. At the owner's request. |
 | 0.26 | 2026-11-12 | Added DM-021 (owner under a divider), DM-022 (hexagon / system action), DM-023 (`styleBy`), DM-024 (positioned edge labels, tighter boxes), LY-013 (fewer bends, perpendicular entries with visible stub); bends now gated (LY-007). TYP-008: `role` → `owner`, `system` step kind, state-change label without the arrow. All at the owner's request. |
 | 0.25 | 2026-11-12 | NF-012: Run workflow with a new version creates the tag on the selected branch instead of failing at checkout (user report). |
 | 0.24 | 2026-11-12 | Added TYP-008 (lifecycle type), DM-019 (band groups), DM-020 (header detail), all verified; IN-010 (Vault configuration import) on the backlog. XML adapter now writes lists of plain values. |

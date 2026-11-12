@@ -36,7 +36,13 @@ function fitInside(n: IRNode, s: Shape, w: number, h: number, font: Font): Stack
  * `width`/`height`, or `label: callout | auto`, keeps the standard size instead, and the label goes
  * inside when it fits or into a callout beside the node (URS-DM-017).
  */
-export function sized(n: IRNode): SizedNode {
+export function sized(n: IRNode, flow?: Flow): SizedNode {
+  const t = sizedLR(n);
+  // Shapes that lie across the flow turn for top-to-bottom layouts.
+  return shape(n.shape).across && flow && flow.main(1, 0) === 0 ? { ...t, w: t.h, h: t.w } : t;
+}
+
+function sizedLR(n: IRNode): SizedNode {
   const st = n.style;
   const s = shape(n.shape);
   const font = fontOf(NODE_FONT, st);

@@ -7,7 +7,7 @@ import type { LayoutResult } from '../../registry/layout-engine.ts';
 import { CONTAINER_FONT, CONTAINER_HEAD_PAD as HEAD_PAD, CONTAINER_TEXT_MAX, fontOf } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
-import { hintsOf, polish } from '../polish.ts';
+import { polish } from '../polish.ts';
 import { normalize } from '../normalize.ts';
 import { simplify } from '../simplify.ts';
 import { build, sized } from './build.ts';
@@ -145,7 +145,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     const level = levels.get(s)!;
     const lay = level.lay!;
     const nodes: SizedNode[] = level.items.map((it) => {
-      if (it.kind === 'node') return sized(ir.nodes[it.node]!);
+      if (it.kind === 'node') return sized(ir.nodes[it.node]!, flow);
       if (it.kind === 'port') return { id: it.id, shape: 'port', lines: [], w: 0, h: 0 };
       const c = placed.get(it.id)!;
       return { id: it.id, shape: 'container', lines: [], w: c.w, h: c.h };
@@ -244,7 +244,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
       drawn.set(l.edge, { id: e.id, from: e.from, to: e.to, points: p.points, ...(p.labels && { labels: p.labels }) });
     }
   const edges = [...drawn.entries()].sort(([a], [b]) => a - b).map(([, e]) => e);
-  return { geometry: normalize(placeLabels(polish({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges }, hintsOf(ir)))), diagnostics };
+  return { geometry: normalize(placeLabels(polish({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges }, ir.edges))), diagnostics };
 }
 
 /** A placed node moved by (dx, dy), its callout with it. */

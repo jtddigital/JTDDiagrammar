@@ -26,6 +26,17 @@ export const CALLOUT_PAD = { x: 8, y: 5 };
 /** Gap between a node and its callout. */
 export const CALLOUT_GAP = 16;
 export const LABEL_TEXT_MAX = 140;
+/** Icons in badges, labels and legends (URS-DM-025): a square this size. */
+export const ICON = 10;
+export const ICON_GAP = 3;
+export const BADGE_FONT: Font = { size: 10 };
+export const BADGE_H = 14;
+/** Legend text and sample sizes (URS-DM-026). */
+export const LEGEND_FONT: Font = { size: 11 };
+export const LEGEND_SAMPLE = { w: 34, h: 20 };
+export const LEGEND_GAP = 20;
+/** Title block text (URS-DM-027). */
+export const META_FONT: Font = { size: 11 };
 /** Default line width; arrowheads grow with thicker lines so they stay visible (URS-DM-014). */
 export const STROKE = 1.5;
 export const arrowSize = (width: number = STROKE) => 9 * Math.max(1, width / STROKE);

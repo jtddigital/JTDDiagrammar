@@ -574,7 +574,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Object lifecycle
 
-`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows, and the lifecycle actions band with user actions.
+`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
 
 ![Object lifecycle](docs/img/lifecycle-change-control.svg)
 
@@ -586,6 +586,10 @@ The examples and images below are generated from the registered types (`pnpm doc
   "type": "lifecycle",
   "title": "Change Control lifecycle",
   "object": "change_control__c",
+  "info": {
+    "Lifecycle": "Change Control",
+    "Version": "3"
+  },
   "styleBy": {
     "owner": {
       "QA Reviewer": {
@@ -619,7 +623,8 @@ The examples and images below are generated from the registered types (`pnpm doc
       "id": "closure",
       "label": "Closure",
       "states": [
-        "closed"
+        "closed",
+        "cancelled"
       ]
     }
   ],
@@ -628,19 +633,21 @@ The examples and images below are generated from the registered types (`pnpm doc
       "id": "draft",
       "label": "Draft",
       "stateType": "initial",
-      "to": [
-        {
-          "state": "cancelled",
-          "label": "Cancel"
-        }
-      ]
+      "security": {
+        "Owner": "Edit",
+        "Viewer": "Read"
+      }
     },
     {
       "id": "in_review",
       "label": "In Review",
       "entryCriteria": [
         "Impact assessed"
-      ]
+      ],
+      "security": {
+        "Owner": "Read",
+        "QA Reviewer": "Edit"
+      }
     },
     {
       "id": "approved",
@@ -651,7 +658,8 @@ The examples and images below are generated from the registered types (`pnpm doc
       "to": [
         {
           "state": "in_progress",
-          "label": "Start work"
+          "label": "Start work",
+          "main": true
         }
       ]
     },
@@ -670,13 +678,26 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "id": "cancelled",
       "label": "Cancelled",
-      "stateType": "final"
+      "stateType": "cancelled"
+    }
+  ],
+  "sharedActions": [
+    {
+      "state": "cancelled",
+      "label": "Cancel",
+      "except": [
+        "closed"
+      ]
     }
   ],
   "workflows": [
     {
       "id": "review",
       "label": "Review & Approval",
+      "start": {
+        "state": "draft",
+        "action": "Submit for review"
+      },
       "steps": [
         {
           "id": "r_start",
@@ -684,7 +705,8 @@ The examples and images below are generated from the registered types (`pnpm doc
           "state": "draft",
           "to": [
             {
-              "step": "r_submit"
+              "step": "r_submit",
+              "main": true
             }
           ]
         },
@@ -694,7 +716,8 @@ The examples and images below are generated from the registered types (`pnpm doc
           "target": "in_review",
           "to": [
             {
-              "step": "r_review"
+              "step": "r_review",
+              "main": true
             }
           ]
         },
@@ -703,25 +726,26 @@ The examples and images below are generated from the registered types (`pnpm doc
           "label": "Review change",
           "owner": "QA Reviewer",
           "state": "in_review",
-          "to": [
+          "due": "5d",
+          "completion": "all",
+          "fields": [
+            "Risk level"
+          ],
+          "verdicts": [
             {
-              "step": "r_ok"
-            }
-          ]
-        },
-        {
-          "id": "r_ok",
-          "kind": "decision",
-          "label": "Approved?",
-          "state": "in_review",
-          "to": [
-            {
+              "name": "Approve",
               "step": "r_approve",
-              "label": "Yes"
+              "signature": true,
+              "main": true
             },
             {
+              "name": "Reject",
               "step": "r_return",
-              "label": "No"
+              "reasons": [
+                "Incomplete",
+                "Out of scope"
+              ],
+              "comment": true
             }
           ]
         },
@@ -731,7 +755,8 @@ The examples and images below are generated from the registered types (`pnpm doc
           "target": "approved",
           "to": [
             {
-              "step": "r_notify"
+              "step": "r_notify",
+              "main": true
             }
           ]
         },
@@ -739,6 +764,7 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "r_notify",
           "kind": "notification",
           "label": "Notify owner",
+          "owner": "Change Owner",
           "state": "approved"
         },
         {
@@ -751,6 +777,10 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "id": "closure",
       "label": "Closure",
+      "start": {
+        "state": "in_progress",
+        "by": "entry"
+      },
       "steps": [
         {
           "id": "c_start",
@@ -758,7 +788,22 @@ The examples and images below are generated from the registered types (`pnpm doc
           "state": "in_progress",
           "to": [
             {
-              "step": "c_verify"
+              "step": "c_split",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_split",
+          "kind": "parallel",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_verify",
+              "main": true
+            },
+            {
+              "step": "c_docs"
             }
           ]
         },
@@ -767,20 +812,48 @@ The examples and images below are generated from the registered types (`pnpm doc
           "label": "Verify effectiveness",
           "owner": "Change Owner",
           "state": "in_progress",
+          "signature": true,
           "to": [
             {
-              "step": "c_fields"
+              "step": "c_join",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_docs",
+          "label": "Update documents",
+          "owner": "Document Control",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_join"
+            }
+          ]
+        },
+        {
+          "id": "c_join",
+          "kind": "join",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_fields",
+              "main": true
             }
           ]
         },
         {
           "id": "c_fields",
           "kind": "system",
-          "label": "Set closure date",
+          "label": "Close record",
+          "fields": [
+            "Closure date = today"
+          ],
           "state": "in_progress",
           "to": [
             {
-              "step": "c_close"
+              "step": "c_close",
+              "main": true
             }
           ]
         },
@@ -790,7 +863,8 @@ The examples and images below are generated from the registered types (`pnpm doc
           "target": "closed",
           "to": [
             {
-              "step": "c_end"
+              "step": "c_end",
+              "main": true
             }
           ]
         },
@@ -807,9 +881,629 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Object lifecycle, workflows split by role
+
+`type: lifecycle` · `roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System.
+
+![Object lifecycle, workflows split by role](docs/img/lifecycle-roles.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "lifecycle",
+  "title": "Change Control lifecycle",
+  "object": "change_control__c",
+  "info": {
+    "Lifecycle": "Change Control",
+    "Version": "3"
+  },
+  "styleBy": {
+    "owner": {
+      "QA Reviewer": {
+        "fill": "#e0f2f1",
+        "stroke": "#00897b"
+      },
+      "Change Owner": {
+        "fill": "#fdecea",
+        "stroke": "#c62828"
+      }
+    }
+  },
+  "stages": [
+    {
+      "id": "initiation",
+      "label": "Initiation",
+      "states": [
+        "draft",
+        "in_review"
+      ]
+    },
+    {
+      "id": "execution",
+      "label": "Execution",
+      "states": [
+        "approved",
+        "in_progress"
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "states": [
+        "closed",
+        "cancelled"
+      ]
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "label": "Draft",
+      "stateType": "initial",
+      "security": {
+        "Owner": "Edit",
+        "Viewer": "Read"
+      }
+    },
+    {
+      "id": "in_review",
+      "label": "In Review",
+      "entryCriteria": [
+        "Impact assessed"
+      ],
+      "security": {
+        "Owner": "Read",
+        "QA Reviewer": "Edit"
+      }
+    },
+    {
+      "id": "approved",
+      "label": "Approved",
+      "entryActions": [
+        "Set approval date"
+      ],
+      "to": [
+        {
+          "state": "in_progress",
+          "label": "Start work",
+          "main": true
+        }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "label": "In Progress"
+    },
+    {
+      "id": "closed",
+      "label": "Closed",
+      "stateType": "final",
+      "entryActions": [
+        "Lock record"
+      ]
+    },
+    {
+      "id": "cancelled",
+      "label": "Cancelled",
+      "stateType": "cancelled"
+    }
+  ],
+  "sharedActions": [
+    {
+      "state": "cancelled",
+      "label": "Cancel",
+      "except": [
+        "closed"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "review",
+      "label": "Review & Approval",
+      "start": {
+        "state": "draft",
+        "action": "Submit for review"
+      },
+      "steps": [
+        {
+          "id": "r_start",
+          "kind": "start",
+          "state": "draft",
+          "to": [
+            {
+              "step": "r_submit",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_submit",
+          "kind": "stateChange",
+          "target": "in_review",
+          "to": [
+            {
+              "step": "r_review",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_review",
+          "label": "Review change",
+          "owner": "QA Reviewer",
+          "state": "in_review",
+          "due": "5d",
+          "completion": "all",
+          "fields": [
+            "Risk level"
+          ],
+          "verdicts": [
+            {
+              "name": "Approve",
+              "step": "r_approve",
+              "signature": true,
+              "main": true
+            },
+            {
+              "name": "Reject",
+              "step": "r_return",
+              "reasons": [
+                "Incomplete",
+                "Out of scope"
+              ],
+              "comment": true
+            }
+          ]
+        },
+        {
+          "id": "r_approve",
+          "kind": "stateChange",
+          "target": "approved",
+          "to": [
+            {
+              "step": "r_notify",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_notify",
+          "kind": "notification",
+          "label": "Notify owner",
+          "owner": "Change Owner",
+          "state": "approved"
+        },
+        {
+          "id": "r_return",
+          "kind": "stateChange",
+          "target": "draft"
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "start": {
+        "state": "in_progress",
+        "by": "entry"
+      },
+      "steps": [
+        {
+          "id": "c_start",
+          "kind": "start",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_split",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_split",
+          "kind": "parallel",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_verify",
+              "main": true
+            },
+            {
+              "step": "c_docs"
+            }
+          ]
+        },
+        {
+          "id": "c_verify",
+          "label": "Verify effectiveness",
+          "owner": "Change Owner",
+          "state": "in_progress",
+          "signature": true,
+          "to": [
+            {
+              "step": "c_join",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_docs",
+          "label": "Update documents",
+          "owner": "Document Control",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_join"
+            }
+          ]
+        },
+        {
+          "id": "c_join",
+          "kind": "join",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_fields",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_fields",
+          "kind": "system",
+          "label": "Close record",
+          "fields": [
+            "Closure date = today"
+          ],
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_close",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_close",
+          "kind": "stateChange",
+          "target": "closed",
+          "to": [
+            {
+              "step": "c_end",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_end",
+          "kind": "end",
+          "state": "closed"
+        }
+      ]
+    }
+  ],
+  "roleLanes": true
+}
+```
+
+</details>
+
+### Object lifecycle, summary view
+
+`type: lifecycle` · `view: summary`: the states and every transition between them; each workflow collapses into dashed arrows.
+
+![Object lifecycle, summary view](docs/img/lifecycle-summary.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "lifecycle",
+  "title": "Change Control lifecycle",
+  "object": "change_control__c",
+  "info": {
+    "Lifecycle": "Change Control",
+    "Version": "3"
+  },
+  "styleBy": {
+    "owner": {
+      "QA Reviewer": {
+        "fill": "#e0f2f1",
+        "stroke": "#00897b"
+      },
+      "Change Owner": {
+        "fill": "#fdecea",
+        "stroke": "#c62828"
+      }
+    }
+  },
+  "stages": [
+    {
+      "id": "initiation",
+      "label": "Initiation",
+      "states": [
+        "draft",
+        "in_review"
+      ]
+    },
+    {
+      "id": "execution",
+      "label": "Execution",
+      "states": [
+        "approved",
+        "in_progress"
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "states": [
+        "closed",
+        "cancelled"
+      ]
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "label": "Draft",
+      "stateType": "initial",
+      "security": {
+        "Owner": "Edit",
+        "Viewer": "Read"
+      }
+    },
+    {
+      "id": "in_review",
+      "label": "In Review",
+      "entryCriteria": [
+        "Impact assessed"
+      ],
+      "security": {
+        "Owner": "Read",
+        "QA Reviewer": "Edit"
+      }
+    },
+    {
+      "id": "approved",
+      "label": "Approved",
+      "entryActions": [
+        "Set approval date"
+      ],
+      "to": [
+        {
+          "state": "in_progress",
+          "label": "Start work",
+          "main": true
+        }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "label": "In Progress"
+    },
+    {
+      "id": "closed",
+      "label": "Closed",
+      "stateType": "final",
+      "entryActions": [
+        "Lock record"
+      ]
+    },
+    {
+      "id": "cancelled",
+      "label": "Cancelled",
+      "stateType": "cancelled"
+    }
+  ],
+  "sharedActions": [
+    {
+      "state": "cancelled",
+      "label": "Cancel",
+      "except": [
+        "closed"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "review",
+      "label": "Review & Approval",
+      "start": {
+        "state": "draft",
+        "action": "Submit for review"
+      },
+      "steps": [
+        {
+          "id": "r_start",
+          "kind": "start",
+          "state": "draft",
+          "to": [
+            {
+              "step": "r_submit",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_submit",
+          "kind": "stateChange",
+          "target": "in_review",
+          "to": [
+            {
+              "step": "r_review",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_review",
+          "label": "Review change",
+          "owner": "QA Reviewer",
+          "state": "in_review",
+          "due": "5d",
+          "completion": "all",
+          "fields": [
+            "Risk level"
+          ],
+          "verdicts": [
+            {
+              "name": "Approve",
+              "step": "r_approve",
+              "signature": true,
+              "main": true
+            },
+            {
+              "name": "Reject",
+              "step": "r_return",
+              "reasons": [
+                "Incomplete",
+                "Out of scope"
+              ],
+              "comment": true
+            }
+          ]
+        },
+        {
+          "id": "r_approve",
+          "kind": "stateChange",
+          "target": "approved",
+          "to": [
+            {
+              "step": "r_notify",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "r_notify",
+          "kind": "notification",
+          "label": "Notify owner",
+          "owner": "Change Owner",
+          "state": "approved"
+        },
+        {
+          "id": "r_return",
+          "kind": "stateChange",
+          "target": "draft"
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "start": {
+        "state": "in_progress",
+        "by": "entry"
+      },
+      "steps": [
+        {
+          "id": "c_start",
+          "kind": "start",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_split",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_split",
+          "kind": "parallel",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_verify",
+              "main": true
+            },
+            {
+              "step": "c_docs"
+            }
+          ]
+        },
+        {
+          "id": "c_verify",
+          "label": "Verify effectiveness",
+          "owner": "Change Owner",
+          "state": "in_progress",
+          "signature": true,
+          "to": [
+            {
+              "step": "c_join",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_docs",
+          "label": "Update documents",
+          "owner": "Document Control",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_join"
+            }
+          ]
+        },
+        {
+          "id": "c_join",
+          "kind": "join",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_fields",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_fields",
+          "kind": "system",
+          "label": "Close record",
+          "fields": [
+            "Closure date = today"
+          ],
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_close",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_close",
+          "kind": "stateChange",
+          "target": "closed",
+          "to": [
+            {
+              "step": "c_end",
+              "main": true
+            }
+          ]
+        },
+        {
+          "id": "c_end",
+          "kind": "end",
+          "state": "closed"
+        }
+      ]
+    }
+  ],
+  "view": "summary"
+}
+```
+
+</details>
+
 ### Object lifecycle, states as rows
 
-`type: lifecycle` · `statesAs: rows` with `direction: TB`: states run down the page and workflows across it.
+`type: lifecycle` · `statesAs: rows` with `direction: TB`: states run down the page and workflows across it. A scheduled job retires effective documents.
 
 ![Object lifecycle, states as rows](docs/img/lifecycle-states-as-rows.svg)
 
@@ -837,7 +1531,20 @@ The examples and images below are generated from the registered types (`pnpm doc
       "label": "Effective",
       "entryActions": [
         "Publish to readers"
+      ],
+      "to": [
+        {
+          "state": "retired",
+          "label": "Retire",
+          "by": "job",
+          "after": "2 years"
+        }
       ]
+    },
+    {
+      "id": "retired",
+      "label": "Retired",
+      "stateType": "final"
     }
   ],
   "workflows": [
@@ -870,9 +1577,15 @@ The examples and images below are generated from the registered types (`pnpm doc
           "label": "Sign off",
           "owner": "Approver",
           "state": "review",
-          "to": [
+          "verdicts": [
             {
-              "step": "a_go"
+              "name": "Approve",
+              "step": "a_go",
+              "signature": true
+            },
+            {
+              "name": "Reject",
+              "step": "a_back"
             }
           ]
         },
@@ -880,6 +1593,11 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "a_go",
           "kind": "stateChange",
           "target": "effective"
+        },
+        {
+          "id": "a_back",
+          "kind": "stateChange",
+          "target": "draft"
         }
       ]
     }
@@ -1024,15 +1742,20 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `object` | string |  | Object API name, e.g. `change_control__c`; used as the title when there is none. |
+| `object` | string |  | Object API name, e.g. `change_control__c`; used as the title when there is none, else shown in the title block. |
+| `info` | object |  | Title block under the title, e.g. `{ "Lifecycle": "Change Control", "Version": "3" }`. |
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
 | `statesAs` | `columns` \| `rows` |  | States as columns (default) or rows; workflows take the other axis. Independent of `direction`. |
-| `actionsLane` | boolean |  | Show the lifecycle actions band (states and user actions). Default: when any state has user actions. |
+| `view` | `detailed` \| `summary` |  | `summary`: only the states and the transitions between them; each workflow collapses into dashed arrows. |
+| `actionsLane` | boolean |  | Show the lifecycle actions band (states, user actions, workflow starts). Default: when there is something to show in it. |
+| `roleLanes` | boolean |  | Split each workflow into one band per role (step owner); steps without an owner go in a System band. |
+| `legend` | boolean |  | Draw a legend of the shapes, colours and markers used. |
 | `styles` | styles by key |  | Default style per section (`stages`, `states`, `workflows`, `steps`); each item’s own `style` overrides it field by field. |
 | `edgeStyle` | style |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
-| `styleBy` | object |  | Step styles by kind and by owner, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: `styles.steps`, then kind, then owner, then the step’s own `style`. |
-| `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `end`. |
+| `styleBy` | object |  | Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`. |
+| `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `parallel`, `join`, `end`. |
 | `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
+| `styleBy.stateType` | styles by key |  | Style for every item with this `stateType`, by value: `initial`, `steady`, `final`, `cancelled`. |
 | `stages` | list of objects |  | Lifecycle stage groups: a header over adjacent states. |
 | `stages[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `stages[].label` | string | yes | Stage name. |
@@ -1041,9 +1764,10 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states` | list of objects | yes | Object states, in lifecycle order: one column (or row) each. |
 | `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `states[].label` | string |  | Defaults to the id. |
-| `states[].stateType` | `initial` \| `steady` \| `final` |  | Exactly one state is `initial`. |
+| `states[].stateType` | `initial` \| `steady` \| `final` \| `cancelled` |  | Exactly one state is `initial`. `final` and `cancelled` end the lifecycle. Initial, final and cancelled states are tinted. |
 | `states[].entryCriteria` | list of string |  | Shown under the state header. |
 | `states[].entryActions` | list of string |  | Shown under the state header. |
+| `states[].security` | object |  | Access per role in this state, e.g. `{ "Owner": "Edit", "Viewer": "Read" }`; shown under the header. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
@@ -1052,31 +1776,73 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
 | `states[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
 | `states[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
+| `states[].to[].by` | `user` \| `job` |  | `job`: a scheduled job makes the change (timer icon). |
+| `states[].to[].after` | string |  | For a job: when, e.g. "2 years"; shown after the name. |
+| `states[].to[].main` | boolean |  | On the main path: drawn bold while other connections fade. |
 | `states[].to[].id` | string |  | Optional; generated when absent. |
 | `states[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].to[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `sharedActions` | list of objects |  | User actions available in several states (e.g. Cancel), each drawn once. |
+| `sharedActions[].state` | string | yes | Target state id. |
+| `sharedActions[].label` | string |  | Action name. |
+| `sharedActions[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `sharedActions[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `sharedActions[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
+| `sharedActions[].by` | `user` \| `job` |  | `job`: a scheduled job makes the change (timer icon). |
+| `sharedActions[].after` | string |  | For a job: when, e.g. "2 years"; shown after the name. |
+| `sharedActions[].main` | boolean |  | On the main path: drawn bold while other connections fade. |
+| `sharedActions[].id` | string |  | Optional; generated when absent. |
+| `sharedActions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `sharedActions[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `sharedActions[].from` | list of string |  | Source states. Default: every state that is not final or cancelled. |
+| `sharedActions[].except` | list of string |  | States left out of the default. |
 | `workflows` | list of objects |  | Workflows: one row (or column) each. |
 | `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].label` | string | yes | Workflow name. |
 | `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].roles` | list of string |  | With `roleLanes`: role bands in this order; other owners follow. |
+| `workflows[].start` | object |  | What starts the workflow: a dashed arrow from the state in the actions band to the start step. |
+| `workflows[].start.state` | string | yes | State it is started in. |
+| `workflows[].start.action` | string |  | User action name; defaults by `by`. |
+| `workflows[].start.by` | `user` \| `entry` \| `job` |  | `user` action, `entry` into the state, or a scheduled `job`. |
 | `workflows[].steps` | list of objects | yes |  |
 | `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
-| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange` or `end`. |
+| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `parallel` \| `join` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`. |
 | `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, the target state’s name. |
-| `workflows[].steps[].owner` | string |  | Who performs the step; shown under a line below the label, and matched by `styleBy.owner`. |
+| `workflows[].steps[].owner` | string |  | Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`. |
 | `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
 | `workflows[].steps[].target` | string |  | For a state change: the state it moves the record to. |
+| `workflows[].steps[].fields` | list of string |  | Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label. |
+| `workflows[].steps[].verdicts` | list of objects |  | Task outcomes, each leading to a next step; no decision diamond needed. |
+| `workflows[].steps[].verdicts[].name` | string | yes | Verdict, e.g. "Approve"; the connection’s label. |
+| `workflows[].steps[].verdicts[].signature` | boolean |  | Needs an eSignature (icon on the label). |
+| `workflows[].steps[].verdicts[].reasons` | list of string |  | Reasons offered; shown in the tooltip. |
+| `workflows[].steps[].verdicts[].comment` | boolean |  | A comment is required; shown in the tooltip. |
+| `workflows[].steps[].verdicts[].step` | string | yes | Next step id. |
+| `workflows[].steps[].verdicts[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `workflows[].steps[].verdicts[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `workflows[].steps[].verdicts[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
+| `workflows[].steps[].verdicts[].exitSide` | `N` \| `E` \| `S` \| `W` |  | Side of this step the line leaves by. |
+| `workflows[].steps[].verdicts[].entrySide` | `N` \| `E` \| `S` \| `W` |  | Side of the next step the line enters by. |
+| `workflows[].steps[].verdicts[].main` | boolean |  | On the main path: drawn bold while other connections fade. |
+| `workflows[].steps[].verdicts[].id` | string |  | Optional; generated when absent. |
+| `workflows[].steps[].verdicts[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].steps[].verdicts[].style` | style |  | Overrides `edgeStyle` field by field. |
+| `workflows[].steps[].signature` | boolean |  | Task: needs an eSignature (badge). |
+| `workflows[].steps[].due` | string |  | Task: time allowed, e.g. "5d" (badge). |
+| `workflows[].steps[].completion` | `all` \| `any` \| `each` |  | Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge). |
 | `workflows[].steps[].order` | integer |  | Hint: steps in the same cell are placed in ascending order. |
 | `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows[].steps[].to` | list of objects |  | Next steps. |
-| `workflows[].steps[].to[].step` | string | yes | Next step id. |
 | `workflows[].steps[].to[].label` | string |  | Text on the connection, placed where it fits best. |
+| `workflows[].steps[].to[].step` | string | yes | Next step id. |
 | `workflows[].steps[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
 | `workflows[].steps[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
 | `workflows[].steps[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
 | `workflows[].steps[].to[].exitSide` | `N` \| `E` \| `S` \| `W` |  | Side of this step the line leaves by. |
 | `workflows[].steps[].to[].entrySide` | `N` \| `E` \| `S` \| `W` |  | Side of the next step the line enters by. |
+| `workflows[].steps[].to[].main` | boolean |  | On the main path: drawn bold while other connections fade. |
 | `workflows[].steps[].to[].id` | string |  | Optional; generated when absent. |
 | `workflows[].steps[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].to[].style` | style |  | Overrides `edgeStyle` field by field. |
@@ -1160,6 +1926,34 @@ Sections are `lanes`, `phases`, `nodes` and `notes` for flowcharts; `states` for
 The layout reserves room for each callout, below the node in `LR` diagrams and beside it in `TB` diagrams, within the node's lane, phase and composite state. If that spot is blocked, the callout moves to the clearest nearby spot. `inside` with a fixed `width`/`height` wraps the label to fit. Initial, final and choice pseudostates always keep their own size.
 
 Set `"theme": "dark"` on the diagram for the dark palette; styles override either theme.
+
+### Object lifecycles
+
+The `lifecycle` type is built for Veeva Vault-style object lifecycles. Beyond states, stages and workflows (see the examples above), it has:
+
+| Field | Draws |
+|-------|-------|
+| `verdicts: [{ name, step, signature, reasons, comment }]` on a task | One labelled connection per outcome, no decision diamond. An eSignature icon marks verdicts that need one; reasons and comment rules show in the tooltip. |
+| `owner`, `fields` on a step | Under the label, below a line. For a task, the fields to complete; for a `system` action, the fields it sets (`"Closure date = today"`). For a notification, `owner` is the recipient. |
+| `signature`, `due`, `completion` on a task | Badges on the task's top edge: eSignature, time allowed (`"5d"`), and whether `all` participants, `any` one, or `each` (one task per participant) must complete. |
+| `kind: parallel` / `join` | A bar where branches split and meet. |
+| `sharedActions: [{ state, label, from, except }]` | A user action available in many states (e.g. Cancel), drawn once from a dashed pill naming its source states. |
+| `by: job`, `after` on a user action | A scheduled change, with a timer icon: `Retire after 2 years`. |
+| `start: { state, action, by }` on a workflow | A dashed arrow from the state to the workflow's start: a user action, `entry` into the state, or a `job`. |
+| `main: true` on connections, verdicts and actions | The main path, drawn bold; everything else fades. |
+| `security: { "Owner": "Edit" }` on a state | A line under the state header. |
+| `stateType: initial \| final \| cancelled` | Tinted headers and pills; `styleBy.stateType` overrides. |
+| `view: summary` | Only the states and the transitions between them; each workflow becomes dashed arrows. |
+| `roleLanes: true` | Each workflow becomes a group with one band per role (step owner), in the order of `roles` and then as owners appear; steps without an owner go in System. |
+| `info: { "Version": "3" }` | A title block under the title (with `object`). |
+| `legend` (default `true`) | A legend of the shapes, colours, markers and lines the chart uses. |
+
+Validation also checks the lifecycle as a whole, with warnings for:
+- states no transition reaches from the initial state;
+- states that are not final or cancelled but have no way out;
+- workflows that never change the record's state;
+- decisions with fewer than two ways out;
+- verdicts on anything but a task.
 
 ### Diagnostics
 

@@ -40,16 +40,39 @@ export interface IRNode extends Sourced {
   label: string;
   /** Secondary text under a divider, e.g. who owns a task (URS-DM-021). */
   sub?: string;
+  badges?: Badge[];
   parent?: string;
   order?: number;
   lane?: string;
   phase?: string;
 }
 
+/** Small pictograms for badges, edge labels and legends (URS-DM-025). */
+export const ICONS = ['signature', 'clock', 'timer', 'all', 'any', 'each'] as const;
+export type Icon = (typeof ICONS)[number];
+
+/** A marker on a node's top edge: an icon, short text, or both (URS-DM-025). */
+export interface Badge {
+  icon?: Icon;
+  text?: string;
+}
+
 /** Text on an edge; `at` pins it at that percentage of the edge's length, else it is placed clear of other things (URS-DM-024). */
 export interface EdgeLabel {
   text: string;
   at?: number;
+  /** Drawn before the text (URS-DM-025). */
+  icon?: Icon;
+}
+
+/** One legend entry: a shape, an icon or a line sample, and its meaning (URS-DM-026). */
+export interface LegendItem {
+  label: string;
+  shape?: string;
+  icon?: Icon;
+  /** A line sample in this style. */
+  line?: Style;
+  style?: Style;
 }
 
 export interface IREdge extends Sourced {
@@ -100,4 +123,8 @@ export interface GraphIR {
   edges: IREdge[];
   containers: IRContainer[];
   partitions?: Partitions;
+  /** Drawn under the diagram (URS-DM-026). */
+  legend?: LegendItem[];
+  /** Title block: key–value pairs under the title (URS-DM-027). */
+  meta?: [string, string][];
 }

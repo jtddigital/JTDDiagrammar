@@ -22,6 +22,8 @@ export interface Shape {
   solid?(w: number, h: number): string;
   /** The shape draws no label (pseudostates). */
   unlabelled?: boolean;
+  /** Sized for left-to-right flow and turned a quarter for top-to-bottom, so it always lies across the flow (bars). */
+  across?: boolean;
   /** Edges attach only at the four side midpoints (diamonds); the router allocates them jointly. */
   tips?: boolean;
   /** Default fill from the theme palette instead of the node fill (e.g. notes). */

@@ -1,10 +1,10 @@
 import { max } from '../../math.ts';
 import type { Box, PlacedNode, Point, RoutedEdge } from '../../geometry.ts';
-import type { IREdge } from '../../ir/types.ts';
+import type { Icon, IREdge } from '../../ir/types.ts';
 import { textBlock } from '../../measure/text.ts';
 import { shape } from '../../shapes/library.ts';
 import type { Side } from '../../shapes/shape.ts';
-import { CALLOUT_GAP, entryStub, EXIT_STUB, fontOf, LABEL_BOX, LABEL_FONT, LABEL_TEXT_MAX } from '../../style.ts';
+import { CALLOUT_GAP, entryStub, EXIT_STUB, fontOf, ICON, ICON_GAP, LABEL_BOX, LABEL_FONT, LABEL_TEXT_MAX } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { simplify } from '../simplify.ts';
 import { RANK_GAP, TRACK_SEP } from './constants.ts';
@@ -201,12 +201,15 @@ interface Measured {
   w: number;
   h: number;
   at?: number;
+  icon?: Icon;
 }
 /** An edge's labels, measured with their margin (URS-DM-024). */
 const labelsOf = (e: IREdge): Measured[] =>
   (e.labels ?? []).map((l) => {
     const t = textBlock(l.text, LABEL_TEXT_MAX, fontOf(LABEL_FONT, e.style));
-    return { lines: t.lines, w: t.width + 2 * LABEL_BOX.x, h: t.height + 2 * LABEL_BOX.y, ...(l.at !== undefined && { at: l.at }) };
+    // An icon sits before the text (URS-DM-025).
+    const icon = l.icon ? ICON + ICON_GAP : 0;
+    return { lines: t.lines, w: t.width + icon + 2 * LABEL_BOX.x, h: Math.max(t.height, l.icon ? ICON : 0) + 2 * LABEL_BOX.y, ...(l.at !== undefined && { at: l.at }), ...(l.icon && { icon: l.icon }) };
   });
 /** Space between labels on one edge. */
 const LABEL_SEP = 6;

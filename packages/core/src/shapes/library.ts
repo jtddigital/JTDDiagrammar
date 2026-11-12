@@ -161,12 +161,15 @@ const hexagon: Shape = {
     side === 'E' ? { x: w, y: h / 2 } : side === 'W' ? { x: 0, y: h / 2 } : { x: w / 2 + t * (w - 2 * POINT(h)) * 0.3, y: side === 'N' ? 0 : h },
 };
 
+/** Bar: a parallel split or join (URS-DM-028). Thin and tall across the flow; edges spread along its long sides. */
+const bar: Shape = { id: 'bar', unlabelled: true, across: true, size: () => ({ w: 8, h: 56 }), outline: rect, solid: rect, port: boxPort() };
+
 /** Card: rounded rectangle for people and entities. */
 const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;
