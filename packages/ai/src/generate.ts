@@ -1,4 +1,4 @@
-import { compile, error, hasErrors, validateSchema, type Diagnostic, type DiagramType, type Registry } from '@jtd/core';
+import { compile, error, hasErrors, validateSchema, warning, type Diagnostic, type DiagramType, type Registry } from '@jtd/core';
 import type { ClaudeClient, ClaudeReply, InputBlock, Turn, Usage } from './client.ts';
 import { AiError } from './errors.ts';
 import { ingest, type IngestLimits, type InputFile } from './ingest/files.ts';
@@ -159,9 +159,18 @@ export async function refine(req: RefineRequest, o: GenerateOptions): Promise<Ge
   if (c.diagnostics.some((d) => d.code.startsWith('schema.'))) fail("fix the diagram's structure first; refine needs a schema-valid source");
   const t = c.type!;
   const meter = new Meter(o.prices);
-  const run = await attempts(t, refineTurn(t.ai.toGenerated(req.source), req.instruction), o, meter, req, (g) => t.ai.merge(req.source, t.ai.fromGenerated(g)));
-  return result(t, run, meter);
+  const before = t.ai.toGenerated(req.source);
+  const run = await attempts(t, refineTurn(before, req.instruction), o, meter, req, (g) => t.ai.merge(req.source, t.ai.fromGenerated(g)));
+  const r = result(t, run, meter);
+  // Say so rather than fail silently, e.g. when the instruction asks for something only the source can set.
+  if (run.valid && canonical(t.ai.toGenerated(run.best.source)) === canonical(before))
+    r.diagnostics = [...r.diagnostics, warning('ai.unchanged', 'the AI made no change; styles, colours and theme are set in the source, not by the AI')];
+  return r;
 }
+
+/** JSON with sorted keys, for comparing generation shapes. */
+const canonical = (v: unknown): string =>
+  JSON.stringify(v, (_k, x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1))) : x));
 
 function fail(message: string): never {
   throw new AiError('ai.input', message);

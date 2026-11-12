@@ -5,9 +5,12 @@ import { stageText } from './progress.ts';
 
 const ACCEPT = '.pdf,.docx,.html,.htm,.txt,.md,.markdown,.png,.jpg,.jpeg,.gif,.webp';
 
+/** AI warnings the editor does not show, e.g. that a refine changed nothing. */
+const notes = (g: Generated) => g.diagnostics.filter((d) => d.code.startsWith('ai.')).map((d) => ` Note: ${d.message}.`).join('');
+
 const summary = (g: Generated, verb: string) =>
   g.valid
-    ? `${verb} a ${g.type} in ${g.attempts} attempt${g.attempts > 1 ? 's' : ''}.${g.reason ? ` ${g.reason}.` : ''}`
+    ? `${verb} a ${g.type} in ${g.attempts} attempt${g.attempts > 1 ? 's' : ''}.${g.reason ? ` ${g.reason}.` : ''}${notes(g)}`
     : `${verb} a ${g.type} with ${g.diagnostics.length} problem${g.diagnostics.length > 1 ? 's' : ''} left after ${g.attempts} attempts. Fix them in the editor.`;
 
 interface Props {

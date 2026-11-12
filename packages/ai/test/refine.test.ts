@@ -48,6 +48,26 @@ describe('refine (URS-AI-013)', () => {
     expect(ask.to.find((l) => l.node === 'pay')).toMatchObject({ exitSide: 'S', style: { stroke: '#00ff00' } });
   });
 
+  it('can switch lifecycle display options such as role lanes, and keeps the rest', async () => {
+    const cc = reg.type('lifecycle')!.examples[0]!.source as Record<string, unknown>;
+    const lifecycle = reg.type('lifecycle')!.ai;
+    const g = lifecycle.toGenerated(cc) as { display: Record<string, unknown>; workflows: { roles: string[] }[] };
+    expect(g.display).toEqual({ direction: 'LR', statesAs: 'columns', view: 'detailed', roleLanes: false, legend: true });
+    const reply = { ...g, display: { ...g.display, roleLanes: true }, workflows: g.workflows.map((w, i) => ({ ...w, roles: i ? [] : ['Change Owner'] })) };
+    const r = await refine({ source: cc, instruction: 'Split the workflows into role lanes' }, opts(new MockClaude([{ json: reply }])));
+    expect(r.valid).toBe(true);
+    expect(r.diagnostics).toEqual([]);
+    const src = r.source as { roleLanes?: boolean; styleBy?: unknown; info?: unknown; workflows: { roles?: string[] }[] };
+    expect(src).toMatchObject({ roleLanes: true, styleBy: cc.styleBy, info: cc.info });
+    expect(src.workflows.map((w) => w.roles)).toEqual([['Change Owner'], undefined]);
+  });
+
+  it('warns when the instruction changed nothing', async () => {
+    const r = await refine({ source: current, instruction: 'Make it blue' }, opts(new MockClaude([{ json: reg.type('flowchart')!.ai.toGenerated(current) }])));
+    expect(r.valid).toBe(true);
+    expect(r.diagnostics.map((d) => [d.severity, d.code])).toEqual([['warning', 'ai.unchanged']]);
+  });
+
   it('refuses empty instructions and structurally invalid sources', async () => {
     const client = new MockClaude([]);
     expect(await code(refine({ source: current, instruction: '  ' }, opts(client)))).toBe('ai.input');
