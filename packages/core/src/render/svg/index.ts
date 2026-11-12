@@ -1,21 +1,28 @@
 import type { Geometry, PlacedNode, RoutedEdge } from '../../geometry.ts';
-import { FONT_FAMILY, lineHeight, textBlock } from '../../measure/text.ts';
+import { FONT_FAMILY, lineHeight, textBlock, textWidth } from '../../measure/text.ts';
 import { num } from '../../num.ts';
 import { shape } from '../../shapes/library.ts';
-import { fontOf, LABEL_FONT, NODE_FONT, TITLE_FONT } from '../../style.ts';
+import { arrowSize, BADGE_FONT, BADGE_H, CALLOUT_PAD, fontOf, ICON, ICON_GAP, LABEL_BOX, META_FONT, LABEL_FONT, NODE_FONT, stackHeight, TITLE_FONT } from '../../style.ts';
+import { innerOf } from '../../shapes/shape.ts';
 import { bands } from './bands.ts';
 import { containers } from './containers.ts';
 import { esc } from './escape.ts';
-import { fontAttrs, lines } from './text.ts';
+import { icon } from './icons.ts';
+import { legend } from './legend.ts';
+import { fontAttrs, lines, stack } from './text.ts';
 import { dash, METRICS as M, opacity, PALETTES, type Palette } from './theme.ts';
 import type { Style } from '../../ir/types.ts';
 
 export interface SvgOptions {
   title?: string;
+  /** Title block under the title (URS-DM-027). */
+  meta?: readonly (readonly [string, string])[];
   /** Extra class on the root element, e.g. the diagram type (URS-RN-005). */
   className?: string;
 }
 
+/** Space inside a badge pill around its icon and text. */
+const BADGE_PAD = 4;
 const stroke = (color: string, width: number = M.stroke) => `stroke="${color}" stroke-width="${num(width)}"`;
 /** Provenance as a native tooltip (URS-AI-014). */
 const tooltip = (q: string | undefined) => (q ? `<title>${esc(q)}</title>` : '');
@@ -33,8 +40,6 @@ const HEADS: Record<Head, (c: string) => string> = {
   diamond: (c) => `<path d="M0 5L5 1L10 5L5 9Z" fill="${c}"/>`,
   circle: (c) => `<path d="M1 5A4 4 0 1 1 9 5A4 4 0 1 1 1 5Z" fill="${c}"/>`,
 };
-/** Arrowheads grow with lines thicker than the default so they stay visible (URS-DM-014). */
-const arrowSize = (width: number) => 9 * Math.max(1, width / M.stroke);
 /** One marker per head shape, colour and size; the default keeps the id `jtd-arrow`. */
 const markerId = ({ head, color, width }: Arrow, P: Palette) =>
   'jtd-arrow' + (head === 'triangle' ? '' : `-${head}`) + (color === P.edge ? '' : `-${color.slice(1)}`) + (width > M.stroke ? `-w${num(width).replace('.', '_')}` : '');
@@ -52,20 +57,40 @@ function node(n: PlacedNode, P: Palette): string {
   const width: number = n.style?.lineWidth ?? M.stroke;
   const fill = n.style?.fill ?? (s.paint ? P[s.paint] : P.nodeFill);
   const font = fontOf(NODE_FONT, n.style);
-  const attrs = fontAttrs(font, NODE_FONT) + fillAttr(n.style?.text);
-  const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - (n.lines.length * lineHeight(font)) / 2;
+  const attrs = (f: typeof font) => fontAttrs(f, NODE_FONT) + fillAttr(n.style?.text);
+  const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - stackHeight(n.lines.length, n.sub?.length ?? 0, font) / 2;
   const detail = s.detail ? `<path d="${s.detail(n.w, n.h)}" fill="none" ${stroke(line, width)}/>` : '';
   const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${line}"/>` : '';
-  const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, font, attrs);
+  const text = s.unlabelled ? '' : stack(n.lines, n.sub, n.w / 2, textTop, font, attrs, innerOf(s, n.w, n.h).w, line);
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})"${opacity(n.style?.opacity)}>` +
     tooltip(n.quote) +
-    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${callout(n, font, attrs, P)}</g>`
+    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${badges(n, line, P)}${callout(n, font, attrs, P)}</g>`
   );
 }
 
+/** Badges (URS-DM-025): pills in a row across the top-right of the node's top edge, in its local coordinates. */
+function badges(n: PlacedNode, line: string, P: Palette): string {
+  const pills = (n.badges ?? []).map((b) => {
+    const t = b.text ? textWidth(b.text, BADGE_FONT) : 0;
+    return { ...b, w: 2 * BADGE_PAD + (b.icon ? ICON : 0) + (b.icon && b.text ? ICON_GAP : 0) + t };
+  });
+  let x = n.w - 6 - pills.reduce((s, p) => s + p.w + 3, -3);
+  const y = -BADGE_H / 2;
+  return pills
+    .map((p) => {
+      const out =
+        `<rect x="${num(x)}" y="${num(y)}" width="${num(p.w)}" height="${BADGE_H}" rx="${BADGE_H / 2}" fill="${P.labelFill}" stroke="${line}" stroke-width="1"/>` +
+        (p.icon ? icon(p.icon, x + BADGE_PAD, y + (BADGE_H - ICON) / 2, line) : '') +
+        (p.text ? lines([p.text], x + p.w - BADGE_PAD - textWidth(p.text, BADGE_FONT) / 2, y + (BADGE_H - lineHeight(BADGE_FONT)) / 2, BADGE_FONT, ` font-size="${BADGE_FONT.size}"`) : '');
+      x += p.w + 3;
+      return out;
+    })
+    .join('');
+}
+
 /** Label beside a fixed-size node with a leader line to it, in the node's local coordinates (URS-DM-017). */
-function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: string, P: Palette): string {
+function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: (f: typeof font) => string, P: Palette): string {
   const c = n.callout;
   if (!c) return '';
   const [x, y] = [c.x - n.x, c.y - n.y];
@@ -74,7 +99,7 @@ function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: string, 
   return (
     `<path d="M${num(a!.x)} ${num(a!.y)}L${num(b!.x)} ${num(b!.y)}" fill="none" stroke="${border}" stroke-width="1"/>` +
     `<rect x="${num(x)}" y="${num(y)}" width="${num(c.w)}" height="${num(c.h)}" rx="4" fill="${n.style?.labelFill ?? P.labelFill}" stroke="${border}" stroke-width="1"/>` +
-    lines(c.lines, x + c.w / 2, y + (c.h - c.lines.length * lineHeight(font)) / 2, font, attrs)
+    stack(c.lines, c.sub, x + c.w / 2, y + (c.h - stackHeight(c.lines.length, c.sub?.length ?? 0, font)) / 2, font, attrs, c.w - 2 * CALLOUT_PAD.x, border)
   );
 }
 
@@ -84,11 +109,17 @@ function edge(e: RoutedEdge, P: Palette): string {
   const font = fontOf(LABEL_FONT, e.style);
   const arrow = arrowOf(e, P);
   const d = e.points.map((p, i) => `${i ? 'L' : 'M'}${num(p.x)} ${num(p.y)}`).join('');
-  const l = e.label;
-  const label = l
-    ? `<rect x="${num(l.x)}" y="${num(l.y)}" width="${num(l.w)}" height="${num(l.h)}" rx="3" fill="${e.style?.labelFill ?? P.labelFill}"/>` +
-      lines(l.lines, l.x + l.w / 2, l.y + (l.h - l.lines.length * lineHeight(font)) / 2, font, ` font-size="${num(font.size)}"${fontAttrs(font, { size: font.size })}${fillAttr(e.style?.text)}`)
-    : '';
+  const label = (e.labels ?? [])
+    .map((l) => {
+      // An icon sits before the text, centred on the box's height (URS-DM-025).
+      const shift = l.icon ? ICON + ICON_GAP : 0;
+      return (
+        `<rect x="${num(l.x)}" y="${num(l.y)}" width="${num(l.w)}" height="${num(l.h)}" rx="2" fill="${e.style?.labelFill ?? P.labelFill}"/>` +
+        (l.icon ? icon(l.icon, l.x + LABEL_BOX.x, l.y + (l.h - ICON) / 2, e.style?.text ?? P.text) : '') +
+        lines(l.lines, l.x + (l.w + shift) / 2, l.y + (l.h - l.lines.length * lineHeight(font)) / 2, font, ` font-size="${num(font.size)}"${fontAttrs(font, { size: font.size })}${fillAttr(e.style?.text)}`)
+      );
+    })
+    .join('');
   return (
     `<g id="e-${esc(e.id)}" class="jtd-edge"${opacity(e.style?.opacity)}>` +
     tooltip(e.quote) +
@@ -100,8 +131,10 @@ function edge(e: RoutedEdge, P: Palette): string {
 export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
   const P = PALETTES[g.theme ?? 'default'];
   const title = opts.title ? textBlock(opts.title, Math.max(g.width, 480), TITLE_FONT) : undefined;
-  const titleH = title ? title.height + M.titleGap : 0;
-  const innerW = Math.max(g.width, title?.width ?? 0);
+  // Title block: one line of `key: value` pairs, wrapped to the drawing's width (URS-DM-027).
+  const meta = opts.meta?.length ? textBlock(opts.meta.map(([k, v]) => `${k}: ${v}`).join('   ·   '), Math.max(g.width, 480), META_FONT) : undefined;
+  const titleH = (title ? title.height : 0) + (meta ? meta.height + 4 : 0) + (title || meta ? M.titleGap : 0);
+  const innerW = Math.max(g.width, title?.width ?? 0, meta?.width ?? 0);
   const W = innerW + 2 * M.margin;
   const H = g.height + titleH + 2 * M.margin;
   const cls = ['jtd', ...(opts.className ? [opts.className] : [])].join(' ');
@@ -119,11 +152,13 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     `<rect width="${num(W)}" height="${num(H)}" fill="${P.background}"/>` +
     `<g font-family="${esc(FONT_FAMILY)}" font-size="${NODE_FONT.size}" fill="${P.text}" style="font-kerning:none;font-variant-ligatures:none">` +
     titleSvg +
+    (meta ? lines(meta.lines, W / 2, M.margin + (title ? title.height + 4 : 0), META_FONT, ` font-size="${META_FONT.size}" class="jtd-meta"`) : '') +
     `<g transform="translate(${num(M.margin + (innerW - g.width) / 2)} ${num(M.margin + titleH)})">` +
     bands(g.bands, P, g.corner, g.fillers) +
     containers(g.containers, P) +
     g.edges.map((e) => edge(e, P)).join('') +
     g.nodes.map((n) => node(n, P)).join('') +
+    legend(g.legend, P) +
     `</g></g></svg>\n`
   );
 }

@@ -144,7 +144,7 @@ export const stateAi: AiAssets<StateDiagram> = {
     const restyle = (ss: State[]): State[] => ss.map((s) => ({ ...s, ...pick(states.get(s.id) ?? ({} as State), 'style'), ...(s.states && { states: restyle(s.states) }) }));
     const ts = flatTransitions(next.states).map((t) => {
       const p = match(t);
-      return { from: t.from, to: t.to, ...pick(t, 'event', 'guard', 'action', 'quote'), ...(p && pick(p, 'id', 'style')) };
+      return { from: t.from, to: t.to, ...pick(t, 'event', 'guard', 'action', 'quote'), ...(p && pick(p, 'id', 'labels', 'style')) };
     });
     return { ...next, ...pick(prev, 'theme', 'styles', 'transitionStyle'), states: attach(restyle(next.states), ts) };
   },

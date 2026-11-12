@@ -26,6 +26,7 @@ const schema = {
           id,
           shape: { type: 'string', enum: FLOWCHART_SHAPES },
           label: { type: 'string' },
+          owner: { type: 'string', description: 'Person or role who does this step, when the material names one.' },
           lane: { type: 'string', description: 'Lane id; required when lanes exist.' },
           phase: { type: 'string', description: 'Phase id; required when phases exist.' },
           quote: { type: 'string', description: 'Short verbatim excerpt from the material supporting this step.' },
@@ -114,7 +115,7 @@ export const flowchartAi: AiAssets<Flowchart> = {
     direction: m.direction ?? 'LR',
     ...(m.lanes && { lanes: m.lanes.map((b) => pick(b, 'id', 'label')) }),
     ...(m.phases && { phases: m.phases.map((b) => pick(b, 'id', 'label')) }),
-    nodes: m.nodes.map((n) => ({ id: n.id, shape: n.shape ?? 'process', label: n.label ?? n.id, ...pick(n, 'lane', 'phase', 'quote') })),
+    nodes: m.nodes.map((n) => ({ id: n.id, shape: n.shape ?? 'process', label: n.label ?? n.id, ...pick(n, 'owner', 'lane', 'phase', 'quote') })),
     edges: flatEdges(m).map((e) => pick(e, 'from', 'to', 'label', 'quote')),
   }),
   // Restore what generation cannot express: theme, styles, order and side hints, edge ids, notes on surviving nodes.
@@ -127,14 +128,14 @@ export const flowchartAi: AiAssets<Flowchart> = {
     const notes = (prev.notes ?? []).filter((n) => n.for === undefined || kept.has(n.for));
     return {
       ...next,
-      ...pick(prev, 'theme', 'styles', 'edgeStyle'),
+      ...pick(prev, 'theme', 'styles', 'edgeStyle', 'styleBy'),
       ...(next.lanes && { lanes: next.lanes.map(band) }),
       ...(next.phases && { phases: next.phases.map(band) }),
       nodes: nestEdges(
         next.nodes.map(({ to: _to, ...n }) => ({ ...n, ...pick(nodes.get(n.id) ?? ({} as FlowNode), 'order', 'style') })),
         flatEdges(next).map((e) => {
           const p = match(e);
-          return { from: e.from, to: e.to, ...pick(e, 'label', 'quote'), ...(p && pick(p, 'id', 'exitSide', 'entrySide', 'style')) };
+          return { from: e.from, to: e.to, ...pick(e, 'label', 'quote'), ...(p && pick(p, 'id', 'labels', 'exitSide', 'entrySide', 'style')) };
         }),
       ),
       ...(notes.length && { notes }),

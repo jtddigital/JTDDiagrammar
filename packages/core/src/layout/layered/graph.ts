@@ -15,6 +15,8 @@ export interface Vertex {
   /** Room reserved past the shape on the cross axis, and the length needed along the flow, for a callout (URS-DM-017). */
   after?: number;
   reach?: number;
+  /** Edges attach at the shape's tips (diamonds), so any of them can run straight from the centre. */
+  tips?: boolean;
 }
 
 export interface Link {

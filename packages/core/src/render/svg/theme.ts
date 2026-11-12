@@ -1,4 +1,5 @@
 import type { Theme } from '../../ir/types.ts';
+import { STROKE } from '../../style.ts';
 
 /** Colours per theme (URS-DM-010). Element styles override these. */
 export interface Palette {
@@ -48,7 +49,7 @@ export const PALETTES: Record<Theme, Palette> = {
 };
 
 /** Sizes, independent of theme. */
-export const METRICS = { stroke: 1.5, margin: 24, titleGap: 16 } as const;
+export const METRICS = { stroke: STROKE, margin: 24, titleGap: 16 } as const;
 
 const DASH = { solid: '', dashed: ' stroke-dasharray="6 4"', dotted: ' stroke-dasharray="1.5 3" stroke-linecap="round"' } as const;
 export const dash = (d: keyof typeof DASH | undefined) => (d ? DASH[d] : '');

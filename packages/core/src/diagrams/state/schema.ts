@@ -1,4 +1,4 @@
-import { direction, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { direction, edgeLabels, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
 import { STATE_KINDS } from './model.ts';
 
 export const stateSchema = {
@@ -39,6 +39,7 @@ export const stateSchema = {
         event: { type: 'string', description: 'Trigger.' },
         guard: { type: 'string', description: 'Condition, shown in brackets.' },
         action: { type: 'string', description: 'Effect, shown after a slash.' },
+        labels: edgeLabels,
         id: { ...id, description: 'Optional; generated when absent.' },
         quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
         style: { ...style, description: 'Overrides `transitionStyle` field by field.' },

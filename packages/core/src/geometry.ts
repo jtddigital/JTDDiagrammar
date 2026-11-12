@@ -1,4 +1,4 @@
-import type { Style, Theme } from './ir/types.ts';
+import type { Badge, Icon, Style, Theme } from './ir/types.ts';
 
 /** Positioned output of a layout engine; the renderer's only input (URS-EXT-004). */
 export interface Point {
@@ -16,6 +16,7 @@ export interface Box {
 /** A node label drawn beside a fixed-size node, joined to it by a leader line (URS-DM-017). */
 export interface Callout extends Box {
   lines: string[];
+  sub?: string[];
   /** Leader line from the node's outline to the callout. */
   leader: [Point, Point];
 }
@@ -26,7 +27,17 @@ export interface PlacedNode extends Box {
   quote?: string;
   shape: string;
   lines: string[];
+  /** Secondary text under a divider (URS-DM-021). */
+  sub?: string[];
+  badges?: Badge[];
   callout?: Callout;
+}
+
+/** A placed edge label; `at` (percent of the edge's length) pins it (URS-DM-024). */
+export interface LabelBox extends Box {
+  lines: string[];
+  at?: number;
+  icon?: Icon;
 }
 
 export interface RoutedEdge {
@@ -37,7 +48,7 @@ export interface RoutedEdge {
   from: string;
   to: string;
   points: Point[];
-  label?: Box & { lines: string[] };
+  labels?: LabelBox[];
 }
 
 /** A lane or phase: the full band area plus its header cell (URS-DM-001/002). */
@@ -74,4 +85,10 @@ export interface Geometry {
   containers: PlacedContainer[];
   nodes: PlacedNode[];
   edges: RoutedEdge[];
+  legend?: PlacedLegend;
+}
+
+/** The legend box under the diagram (URS-DM-026): each entry's sample box and text. */
+export interface PlacedLegend extends Box {
+  items: { sample: Box; text: Box & { lines: string[] }; label: string; shape?: string; icon?: Icon; line?: Style; style?: Style }[];
 }

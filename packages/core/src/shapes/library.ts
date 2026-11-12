@@ -146,12 +146,30 @@ const chevron: Shape = {
   port: (side, w, h, t) => (side === 'E' ? { x: w, y: h / 2 } : side === 'W' ? { x: NOTCH(h), y: h / 2 } : boxPort()(side, w, h, t)),
 };
 
+const POINT = (h: number) => h / 4;
+/** Hexagon: an automated or system action, e.g. setting field values (URS-DM-022). */
+const hexagon: Shape = {
+  id: 'hexagon',
+  size: (tw, th) => {
+    const { h } = boxSize()(tw, th);
+    return { w: Math.max(112, tw + 2 * PAD_X + 2 * POINT(h)), h };
+  },
+  inner: (w, h) => ({ w: w - 2 * POINT(h) - 2 * PAD_X, h: h - 2 * PAD_Y }),
+  outline: (w, h) => `M${n(POINT(h))} 0H${n(w - POINT(h))}L${n(w)} ${n(h / 2)}L${n(w - POINT(h))} ${n(h)}H${n(POINT(h))}L0 ${n(h / 2)}Z`,
+  // Side ports sit on the points; top and bottom ones spread along the flat edges.
+  port: (side, w, h, t) =>
+    side === 'E' ? { x: w, y: h / 2 } : side === 'W' ? { x: 0, y: h / 2 } : { x: w / 2 + t * (w - 2 * POINT(h)) * 0.3, y: side === 'N' ? 0 : h },
+};
+
+/** Bar: a parallel split or join (URS-DM-028). Thin and tall across the flow; edges spread along its long sides. */
+const bar: Shape = { id: 'bar', unlabelled: true, across: true, size: () => ({ w: 8, h: 56 }), outline: rect, solid: rect, port: boxPort() };
+
 /** Card: rounded rectangle for people and entities. */
 const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

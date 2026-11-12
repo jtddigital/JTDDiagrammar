@@ -34,7 +34,7 @@ describe('state type (URS-TYP-003..005)', () => {
       ['f', 'final', '', 'c'],
       ['x', 'choice', '', undefined],
     ]);
-    expect(ir!.edges[1]!.label).toBe('go [ok] / log()');
+    expect(ir!.edges[1]!.labels).toEqual([{ text: 'go [ok] / log()' }]);
   });
 
   it('applies pseudostate rules', () => {

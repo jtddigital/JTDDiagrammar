@@ -12,7 +12,7 @@ export function normalize(g: Content): Geometry {
     ...g.containers,
     ...g.nodes,
     ...g.nodes.flatMap((n) => (n.callout ? [n.callout] : [])),
-    ...g.edges.flatMap((e) => [...e.points.map((p) => ({ ...p, w: 0, h: 0 })), ...(e.label ? [e.label] : [])]),
+    ...g.edges.flatMap((e) => [...e.points.map((p) => ({ ...p, w: 0, h: 0 })), ...(e.labels ?? [])]),
   ];
   if (!boxes.length) return { width: 0, height: 0, ...g };
   const x0 = min(boxes.map((b) => b.x));
@@ -26,6 +26,6 @@ export function normalize(g: Content): Geometry {
     ...(g.fillers && { fillers: g.fillers.map(shift) }),
     containers: g.containers.map(shift),
     nodes: g.nodes.map((n) => ({ ...shift(n), ...(n.callout && { callout: { ...shift(n.callout), leader: [shift(n.callout.leader[0]), shift(n.callout.leader[1])] as [Point, Point] } }) })),
-    edges: g.edges.map((e) => ({ ...e, points: e.points.map(shift), ...(e.label && { label: shift(e.label) }) })),
+    edges: g.edges.map((e) => ({ ...e, points: e.points.map(shift), ...(e.labels && { labels: e.labels.map(shift) }) })),
   };
 }

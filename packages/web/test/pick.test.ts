@@ -14,7 +14,7 @@ describe('click to source (URS-WEB-009)', () => {
       for (const [kind, list] of all)
         for (const x of list) {
           const path = pointerOf(ir, kind, x.id);
-          expect(path, `${ex.title} ${kind}-${x.id}`).toMatch(/^\/[a-z]+\/\d+/);
+          expect(path, `${ex.title} ${kind}-${x.id}`).toMatch(/^\/[a-zA-Z]+\/\d+/);
           const r = locate(text, { code: 'pick', path: path! });
           expect(r.to).toBeGreaterThan(r.from);
         }

@@ -5,7 +5,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 4
   },
   "cff-lanes": {
     "crossings": 0,
@@ -13,7 +14,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 7
   },
   "cff-phases": {
     "crossings": 0,
@@ -21,7 +23,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 3
   },
   "cff-tb": {
     "crossings": 0,
@@ -29,7 +32,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 6
   },
   "cycle": {
     "crossings": 0,
@@ -37,7 +41,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 6
   },
   "empty": {
     "crossings": 0,
@@ -45,7 +50,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 0
   },
   "hints-notes": {
     "crossings": 5,
@@ -53,15 +59,17 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 1,
+    "bends": 16
   },
   "hints-tb-lanes": {
     "crossings": 0,
-    "overlaps": 1,
+    "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 10
   },
   "long-edges": {
     "crossings": 0,
@@ -69,7 +77,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 5
   },
   "shapes": {
     "crossings": 0,
@@ -77,7 +86,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 2
   },
   "state-callouts": {
     "crossings": 0,
@@ -85,7 +95,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 0
   },
   "state-dark": {
     "crossings": 0,
@@ -93,7 +104,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 4
   },
   "state-nested": {
     "crossings": 0,
@@ -101,7 +113,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 8
   },
   "state-tb-choice": {
     "crossings": 0,
@@ -109,7 +122,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 5
   },
   "styled": {
     "crossings": 0,
@@ -117,7 +131,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 2
   },
   "text": {
     "crossings": 0,
@@ -125,7 +140,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 0
   },
   "flowchart-basic": {
     "crossings": 0,
@@ -133,7 +149,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 2
   },
   "flowchart-cross-functional": {
     "crossings": 0,
@@ -141,7 +158,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 4
   },
   "flowchart-styled-callouts": {
     "crossings": 0,
@@ -149,7 +167,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 4
   },
   "state-basic": {
     "crossings": 0,
@@ -157,7 +176,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 4
   },
   "state-composite": {
     "crossings": 0,
@@ -165,7 +185,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 1
+    "edgeThroughLabel": 0,
+    "bends": 13
   },
   "orgchart-basic": {
     "crossings": 0,
@@ -173,7 +194,8 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 3
   },
   "lifecycle-change-control": {
     "crossings": 0,
@@ -181,7 +203,26 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 6
+  },
+  "lifecycle-roles": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 12
+  },
+  "lifecycle-summary": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 0
   },
   "lifecycle-states-as-rows": {
     "crossings": 0,
@@ -189,30 +230,34 @@
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 0
+    "edgeThroughLabel": 0,
+    "bends": 2
   },
   "random-30": {
-    "crossings": 42,
+    "crossings": 34,
     "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 1
+    "edgeThroughLabel": 0,
+    "bends": 102
   },
   "random-60-lanes": {
-    "crossings": 323,
-    "overlaps": 1,
-    "edgeThroughNode": 0,
-    "labelOnNode": 0,
-    "labelOnLabel": 0,
-    "edgeThroughLabel": 2
-  },
-  "random-200": {
-    "crossings": 2814,
+    "crossings": 301,
     "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
-    "edgeThroughLabel": 6
+    "edgeThroughLabel": 0,
+    "bends": 281
+  },
+  "random-200": {
+    "crossings": 2319,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 2,
+    "bends": 1791
   }
 }

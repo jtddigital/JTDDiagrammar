@@ -43,7 +43,14 @@ function convert(n: XNode, s: JsonSchema | undefined, root: JsonSchema): unknown
   const props = (schema?.properties ?? {}) as Record<string, JsonSchema>;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(n[':@'] ?? {})) out[k] = scalar(v, resolve(props[k], root));
-  for (const c of childrenOf(n)) out[tagOf(c)!] = convert(c, props[tagOf(c)!], root);
+  // A map (e.g. styles by owner) takes any key; one that is not an XML name is written `<entry key="…">`.
+  const map = typeof schema?.additionalProperties === 'object' ? (schema.additionalProperties as JsonSchema) : undefined;
+  for (const c of childrenOf(n)) {
+    const tag = tagOf(c)!;
+    const { key, ...rest } = c[':@'] ?? {};
+    if (map && !(tag in props) && tag === ENTRY && key !== undefined) out[key] = convert({ [tag]: c[tag], ':@': rest }, map, root);
+    else out[tag] = convert(c, props[tag] ?? map, root);
+  }
   return out;
 }
 
@@ -68,22 +75,29 @@ export function parseXml(text: string, reg: Registry): ParseResult {
   return { value: convert(root, type?.schema, type?.schema ?? {}), diagnostics: [] };
 }
 
-const SINGULAR: Record<string, string> = { nodes: 'node', lanes: 'lane', phases: 'phase', states: 'state', to: 'link', notes: 'note', people: 'person' };
+const SINGULAR: Record<string, string> = { nodes: 'node', lanes: 'lane', phases: 'phase', states: 'state', to: 'link', labels: 'label', notes: 'note', verdicts: 'verdict', sharedActions: 'action', workflows: 'workflow', steps: 'step', stages: 'stage', fields: 'field', roles: 'role', reasons: 'reason', people: 'person' };
 const attr = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
 
 const text = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function element(tag: string, v: unknown, indent: string): string {
+const ENTRY = 'entry';
+const NAME = /^[A-Za-z_][\w.-]*$/;
+
+function element(key: string, v: unknown, indent: string): string {
+  const tag = NAME.test(key) && key !== ENTRY ? key : ENTRY;
+  const keyAttr = tag === key ? '' : ` key="${attr(key)}"`;
   // Items of a list of scalars (e.g. stage states, entry criteria) are elements with text content.
-  if (typeof v !== 'object' || v === null) return `${indent}<${tag}>${text(v)}</${tag}>\n`;
+  if (typeof v !== 'object' || v === null) return `${indent}<${tag}${keyAttr}>${text(v)}</${tag}>\n`;
   if (Array.isArray(v)) {
     const item = SINGULAR[tag] ?? 'item';
     return `${indent}<${tag}>\n${v.map((x) => element(item, x, `${indent}  `)).join('')}${indent}</${tag}>\n`;
   }
   const o = v as Record<string, unknown>;
-  const attrs = Object.entries(o).filter(([, x]) => typeof x !== 'object' || x === null);
-  const kids = Object.entries(o).filter(([, x]) => typeof x === 'object' && x !== null);
-  const head = `${indent}<${tag}${attrs.map(([k, x]) => ` ${k}="${attr(x)}"`).join('')}`;
+  // Scalars are attributes, unless their key is not an XML name (map keys such as role names): then `<entry key>` text.
+  const scalar = ([k, x]: [string, unknown]) => (typeof x !== 'object' || x === null) && NAME.test(k);
+  const attrs = Object.entries(o).filter(scalar);
+  const kids = Object.entries(o).filter((e) => !scalar(e));
+  const head = `${indent}<${tag}${keyAttr}${attrs.map(([k, x]) => ` ${k}="${attr(x)}"`).join('')}`;
   return kids.length ? `${head}>\n${kids.map(([k, x]) => element(k, x, `${indent}  `)).join('')}${indent}</${tag}>\n` : `${head}/>\n`;
 }
 

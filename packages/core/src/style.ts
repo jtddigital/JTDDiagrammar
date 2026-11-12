@@ -1,5 +1,5 @@
 import type { Style } from './ir/types.ts';
-import type { Font } from './measure/text.ts';
+import { lineHeight, type Font } from './measure/text.ts';
 
 /** An element's font: its section's base font with the style's size, weight and slant (URS-DM-016). Layout and render both use this. */
 export const fontOf = (base: Font, s: Style | undefined): Font => ({
@@ -13,6 +13,12 @@ export const NODE_FONT: Font = { size: 14 };
 export const LABEL_FONT: Font = { size: 12 };
 export const TITLE_FONT: Font = { size: 18, bold: true };
 export const NODE_TEXT_MAX = 180;
+/** Secondary node text under a divider, e.g. an owner (URS-DM-021): two px smaller than the label. */
+export const subFont = (f: Font): Font => ({ size: Math.max(8, f.size - 2), ...(f.italic && { italic: true }) });
+/** Height of the divider band between label and secondary text. */
+export const SUB_GAP = 9;
+/** Height of a label block with optional secondary text below a divider. */
+export const stackHeight = (lines: number, sub: number, f: Font) => lines * lineHeight(f) + (sub ? SUB_GAP + sub * lineHeight(subFont(f)) : 0);
 /** Text box a standard-size node is sized for: two lines this wide (URS-DM-017). */
 export const STANDARD_TEXT_W = 96;
 export const CALLOUT_TEXT_MAX = 160;
@@ -20,6 +26,29 @@ export const CALLOUT_PAD = { x: 8, y: 5 };
 /** Gap between a node and its callout. */
 export const CALLOUT_GAP = 16;
 export const LABEL_TEXT_MAX = 140;
+/** Icons in badges, labels and legends (URS-DM-025): a square this size. */
+export const ICON = 10;
+export const ICON_GAP = 3;
+export const BADGE_FONT: Font = { size: 10 };
+export const BADGE_H = 14;
+/** Legend text and sample sizes (URS-DM-026). */
+export const LEGEND_FONT: Font = { size: 11 };
+export const LEGEND_SAMPLE = { w: 34, h: 20 };
+export const LEGEND_GAP = 20;
+/** Title block text (URS-DM-027). */
+export const META_FONT: Font = { size: 11 };
+/** Default line width; arrowheads grow with thicker lines so they stay visible (URS-DM-014). */
+export const STROKE = 1.5;
+export const arrowSize = (width: number = STROKE) => 9 * Math.max(1, width / STROKE);
+/** Shortest leg leaving a node (URS-LY-013). */
+export const EXIT_STUB = 12;
+/** Visible line between an arrowhead and the turn before it (URS-LY-013). */
+export const ENTRY_LINE = 6;
+/** Shortest final leg into a node: the arrowhead plus a visible line, or the exit stub for arrowless edges. */
+export const entryStub = (s: Style | undefined, marker?: 'none') =>
+  marker === 'none' || s?.arrowhead === 'none' ? EXIT_STUB : Math.max(EXIT_STUB, arrowSize(s?.lineWidth) + ENTRY_LINE);
+/** Margin around edge label text inside its background (URS-DM-024). */
+export const LABEL_BOX = { x: 3, y: 1 };
 export const BAND_FONT: Font = { size: 13, bold: true };
 export const BAND_TEXT_MAX = 140;
 /** Group headers span several bands, so their labels may run wider (URS-DM-019). */

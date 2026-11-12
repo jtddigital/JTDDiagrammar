@@ -34,7 +34,7 @@ test('live preview follows edits and keeps the last good render on error (URS-WE
 
 test('shows diagnostics inline at their source location (URS-WEB-004)', async ({ page }) => {
   await open(page);
-  await setSource(page, flow('A', { nodes: [{ id: 'a', shape: 'hexagon' }] }));
+  await setSource(page, flow('A', { nodes: [{ id: 'a', shape: 'star' }] }));
   await expect(status(page)).toHaveText('1 error');
   await expect(page.locator('.cm-lintRange-error')).toHaveText('"shape"');
   await expect(page.getByLabel('Diagnostics')).toContainText('/nodes/0/shape');

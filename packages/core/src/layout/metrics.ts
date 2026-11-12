@@ -20,7 +20,7 @@ export interface Quality {
 }
 
 /** Metrics the quality baseline holds the line on. */
-export const GATED = ['crossings', 'overlaps', 'edgeThroughNode', 'labelOnNode', 'labelOnLabel', 'edgeThroughLabel'] as const;
+export const GATED = ['crossings', 'overlaps', 'edgeThroughNode', 'labelOnNode', 'labelOnLabel', 'edgeThroughLabel', 'bends'] as const;
 
 type Seg = [Point, Point];
 
@@ -29,14 +29,14 @@ const horiz = ([a, b]: Seg) => a.y === b.y;
 const between = (v: number, a: number, b: number) => v > Math.min(a, b) + 0.5 && v < Math.max(a, b) - 0.5;
 
 /** Proper crossing of a horizontal and a vertical segment (shared ends and touching don't count). */
-function cross(s: Seg, t: Seg): boolean {
+export function cross(s: Seg, t: Seg): boolean {
   if (horiz(s) === horiz(t)) return false;
   const [h, v] = horiz(s) ? [s, t] : [t, s];
   return between(v[0].x, h[0].x, h[1].x) && between(h[0].y, v[0].y, v[1].y);
 }
 
 /** Collinear overlap longer than 4px (edges sharing a port stub are counted too). */
-function overlap(s: Seg, t: Seg): boolean {
+export function overlap(s: Seg, t: Seg): boolean {
   if (horiz(s) !== horiz(t)) return false;
   const [k, a0, a1, b0, b1] = horiz(s) ? [s[0].y === t[0].y, s[0].x, s[1].x, t[0].x, t[1].x] : [s[0].x === t[0].x, s[0].y, s[1].y, t[0].y, t[1].y];
   return k && Math.min(Math.max(a0, a1), Math.max(b0, b1)) - Math.max(Math.min(a0, a1), Math.min(b0, b1)) > 4;
@@ -67,11 +67,10 @@ export function quality(g: Geometry): Quality {
         }
     for (const o of obs) if (o.id !== e.from && o.id !== e.to && ss.some((s) => hits(s, o))) q.edgeThroughNode++;
   });
-  const labelled = g.edges.filter((e) => e.label);
-  labelled.forEach((e, i) => {
-    const l = e.label!;
+  const labelled = g.edges.flatMap((e) => (e.labels ?? []).map((l) => ({ e, l })));
+  labelled.forEach(({ e, l }, i) => {
     q.labelOnNode += obs.filter((o) => overlaps(l, o)).length;
-    q.labelOnLabel += labelled.slice(i + 1).filter((f) => overlaps(l, f.label!)).length;
+    q.labelOnLabel += labelled.slice(i + 1).filter((f) => overlaps(l, f.l)).length;
     q.edgeThroughLabel += g.edges.filter((f) => f !== e && segs(f).some((s) => hits(s, l))).length;
   });
   return q;

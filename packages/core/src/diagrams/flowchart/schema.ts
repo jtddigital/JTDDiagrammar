@@ -1,4 +1,4 @@
-import { band, direction, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { band, direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -10,7 +10,8 @@ const link = {
   required: ['node'],
   properties: {
     node: ref('Target node id.'),
-    label: { type: 'string', description: 'Text on the connection.' },
+    label: { type: 'string', description: 'Text on the connection, placed where it fits best.' },
+    labels: edgeLabels,
     exitSide: { ...side, description: 'Side of this node the line leaves by (N, E, S, W); default follows the flow.' },
     entrySide: { ...side, description: 'Side of the target the line enters by; default follows the flow.' },
     id: { ...id, description: 'Optional; generated when absent.' },
@@ -27,6 +28,7 @@ const node = {
     id,
     shape: { type: 'string', enum: FLOWCHART_SHAPES, default: 'process', description: 'Default `process`.' },
     label: { type: 'string', description: 'Defaults to the id. `\\n` breaks lines; long text wraps.' },
+    owner: { type: 'string', description: 'Who does it; shown under a line below the label, and matched by `styleBy.owner`.' },
     lane: ref('Lane id; required when the diagram has lanes.'),
     phase: ref('Phase id; required when the diagram has phases.'),
     order: { type: 'integer', description: 'Hint: nodes in the same column and lane are placed in ascending order.' },
@@ -62,6 +64,7 @@ export const flowchartSchema = {
     direction,
     styles: sectionStyles(['lanes', 'phases', 'nodes', 'notes']),
     edgeStyle: { ...style, description: 'Default style for every connection; each one’s own `style` overrides it field by field.' },
+    styleBy: styleBy({ shape: FLOWCHART_SHAPES, owner: undefined }, 'Node styles by shape and by owner, e.g. `{ "owner": { "Bill": { "fill": "#fdd" } } }`. Precedence: `styles.nodes`, then shape, then owner, then the node’s own `style`.'),
     lanes: { type: 'array', minItems: 1, items: band, description: 'Functional bands (rows for `LR`). Present → cross-functional flowchart.' },
     phases: { type: 'array', minItems: 1, items: band, description: 'Stages across the lanes. Require lanes.' },
     nodes: { type: 'array', items: node, description: 'Steps, decisions and other shapes.' },

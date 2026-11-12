@@ -1,7 +1,8 @@
 import { pointer } from '../../diagnostics.ts';
-import type { Direction, Side, Style, Theme } from '../../ir/types.ts';
+import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
+import type { StyleBy } from '../section-styles.ts';
 
-export const FLOWCHART_SHAPES = ['process', 'decision', 'terminator', 'document', 'data', 'subprocess', 'connector'] as const;
+export const FLOWCHART_SHAPES = ['process', 'decision', 'terminator', 'document', 'data', 'subprocess', 'connector', 'hexagon'] as const;
 export type FlowchartShape = (typeof FLOWCHART_SHAPES)[number];
 
 export interface FlowBand {
@@ -16,6 +17,8 @@ export interface FlowLink {
   /** Target node id. */
   node: string;
   label?: string;
+  /** More labels, optionally pinned along the line (URS-DM-024). */
+  labels?: EdgeLabel[];
   /** Side of the source the line leaves by, and of the target it enters by (URS-DM-009). */
   exitSide?: Side;
   entrySide?: Side;
@@ -27,6 +30,8 @@ export interface FlowNode {
   id: string;
   shape?: FlowchartShape;
   label?: string;
+  /** Who does it; shown under a divider (URS-DM-021) and matched by `styleBy.owner`. */
+  owner?: string;
   lane?: string;
   phase?: string;
   order?: number;
@@ -57,6 +62,8 @@ export interface Flowchart {
   styles?: Partial<Record<'lanes' | 'phases' | 'nodes' | 'notes', Style>>;
   /** Default style for every connection; each one's `style` overrides it (URS-DM-015). */
   edgeStyle?: Style;
+  /** Node styles by shape and by owner (URS-DM-023). */
+  styleBy?: StyleBy<'shape' | 'owner'>;
   lanes?: FlowBand[];
   phases?: FlowBand[];
   nodes: FlowNode[];

@@ -7,6 +7,7 @@ import type { LayoutResult } from '../../registry/layout-engine.ts';
 import { CONTAINER_FONT, CONTAINER_HEAD_PAD as HEAD_PAD, CONTAINER_TEXT_MAX, fontOf } from '../../style.ts';
 import type { Flow } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
+import { polish } from '../polish.ts';
 import { normalize } from '../normalize.ts';
 import { simplify } from '../simplify.ts';
 import { build, sized } from './build.ts';
@@ -50,7 +51,7 @@ interface Placed {
   nodes: PlacedNode[];
   containers: Map<string, Box>;
   /** One piece per edge drawn at this level, oriented from `from` to `to`. */
-  pieces: Map<number, { points: Point[]; label?: RoutedEdge['label'] }>;
+  pieces: Map<number, { points: Point[]; labels?: RoutedEdge['labels'] }>;
 }
 
 const translate = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
@@ -144,14 +145,14 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     const level = levels.get(s)!;
     const lay = level.lay!;
     const nodes: SizedNode[] = level.items.map((it) => {
-      if (it.kind === 'node') return sized(ir.nodes[it.node]!);
+      if (it.kind === 'node') return sized(ir.nodes[it.node]!, flow);
       if (it.kind === 'port') return { id: it.id, shape: 'port', lines: [], w: 0, h: 0 };
       const c = placed.get(it.id)!;
       return { id: it.id, shape: 'container', lines: [], w: c.w, h: c.h };
     });
     // Labels belong to the piece drawn at the edge's lowest common scope.
     const labelledHere = (i: number) => plans.some((p) => p.edge === i && p.lca === s) || level.loops.some((l) => l.edge === i);
-    const edges: IREdge[] = ir.edges.map((e, i) => (labelledHere(i) || !e.label ? e : { id: e.id, from: e.from, to: e.to }));
+    const edges: IREdge[] = ir.edges.map((e, i) => (labelledHere(i) || !e.labels ? e : { id: e.id, from: e.from, to: e.to }));
     const { verts, chains, layers } = build(nodes, nodes.map(() => 0), lay.ranks, lay.phases.at(-1)!.last + 1, lay.dag, lay.back, flow);
     order(layers, verts, chains);
     place(layers, verts, chains);
@@ -170,9 +171,9 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     });
 
     const at = new Map(routed.nodes.map((n) => [n.id, n]));
-    const pieces = new Map<number, { points: Point[]; label?: RoutedEdge['label'] }>();
+    const pieces = new Map<number, { points: Point[]; labels?: RoutedEdge['labels'] }>();
     const edgeIndex = new Map(ir.edges.map((e, i) => [e.id, i]));
-    for (const r of routed.edges) pieces.set(edgeIndex.get(r.id)!, { points: r.points, ...(r.label && { label: r.label }) });
+    for (const r of routed.edges) pieces.set(edgeIndex.get(r.id)!, { points: r.points, ...(r.labels && { labels: r.labels }) });
 
     let label: TextBlock | undefined;
     let [w, h, dx, dy] = [0, 0, 0, 0];
@@ -180,7 +181,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
       // Size the container around its content; the label sits at the top.
       const c = containerById.get(s)!;
       label = textBlock(c.label ?? '', CONTAINER_TEXT_MAX, fontOf(CONTAINER_FONT, c.style));
-      const boxes: Box[] = [...routed.nodes, ...routed.nodes.flatMap((n) => (n.callout ? [n.callout] : [])), ...[...pieces.values()].flatMap((p) => [...p.points.map((q) => ({ ...q, w: 0, h: 0 })), ...(p.label ? [p.label] : [])])];
+      const boxes: Box[] = [...routed.nodes, ...routed.nodes.flatMap((n) => (n.callout ? [n.callout] : [])), ...[...pieces.values()].flatMap((p) => [...p.points.map((q) => ({ ...q, w: 0, h: 0 })), ...(p.labels ?? [])])];
       const [x0, y0] = [min(boxes.map((b) => b.x)), min(boxes.map((b) => b.y))];
       const [cw, ch] = [max(boxes.map((b) => b.x + b.w)) - x0, max(boxes.map((b) => b.y + b.h)) - y0];
       const top = label.height + 2 * HEAD_PAD;
@@ -191,7 +192,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     }
     const nodesOut = level.items.flatMap((it) => (it.kind === 'node' ? [moveNode(at.get(it.id)!, dx, dy)] : []));
     const containers = new Map(level.items.flatMap((it) => (it.kind === 'container' ? [[it.id, { ...at.get(it.id)!, x: at.get(it.id)!.x + dx, y: at.get(it.id)!.y + dy }] as const] : [])));
-    for (const [e, p] of pieces) pieces.set(e, { points: p.points.map((q) => translate(q, dx, dy)), ...(p.label && { label: { ...p.label, x: p.label.x + dx, y: p.label.y + dy } }) });
+    for (const [e, p] of pieces) pieces.set(e, { points: p.points.map((q) => translate(q, dx, dy)), ...(p.labels && { labels: p.labels.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy })) }) });
 
     // Border ports: extend each crossing piece to the border and record where the parent must attach.
     const ports = new Map<number, MC>();
@@ -226,7 +227,7 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
   const piece = (s: Scope, edge: number) => {
     const o = offset.get(s)!;
     const p = placed.get(s)!.pieces.get(edge)!;
-    return { points: p.points.map((q) => translate(q, o.x, o.y)), ...(p.label && { label: { ...p.label, x: p.label.x + o.x, y: p.label.y + o.y } }) };
+    return { points: p.points.map((q) => translate(q, o.x, o.y)), ...(p.labels && { labels: p.labels.map((l) => ({ ...l, x: l.x + o.x, y: l.y + o.y })) }) };
   };
 
   const drawn = new Map<number, RoutedEdge>();
@@ -234,16 +235,16 @@ export function compound(ir: GraphIR, flow: Flow): LayoutResult {
     const e = ir.edges[p.edge]!;
     const main = piece(p.lca, p.edge);
     const points = [...p.upFrom.flatMap((s) => piece(s, p.edge).points), ...main.points, ...[...p.upTo].reverse().flatMap((s) => piece(s, p.edge).points)];
-    drawn.set(p.edge, { id: e.id, from: e.from, to: e.to, points: simplify(points), ...(main.label && { label: main.label }) });
+    drawn.set(p.edge, { id: e.id, from: e.from, to: e.to, points: simplify(points), ...(main.labels && { labels: main.labels }) });
   }
   for (const s of scopes)
     for (const l of levels.get(s)!.loops) {
       const p = piece(s, l.edge);
       const e = ir.edges[l.edge]!;
-      drawn.set(l.edge, { id: e.id, from: e.from, to: e.to, points: p.points, ...(p.label && { label: p.label }) });
+      drawn.set(l.edge, { id: e.id, from: e.from, to: e.to, points: p.points, ...(p.labels && { labels: p.labels }) });
     }
   const edges = [...drawn.entries()].sort(([a], [b]) => a - b).map(([, e]) => e);
-  return { geometry: normalize(placeLabels({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges })), diagnostics };
+  return { geometry: normalize(placeLabels(polish({ bands: [], containers: containers.sort((a, b) => a.depth - b.depth), nodes, edges }, ir.edges))), diagnostics };
 }
 
 /** A placed node moved by (dx, dy), its callout with it. */

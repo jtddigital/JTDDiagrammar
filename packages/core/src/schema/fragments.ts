@@ -14,6 +14,7 @@ export const color = { type: 'string', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6
 /** Per-element style overrides (URS-DM-010, URS-DM-014, URS-DM-016, URS-DM-017). */
 export const style = {
   type: 'object',
+  title: 'Style',
   description: 'Colours, lines, text and node sizing (see Styling).',
   additionalProperties: false,
   properties: {
@@ -39,9 +40,43 @@ export const sectionStyles = (sections: readonly string[]) =>
   ({
     type: 'object',
     additionalProperties: false,
-    description: 'Default style per section; each item’s own `style` overrides it field by field.',
+    description: `Default style per section (${sections.map((k) => `\`${k}\``).join(', ')}); each item’s own \`style\` overrides it field by field.`,
     properties: Object.fromEntries(sections.map((s) => [s, { ...style, description: `Default style for every item in \`${s}\`.` }])),
   }) as const;
+
+/**
+ * Style rules by attribute value (URS-DM-023). A key with a list of values (e.g. shapes) only takes
+ * those; a key without one (e.g. owner) takes any value.
+ */
+export const styleBy = (keys: Readonly<Record<string, readonly string[] | undefined>>, description: string) =>
+  ({
+    type: 'object',
+    additionalProperties: false,
+    description,
+    properties: Object.fromEntries(
+      Object.entries(keys).map(([k, values]) => [
+        k,
+        values
+          ? { type: 'object', additionalProperties: false, properties: Object.fromEntries(values.map((v) => [v, style])), description: `Style for every item with this \`${k}\`, by value: ${values.map((v) => `\`${v}\``).join(', ')}.` }
+          : { type: 'object', additionalProperties: style, description: `Style for every item with this \`${k}\`, by value.` },
+      ]),
+    ),
+  }) as const;
+
+/** Extra edge labels, each pinned along the edge or placed automatically (URS-DM-024). */
+export const edgeLabels = {
+  type: 'array',
+  description: 'Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent.',
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['text'],
+    properties: {
+      text: { type: 'string', description: 'Label text; `\\n` breaks lines.' },
+      at: { type: 'number', minimum: 0, maximum: 100, description: 'Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end.' },
+    },
+  },
+} as const;
 
 export const band = {
   type: 'object',
