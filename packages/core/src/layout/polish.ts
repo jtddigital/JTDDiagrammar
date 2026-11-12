@@ -178,8 +178,11 @@ export function polish(g: Content, irEdges: readonly IREdge[]): Content {
   live.forEach((ss, edge) => ss.forEach((seg) => lines.add(segBox(seg), { edge, seg })));
   const others = (edge: number, s: Seg) => [...lines.near(segBox(s))].filter((l) => l.edge !== edge && live[l.edge]!.has(l.seg));
   const crossings = (edge: number, ss: readonly Seg[]) => ss.reduce((n, s) => n + others(edge, s).filter((l) => cross(s, l.seg)).length, 0);
+  // Edges ending at each node, for the free-port check; points are read when needed, as edges change.
+  const atNode = new Map<string, { edge: number; end: 'from' | 'to' }[]>();
+  edges.forEach((e, edge) => (['from', 'to'] as const).forEach((end) => atNode.set(e[end], [...(atNode.get(e[end]) ?? []), { edge, end }])));
   const endsAt = (node: string, edge: number) =>
-    edges.flatMap((e, i) => (i === edge ? [] : [...(e.from === node ? [e.points[0]!] : []), ...(e.to === node ? [e.points.at(-1)!] : [])]));
+    (atNode.get(node) ?? []).filter((x) => x.edge !== edge).map((x) => (x.end === 'from' ? edges[x.edge]!.points[0]! : edges[x.edge]!.points.at(-1)!));
 
   edges.forEach((e, edge) => {
     const [a, b] = [byId.get(e.from), byId.get(e.to)];
@@ -188,7 +191,8 @@ export function polish(g: Content, irEdges: readonly IREdge[]): Content {
     const entry = entryStub(info.get(e.id)?.style, info.get(e.id)?.marker);
     const [taken, sides] = [[...endsAt(a.id, edge), ...endsAt(b.id, edge)], [exitSide(e.points), entrySide(e.points)]];
     const walls = g.containers.filter((c) => contains(c, a) === contains(c, b));
-    const before = crossings(edge, segsOf(e.points));
+    // Counted only once a candidate is clean enough to compare.
+    let before: number | undefined;
     let best: { pts: Point[]; key: number[] } | undefined;
     // Candidates share legs: look each leg up once, and other edges only for legs that are clear.
     const blockedMemo = new Map<string, boolean>();
@@ -227,7 +231,7 @@ export function polish(g: Content, irEdges: readonly IREdge[]): Content {
       if (ss.some((s, i) => blocked(s, i === 0 ? 'a' : i === ss.length - 1 ? 'b' : ''))) continue;
       const nearby = ss.map(linesNear);
       const n = ss.reduce((m, s, i) => m + nearby[i]!.filter((l) => cross(s, l.seg)).length, 0);
-      if (n > before) continue;
+      if (n > (before ??= crossings(edge, segsOf(e.points)))) continue;
       const key = [c.pts.length, n, turned(c), c.len];
       if (!best || less(key, best.key)) best = { pts: c.pts, key };
     }

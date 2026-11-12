@@ -31,14 +31,19 @@ describe('scale', () => {
       for (let i = 0; i < m; i++) nodes[Math.floor(rnd() * n)]!.to.push({ node: `n${Math.floor(rnd() * n)}` });
       return { version: '1', type: 'flowchart', nodes };
     };
-    // A running server has compiled the layout code already: warm up on a smaller graph so JIT time is
-    // not counted, then take the best of three runs so other test workers competing for the CPU do not either.
+    // The budget is the layout's own cost on a running server. So: warm up on a smaller graph, as a
+    // server has already compiled the layout code, and measure this process's CPU time rather than wall
+    // time, which other test workers sharing the CPU would inflate. Best of three.
+    const cpuMs = () => {
+      const u = process.cpuUsage();
+      return (u.user + u.system) / 1000;
+    };
     const doc = graph(200, 300);
     render(graph(40, 60), reg);
     const runs = [0, 1, 2].map(() => {
-      const t = performance.now();
+      const t = cpuMs();
       expect(render(doc, reg).svg).toBeDefined();
-      return performance.now() - t;
+      return cpuMs() - t;
     });
     expect(Math.min(...runs)).toBeLessThan(500);
   });

@@ -285,7 +285,7 @@ Updated with each change. `—` = not started.
 | TYP-003..005 | core/src/diagrams/state/* | core/test/state.test.ts, golden/state-* | |
 | DM-013, LY-012 | core/src/layout/layered/compound.ts, render/svg/containers.ts | core/test/layout.test.ts (containers: *) | Containers inside lanes are not supported (warning). |
 | LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle, state-composite example | Labels kept in compound layouts. |
-| LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~170 ms warm (130 ms of it bend reduction, 0.26); the test warms up and takes the best of three runs, since parallel test workers share the CPU. |
+| LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~170 ms warm (130 ms of it bend reduction, 0.26). The test warms up and takes the best of three runs, measured as process CPU time: wall time under parallel test workers reached 511 ms in CI (0.28). Under three concurrent full suites, best-of-three CPU time was 261–285 ms. |
 | NF-006 | Dockerfile, CI `docker` job | CI | Image built and served in CI (P3 run green). |
 | EXT-009, AI-004 | core/src/registry/diagram-type.ts (AiAssets), core/src/diagrams/flowchart/ai.ts | core/test/ai-assets.test.ts | Subset lint plus a 300-sample property test: only `pattern` errors survive conversion. |
 | AI-001 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | |
