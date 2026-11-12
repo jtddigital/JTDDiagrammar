@@ -9,3 +9,4 @@
 - AI code lives only in `packages/ai`. Tests use the mock Claude client; never call the live API in CI.
 - README images are generated (`pnpm docs:build`), never hand-made. Re-run after any render or type change.
 - Every module has tests; layout/render changes update golden SVGs deliberately, never blindly.
+- PR flow (owner's standing approval, 2026-11-12): Claude opens the PR, watches CI, fixes failures, and merges its own PR (merge commit) once every check is green and there are no unresolved review comments. Each merge to `main` releases the next patch version (URS-NF-014). Use `[skip release]` in the PR title for changes that should not ship.

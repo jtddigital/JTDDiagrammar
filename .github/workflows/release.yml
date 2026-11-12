@@ -4,9 +4,12 @@ name: Release
 # If the release already exists (e.g. drafted on the releases page), the files are attached to it.
 # "Run workflow" builds the given tag; if the tag does not exist yet, it is created on the commit
 # the run was started from (normally main).
+# URS-NF-014: every push to main (a merged PR) publishes the next patch version, unless the commit
+# already has a version tag or its message contains [skip release].
 on:
   push:
     tags: ['v*']
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
@@ -16,12 +19,42 @@ on:
 permissions:
   contents: write
 
+# One release at a time, so two quick merges cannot pick the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+    steps:
+      - name: Choose the version
+        id: pick
+        env:
+          SKIP: ${{ contains(github.event.head_commit.message, '[skip release]') }}
+        run: |
+          if [ "${{ github.event_name }}" != push ] || [ "${{ github.ref_type }}" != branch ]; then
+            echo "tag=${{ inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          tags=$(gh api --paginate "repos/${{ github.repository }}/tags" --jq '.[] | select(.name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) | "\(.name) \(.commit.sha)"')
+          if [ "$SKIP" = true ] || grep -q " ${{ github.sha }}$" <<< "$tags"; then
+            echo "::notice::no release: [skip release], or this commit already has a version tag"; exit 0
+          fi
+          latest=$(cut -d' ' -f1 <<< "$tags" | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          IFS=. read -r major minor patch <<< "${latest:-0.0.0}"
+          echo "tag=v$major.$minor.$((patch + 1))" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: version
+    if: needs.version.outputs.tag != ''
     runs-on: ubuntu-latest
     env:
-      TAG: ${{ inputs.tag || github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.version.outputs.tag }}
     steps:
       - name: Resolve the tag
         id: tag

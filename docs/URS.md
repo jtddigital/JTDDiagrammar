@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.29 (draft) |
+| Version | 0.30 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -214,6 +214,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
 | URS-NF-010 | M | One-command installer for Linux, macOS and Windows that installs the latest GitHub release (or a named one), verifies its SHA-256, works with a private repo given a token, keeps user config across updates, and can update in place. | CI installs a packed release from a stand-in GitHub API on Windows (PowerShell 5.1 and 7) and Linux. macOS shares the Linux script. | T | Implemented |
 | URS-NF-011 | M | One command (`jtddiagrammar`), plus a Start Menu or desktop entry, starts the app on localhost, waits until it is healthy, and opens the browser. Bound to 127.0.0.1 by default. | CI launches the installed app and checks health, web app and render. | T | Implemented |
+| URS-NF-014 | S | Hands-off release: every push to `main` (a merged PR) publishes the next patch version with generated release notes and the release files. It is skipped when the commit already has a version tag or its message contains `[skip release]`. Releases run one at a time. | Version chosen numerically from existing `vX.Y.Z` tags; skip rules; the release job is the NF-012 path. | I | Implemented |
 | URS-NF-013 | M | Windows is the primary install target: the installer works in Windows PowerShell 5.1 and PowerShell 7, needs no admin rights, installs Node.js LTS with winget when it is missing, and adds Start Menu and desktop shortcuts and a PATH entry. `jtddiagrammar uninstall` removes all of them. | CI on Windows with both PowerShells: install, launch, update, uninstall. | T | Implemented |
 | URS-NF-012 | S | Pushing a `v*` tag runs the checks and publishes a GitHub release with the app bundle, its checksum and both installers. | Workflow inspection; bundle built by the same script CI tests. | I | Implemented |
 
@@ -316,6 +317,7 @@ Updated with each change. `—` = not started.
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
 | NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
+| NF-014 | .github/workflows/release.yml (`version` job), CLAUDE.md (PR flow) | Version picking checked locally on sample tags (numeric order, already tagged, skip, no tags). Verified on the first merge after 0.30. | Claude opens and merges its own PRs once CI is green, under the owner's standing approval. |
 | NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Attaches to an existing release (made on the releases page) or creates one; `workflow_dispatch` re-attaches for an existing tag, or creates a missing tag on the selected branch's commit (tag format checked first). Verified on the first tagged release. |
 
 ## 5. Change Impact Assessment (required per change)
@@ -331,6 +333,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.30 | 2026-11-12 | Added NF-014 (every merge to main releases the next patch version), at the owner's request: no manual GitHub steps. |
 | 0.29 | 2026-11-12 | Fix (user report: still "AI service failed (400)" with an object lifecycle on v1.0.5): the lifecycle generation schema has no optional properties (was 17) and no nested optional object. AI-004 target is now 8 optional properties or fewer per type. Upstream errors show the API's own message. |
 | 0.28 | 2026-11-12 | Fix (user report: "AI service failed (400)"): the lifecycle generation schema had grown to 27 optional properties, over the API limit of 24. Step and verdict details are now required with empty values. AI-004 now states the limits, and the AI-asset test enforces them for every type. |
 | 0.27 | 2026-11-12 | Added TYP-009 (Vault lifecycle detail), TYP-010 (role lanes), DM-025 (icons, badges), DM-026 (legend), DM-027 (title block), DM-028 (bar shape); all verified. Lifecycle state type `cancelled`; examples `roles` and `summary`. Vault configuration import (IN-010) stays on the backlog. At the owner's request. |
