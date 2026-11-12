@@ -175,6 +175,22 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0
   },
+  "lifecycle-change-control": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
+  "lifecycle-states-as-rows": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0
+  },
   "random-30": {
     "crossings": 42,
     "overlaps": 0,

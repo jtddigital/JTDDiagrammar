@@ -49,7 +49,8 @@ function convert(n: XNode, s: JsonSchema | undefined, root: JsonSchema): unknown
 
 /**
  * XML source adapter (URS-IN-006): `<diagram version="1" type="…">` with attributes for scalars and
- * child elements for objects (`<style …/>`) and arrays (`<nodes><node …/></nodes>`, any item name).
+ * child elements for objects (`<style …/>`) and arrays (`<nodes><node …/></nodes>`, any item name);
+ * a list of scalars holds one text element per value (`<states><state>draft</state></states>`).
  * Type-agnostic: the registered type's schema decides scalar types and array/object shape.
  * DOCTYPE is refused, so no entity expansion or external entities.
  */
@@ -70,7 +71,11 @@ export function parseXml(text: string, reg: Registry): ParseResult {
 const SINGULAR: Record<string, string> = { nodes: 'node', lanes: 'lane', phases: 'phase', states: 'state', to: 'link', notes: 'note', people: 'person' };
 const attr = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
 
+const text = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 function element(tag: string, v: unknown, indent: string): string {
+  // Items of a list of scalars (e.g. stage states, entry criteria) are elements with text content.
+  if (typeof v !== 'object' || v === null) return `${indent}<${tag}>${text(v)}</${tag}>\n`;
   if (Array.isArray(v)) {
     const item = SINGULAR[tag] ?? 'item';
     return `${indent}<${tag}>\n${v.map((x) => element(item, x, `${indent}  `)).join('')}${indent}</${tag}>\n`;

@@ -17,7 +17,7 @@ The main target is the **cross-functional flowchart** (lanes × phases, as in Vi
 | P6 | Layout quality, styling and themes | **Done** |
 | P7 | Extras: XML/YAML, hints, notes, org chart, refine, provenance, streaming, autocomplete, share links, PNG | **Done** |
 
-Today you can write **state diagrams** (with composite states), **org charts** and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with autocomplete, live preview, pan/zoom, share links and SVG/PNG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
+Today you can write **state diagrams** (with composite states), **org charts**, **object lifecycles** (e.g. Veeva Vault: states grouped by lifecycle stage against the workflows that move a record) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with autocomplete, live preview, pan/zoom, share links and SVG/PNG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
 
 ## Diagram types
 
@@ -572,6 +572,300 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Object lifecycle
+
+`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows, and the lifecycle actions band with user actions.
+
+![Object lifecycle](docs/img/lifecycle-change-control.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "lifecycle",
+  "title": "Change Control lifecycle",
+  "object": "change_control__c",
+  "stages": [
+    {
+      "id": "initiation",
+      "label": "Initiation",
+      "states": [
+        "draft",
+        "in_review"
+      ]
+    },
+    {
+      "id": "execution",
+      "label": "Execution",
+      "states": [
+        "approved",
+        "in_progress"
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "states": [
+        "closed"
+      ]
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "label": "Draft",
+      "stateType": "initial",
+      "to": [
+        {
+          "state": "cancelled",
+          "label": "Cancel"
+        }
+      ]
+    },
+    {
+      "id": "in_review",
+      "label": "In Review",
+      "entryCriteria": [
+        "Impact assessed"
+      ]
+    },
+    {
+      "id": "approved",
+      "label": "Approved",
+      "entryActions": [
+        "Set approval date"
+      ],
+      "to": [
+        {
+          "state": "in_progress",
+          "label": "Start work"
+        }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "label": "In Progress"
+    },
+    {
+      "id": "closed",
+      "label": "Closed",
+      "stateType": "final",
+      "entryActions": [
+        "Lock record"
+      ]
+    },
+    {
+      "id": "cancelled",
+      "label": "Cancelled",
+      "stateType": "final"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "review",
+      "label": "Review & Approval",
+      "steps": [
+        {
+          "id": "r_start",
+          "kind": "start",
+          "state": "draft",
+          "to": [
+            {
+              "step": "r_submit"
+            }
+          ]
+        },
+        {
+          "id": "r_submit",
+          "kind": "stateChange",
+          "target": "in_review",
+          "to": [
+            {
+              "step": "r_review"
+            }
+          ]
+        },
+        {
+          "id": "r_review",
+          "label": "Review change",
+          "role": "QA Reviewer",
+          "state": "in_review",
+          "to": [
+            {
+              "step": "r_ok"
+            }
+          ]
+        },
+        {
+          "id": "r_ok",
+          "kind": "decision",
+          "label": "Approved?",
+          "state": "in_review",
+          "to": [
+            {
+              "step": "r_approve",
+              "label": "Yes"
+            },
+            {
+              "step": "r_return",
+              "label": "No"
+            }
+          ]
+        },
+        {
+          "id": "r_approve",
+          "kind": "stateChange",
+          "target": "approved",
+          "to": [
+            {
+              "step": "r_notify"
+            }
+          ]
+        },
+        {
+          "id": "r_notify",
+          "kind": "notification",
+          "label": "Notify owner",
+          "state": "approved"
+        },
+        {
+          "id": "r_return",
+          "kind": "stateChange",
+          "target": "draft"
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "label": "Closure",
+      "steps": [
+        {
+          "id": "c_start",
+          "kind": "start",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_verify"
+            }
+          ]
+        },
+        {
+          "id": "c_verify",
+          "label": "Verify effectiveness",
+          "role": "Change Owner",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_close"
+            }
+          ]
+        },
+        {
+          "id": "c_close",
+          "kind": "stateChange",
+          "target": "closed",
+          "to": [
+            {
+              "step": "c_end"
+            }
+          ]
+        },
+        {
+          "id": "c_end",
+          "kind": "end",
+          "state": "closed"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### Object lifecycle, states as rows
+
+`type: lifecycle` · `statesAs: rows` with `direction: TB`: states run down the page and workflows across it.
+
+![Object lifecycle, states as rows](docs/img/lifecycle-states-as-rows.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "lifecycle",
+  "title": "Controlled document",
+  "direction": "TB",
+  "statesAs": "rows",
+  "states": [
+    {
+      "id": "draft",
+      "label": "Draft",
+      "stateType": "initial"
+    },
+    {
+      "id": "review",
+      "label": "In Review"
+    },
+    {
+      "id": "effective",
+      "label": "Effective",
+      "entryActions": [
+        "Publish to readers"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Approval",
+      "steps": [
+        {
+          "id": "a_start",
+          "kind": "start",
+          "state": "draft",
+          "to": [
+            {
+              "step": "a_send"
+            }
+          ]
+        },
+        {
+          "id": "a_send",
+          "kind": "stateChange",
+          "target": "review",
+          "to": [
+            {
+              "step": "a_sign"
+            }
+          ]
+        },
+        {
+          "id": "a_sign",
+          "label": "Sign off",
+          "role": "Approver",
+          "state": "review",
+          "to": [
+            {
+              "step": "a_go"
+            }
+          ]
+        },
+        {
+          "id": "a_go",
+          "kind": "stateChange",
+          "target": "effective"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -592,7 +886,9 @@ Diagrams are JSON, XML or YAML documents describing the same model. The tables b
 }
 ```
 
-`exitSide` and `entrySide` (N, E, S, W) choose which side of the box the line leaves and enters by. State diagrams do the same with `"to": [{ "state": "paid", "event": "pay" }]` on each state, including composite and nested ones. Org charts link people through `manager`.
+`exitSide` and `entrySide` (N, E, S, W) choose which side of the box the line leaves and enters by. State diagrams do the same with `"to": [{ "state": "paid", "event": "pay" }]` on each state, including composite and nested ones. Lifecycle workflow steps use `"to": [{ "step": … }]`, and lifecycle states list their user actions as `"to": [{ "state": …, "label": "Cancel" }]`. Org charts link people through `manager`.
+
+**Object lifecycles** (`type: lifecycle`): `states` are listed in lifecycle order, and `stages` group adjacent states under a shared header. `workflows` hold `steps` of kind `start`, `task` (with `role`), `decision`, `notification`, `stateChange` (with `target`) and `end`. Each step sits in the `state` the record is in during that step; a state change sits in its target state. `statesAs: "columns" | "rows"` chooses where states go, while `direction` (`LR`/`TB`) still sets the flow. A *Lifecycle actions* band appears when any state has user actions (`actionsLane` forces it on or off). `entryCriteria` and `entryActions` show under each state's header.
 
 <!-- BEGIN GENERATED: reference (pnpm docs:build) -->
 
@@ -602,7 +898,7 @@ Fields every diagram has:
 |-------|------|----------|-------------|
 | `$schema` | string |  | Optional schema URL for editor tooling. |
 | `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
-| `type` | `flowchart` \| `state` \| `orgchart` | yes | Diagram type. |
+| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` | yes | Diagram type. |
 | `title` | string |  | Title shown above the diagram. |
 | `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
@@ -822,6 +1118,134 @@ People and who they report to. For teams and organisations.
 | `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `people[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
 
+### `lifecycle`
+
+Object states (grouped into lifecycle stages) against the workflows that move a record between them. For Veeva Vault and similar object lifecycles.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `object` | string |  | Object API name, e.g. `change_control__c`; used as the title when there is none. |
+| `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
+| `statesAs` | `columns` \| `rows` |  | States as columns (default) or rows; workflows take the other axis. Independent of `direction`. |
+| `actionsLane` | boolean |  | Show the lifecycle actions band (states and user actions). Default: when any state has user actions. |
+| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
+| `styles.stages` | object |  | Default style for every item in `stages`. |
+| `styles.stages.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.stages.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.stages.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.stages.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.stages.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.stages.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.stages.bold` | boolean |  | Bold text. |
+| `styles.stages.italic` | boolean |  | Italic text. |
+| `styles.stages.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.stages.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.stages.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.stages.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.stages.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.stages.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.states` | object |  | Default style for every item in `states`. |
+| `styles.states.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.states.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.states.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.states.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.states.bold` | boolean |  | Bold text. |
+| `styles.states.italic` | boolean |  | Italic text. |
+| `styles.states.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.states.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.states.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.states.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.states.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.states.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.workflows` | object |  | Default style for every item in `workflows`. |
+| `styles.workflows.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.workflows.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.workflows.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.workflows.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.workflows.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.workflows.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.workflows.bold` | boolean |  | Bold text. |
+| `styles.workflows.italic` | boolean |  | Italic text. |
+| `styles.workflows.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.workflows.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.workflows.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.workflows.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.workflows.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.workflows.height` | number |  | Nodes: fixed height in pixels. |
+| `styles.steps` | object |  | Default style for every item in `steps`. |
+| `styles.steps.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.steps.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.steps.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `styles.steps.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `styles.steps.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `styles.steps.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `styles.steps.bold` | boolean |  | Bold text. |
+| `styles.steps.italic` | boolean |  | Italic text. |
+| `styles.steps.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `styles.steps.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `styles.steps.labelFill` | string |  | Background of edge labels and callouts. |
+| `styles.steps.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `styles.steps.width` | number |  | Nodes: fixed width in pixels. |
+| `styles.steps.height` | number |  | Nodes: fixed height in pixels. |
+| `edgeStyle` | object |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
+| `edgeStyle.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `edgeStyle.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `edgeStyle.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
+| `edgeStyle.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
+| `edgeStyle.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
+| `edgeStyle.fontSize` | number |  | Text size in pixels, 8 to 32. |
+| `edgeStyle.bold` | boolean |  | Bold text. |
+| `edgeStyle.italic` | boolean |  | Italic text. |
+| `edgeStyle.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
+| `edgeStyle.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
+| `edgeStyle.labelFill` | string |  | Background of edge labels and callouts. |
+| `edgeStyle.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
+| `edgeStyle.width` | number |  | Nodes: fixed width in pixels. |
+| `edgeStyle.height` | number |  | Nodes: fixed height in pixels. |
+| `stages` | list of objects |  | Lifecycle stage groups: a header over adjacent states. |
+| `stages[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `stages[].label` | string | yes | Stage name. |
+| `stages[].states` | list of string | yes | Adjacent states, in lifecycle order. |
+| `stages[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `states` | list of objects | yes | Object states, in lifecycle order: one column (or row) each. |
+| `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `states[].label` | string |  | Defaults to the id. |
+| `states[].stateType` | `initial` \| `steady` \| `final` |  | Exactly one state is `initial`. |
+| `states[].entryCriteria` | list of string |  | Shown under the state header. |
+| `states[].entryActions` | list of string |  | Shown under the state header. |
+| `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `states[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
+| `states[].to[].state` | string | yes | Target state id. |
+| `states[].to[].label` | string |  | Action name. |
+| `states[].to[].id` | string |  | Optional; generated when absent. |
+| `states[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `states[].to[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows` | list of objects |  | Workflows: one row (or column) each. |
+| `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].label` | string | yes | Workflow name. |
+| `workflows[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].steps` | list of objects | yes |  |
+| `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `stateChange` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `stateChange` or `end`. |
+| `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, "→ <target>". |
+| `workflows[].steps[].role` | string |  | Who performs a task; shown as a second line. |
+| `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
+| `workflows[].steps[].target` | string |  | For a state change: the state it moves the record to. |
+| `workflows[].steps[].order` | integer |  | Hint: steps in the same cell are placed in ascending order. |
+| `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].steps[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].steps[].to` | list of objects |  | Next steps. |
+| `workflows[].steps[].to[].step` | string | yes | Next step id. |
+| `workflows[].steps[].to[].label` | string |  | Text on the connection. |
+| `workflows[].steps[].to[].exitSide` | `N` \| `E` \| `S` \| `W` |  | Side of this step the line leaves by. |
+| `workflows[].steps[].to[].entrySide` | `N` \| `E` \| `S` \| `W` |  | Side of the next step the line enters by. |
+| `workflows[].steps[].to[].id` | string |  | Optional; generated when absent. |
+| `workflows[].steps[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].steps[].to[].style` | object |  | Overrides `edgeStyle` field by field. |
+
 <!-- END GENERATED: reference -->
 
 **XML** uses attributes for scalars and child elements for objects and lists, with any item name:
@@ -874,7 +1298,7 @@ Every node, edge, lane, phase, note, state, transition and person can take a `st
 "edgeStyle": { "stroke": "#475569", "arrowhead": "open" }
 ```
 
-Sections are `lanes`, `phases`, `nodes` and `notes` for flowcharts; `states` for state diagrams; `people` and `lines` (reporting lines) for org charts.
+Sections are `lanes`, `phases`, `nodes` and `notes` for flowcharts; `states` for state diagrams; `stages`, `states`, `workflows` and `steps` for lifecycles (with `edgeStyle` for connections and user actions); `people` and `lines` (reporting lines) for org charts.
 
 **Standard-size nodes and callouts.** By default a node grows to fit its label. To keep nodes the same size, set `label`:
 
