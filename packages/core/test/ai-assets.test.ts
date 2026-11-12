@@ -1,7 +1,7 @@
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { describe, expect, it } from 'vitest';
 import type { JsonSchema } from '../src/index.ts';
-import { compile, createRegistry, render } from '../src/index.ts';
+import { compile, createRegistry } from '../src/index.ts';
 import { validateSchema } from '../src/validate/schema.ts';
 import { checklist } from './fixture-type.ts';
 
@@ -85,13 +85,9 @@ describe.each(reg.types().map((t) => [t.id, t] as const))('AI assets: %s (URS-EX
     }
   });
 
-  it('refine round trip is lossless: merge(src, fromGenerated(toGenerated(src))) renders identically (URS-AI-013)', () => {
-    for (const ex of t.examples) {
-      const g = t.ai.toGenerated(ex.source);
-      expect(validateSchema(t.ai.schema, g), `${ex.name}: toGenerated matches the generation schema`).toEqual([]);
-      const back = t.ai.merge(ex.source, t.ai.fromGenerated(g));
-      expect(render(back, reg).svg, ex.name).toBe(render(ex.source, reg).svg);
-    }
+  it('authoring schema is self-contained, so refine can send it whole (URS-AI-013)', () => {
+    const refs = JSON.stringify(t.schema).match(/"\$ref":"[^"]*"/g) ?? [];
+    expect(refs.filter((r) => !r.startsWith('"$ref":"#'))).toEqual([]);
   });
 
   it('any schema-valid output converts to authoring-valid shape, except string formats', () => {

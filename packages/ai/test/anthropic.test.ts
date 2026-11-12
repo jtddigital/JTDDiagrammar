@@ -124,6 +124,14 @@ describe('Anthropic client (URS-AI-002, URS-AI-003, URS-AI-008, URS-AI-016)', ()
       expect(calls).toHaveLength(4);
     });
 
+    it('goes straight to instructions when the request opts out of strict (refine, URS-AI-013)', async () => {
+      const { sdk, calls } = strictRefusingSdk(fenced);
+      const client = anthropicClient({ model: 'm', effort: 'high', fallbacks: true, sdk });
+      expect((await client.complete({ ...req, strict: false })).text).toBe('{"a":1}');
+      expect(await client.countTokens({ ...req, strict: false })).toBe(99);
+      expect(calls.map((c) => !!(c.output_config as { format?: unknown }).format)).toEqual([false, false]);
+    });
+
     it('counts tokens the same way', async () => {
       const { sdk, calls } = strictRefusingSdk(fenced);
       expect(await anthropicClient({ model: 'm', effort: 'high', fallbacks: true, sdk }).countTokens(req)).toBe(99);

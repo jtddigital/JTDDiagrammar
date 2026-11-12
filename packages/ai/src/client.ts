@@ -19,8 +19,10 @@ export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 export interface ClaudeRequest {
   system: string;
   messages: readonly Turn[];
-  /** Structured-output schema the reply must match (URS-AI-003). */
+  /** Schema the reply must match (URS-AI-003). */
   schema: JsonSchema;
+  /** `false`: send the schema as instructions, not as a structured-output format; for schemas outside that subset (URS-AI-013). */
+  strict?: boolean;
   effort?: Effort;
 }
 

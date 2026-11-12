@@ -1,6 +1,5 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
-import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
-import { STATE_KINDS, walk, type State, type StateDiagram, type StateLink } from './model.ts';
+import { STATE_KINDS, type State, type StateDiagram, type StateLink } from './model.ts';
 
 const str = { type: 'string' } as const;
 
@@ -69,9 +68,6 @@ function attach(states: State[], ts: readonly Flat[]): State[] {
   });
 }
 
-/** Transitions as flat edges, keeping only ids the author set. */
-const flatTransitions = (states: readonly State[]): Flat[] => [...walk(states)].flatMap(({ state: s }) => (s.to ?? []).map((l) => ({ ...l, from: s.id, to: l.state })));
-
 /** Nest flat states by `parent`. Unknown or cyclic parents fall back to the top level. */
 function nest(flat: Generated['states']): State[] {
   const byId = new Map(flat.map((s) => [s.id, s]));
@@ -128,26 +124,6 @@ export const stateAi: AiAssets<StateDiagram> = {
   schema,
   guide,
   examples,
-  toGenerated: (m) => ({
-    title: m.title ?? '',
-    direction: m.direction ?? 'LR',
-    states: [...walk(m.states)].map(({ state: s, parent }) => {
-      const kind = s.kind ?? 'state';
-      return { id: s.id, kind, label: s.label ?? (kind === 'state' && !s.states?.length ? s.id : ''), ...(parent !== undefined && { parent }), ...pick(s, 'quote') };
-    }),
-    transitions: flatTransitions(m.states).map((t) => pick(t, 'from', 'to', 'event', 'guard', 'action', 'quote')),
-  }),
-  // Restore theme, state styles and transition ids/styles, matched by id and endpoints.
-  merge: (prev, next) => {
-    const states = byId([...walk(prev.states)].map((w) => w.state));
-    const match = edgeMatcher(flatTransitions(prev.states), (t) => t.event);
-    const restyle = (ss: State[]): State[] => ss.map((s) => ({ ...s, ...pick(states.get(s.id) ?? ({} as State), 'style'), ...(s.states && { states: restyle(s.states) }) }));
-    const ts = flatTransitions(next.states).map((t) => {
-      const p = match(t);
-      return { from: t.from, to: t.to, ...pick(t, 'event', 'guard', 'action', 'quote'), ...(p && pick(p, 'id', 'labels', 'style')) };
-    });
-    return { ...next, ...pick(prev, 'theme', 'styles', 'transitionStyle'), states: attach(restyle(next.states), ts) };
-  },
   fromGenerated: (generated) => {
     const g = generated as Generated;
     return { version: '1', type: 'state', title: g.title, direction: g.direction, states: attach(nest(g.states), g.transitions) };

@@ -21,13 +21,27 @@ export const userTurn = (blocks: readonly InputBlock[]): Turn => ({
   content: [...blocks, { type: 'text', text: 'Create the diagram from the material above.' }],
 });
 
+const EDIT_RULES = `You edit diagram source for JTDDiagrammar, a diagram language. The JSON Schema at the end defines the source: every property, with a description of what it does and how it is drawn.
+- Apply the user's instruction. It may change anything the schema allows: content, structure, layout and display options, labels, styles, colours, themes and routing hints.
+- Keep everything the instruction does not ask to change, exactly: ids, order, labels, styles and hints.
+- Use only properties and values the schema defines. Ids follow the schema's patterns, and references use them exactly.
+- If the instruction is unclear, make the most reasonable change that fits it; never ignore it.
+- Return the complete updated source as one JSON object.`;
+
+/**
+ * System prompt for refining one type: rules, the type and its examples in authoring form. The
+ * client appends the authoring schema. Byte-stable per type, so it is cached (URS-AI-013, URS-AI-016).
+ */
+export const editPrompt = (t: DiagramType): string =>
+  [EDIT_RULES, `Diagram type "${t.id}": ${t.description}`, ...t.examples.map((ex) => `Example "${ex.name}": ${ex.description ?? ex.title}\n${JSON.stringify(ex.source)}`)].join('\n\n');
+
 /** Ask for a change to an existing diagram (URS-AI-013). The instruction comes from the user, not from material. */
 export const refineTurn = (current: unknown, instruction: string): Turn => ({
   role: 'user',
   content: [
     {
       type: 'text',
-      text: `Current diagram:\n${JSON.stringify(current)}\n\nChange it as follows:\n<instruction>\n${instruction}\n</instruction>\n\nReturn the complete updated diagram. Keep everything the instruction does not ask to change, including ids.`,
+      text: `Current diagram source:\n${JSON.stringify(current)}\n\nChange it as follows:\n<instruction>\n${instruction}\n</instruction>\n\nReturn the complete updated source.`,
     },
   ],
 });

@@ -74,7 +74,7 @@ export const generateRoutes = ({ reg, pool, ai, claude }: Ctx): Route[] => {
   };
   const common = {
     200: '{ type, reason?, source, valid, diagnostics, attempts, usage: { input, output, cacheRead, cacheWrite, costUsd? }, svg? }. valid is false when repairs ran out. With `Accept: text/event-stream`: `progress` events, then `result` or `error`.',
-    400: 'No usable input, unknown type, or (refine) a structurally invalid source',
+    400: 'No usable input, unknown type, or (refine) an empty instruction',
     413: 'Too many or too large files, too many pages or tokens',
     422: 'The AI declined, or its output was cut off',
     429: 'Too many AI requests from this client (Retry-After)',

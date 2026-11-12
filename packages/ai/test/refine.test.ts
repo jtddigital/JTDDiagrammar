@@ -32,53 +32,62 @@ const refined = {
   edges: [{ from: 'ask', to: 'check' }, { from: 'check', to: 'pay', label: 'Yes' }, { from: 'ask', to: 'pay' }],
 };
 
+/** `current` with an eligibility check before paying: the model edits authoring source directly. */
+const edited = {
+  ...current,
+  nodes: [
+    { id: 'ask', label: 'Request', style: { fill: '#ff0000' }, to: [{ node: 'check' }, { node: 'pay', exitSide: 'S', style: { stroke: '#00ff00' } }] },
+    { id: 'check', shape: 'decision', label: 'Eligible?', to: [{ node: 'pay', label: 'Yes' }] },
+    { id: 'pay', label: 'Pay' },
+  ],
+};
+
 describe('refine (URS-AI-013)', () => {
-  it('sends the current diagram and the instruction, and keeps styles, hints and theme', async () => {
-    const client = new MockClaude([{ json: refined }]);
+  it('sends the authoring source, the instruction, the full authoring schema and the examples', async () => {
+    const client = new MockClaude([{ json: edited }]);
     const r = await refine({ source: current, instruction: 'Add an eligibility check before paying' }, opts(client));
-    expect(r).toMatchObject({ type: 'flowchart', valid: true, attempts: 1 });
-    const sent = JSON.stringify(client.requests[0]!.messages);
+    expect(r).toMatchObject({ type: 'flowchart', valid: true, attempts: 1, source: edited, diagnostics: [] });
+    const req = client.requests[0]!;
+    const sent = JSON.stringify(req.messages);
     expect(sent).toContain('Add an eligibility check before paying');
-    expect(sent).toContain('\\"id\\":\\"ask\\"');
-    const src = r.source as typeof current;
-    expect(src.theme).toBe('dark');
-    expect(src.nodes.find((n) => n.id === 'ask')!.style).toEqual({ fill: '#ff0000' });
-    const ask = src.nodes.find((n) => n.id === 'ask') as { to: { node: string }[] };
-    expect(ask.to.map((l) => l.node)).toEqual(['check', 'pay']);
-    expect(ask.to.find((l) => l.node === 'pay')).toMatchObject({ exitSide: 'S', style: { stroke: '#00ff00' } });
+    expect(sent).toContain('\\"fill\\":\\"#ff0000\\"');
+    // The authoring schema is outside the structured-output subset, so it goes as instructions.
+    expect(req).toMatchObject({ schema: reg.type('flowchart')!.schema, strict: false });
+    for (const ex of reg.type('flowchart')!.examples) expect(req.system).toContain(JSON.stringify(ex.source));
   });
 
-  it('can switch lifecycle display options such as role lanes, and keeps the rest', async () => {
+  it('can change anything the language allows, e.g. lifecycle role lanes and owner colours', async () => {
     const cc = reg.type('lifecycle')!.examples[0]!.source as Record<string, unknown>;
-    const lifecycle = reg.type('lifecycle')!.ai;
-    const g = lifecycle.toGenerated(cc) as { display: Record<string, unknown>; workflows: { roles: string[] }[] };
-    expect(g.display).toEqual({ direction: 'LR', statesAs: 'columns', view: 'detailed', roleLanes: false, legend: true });
-    const reply = { ...g, display: { ...g.display, roleLanes: true }, workflows: g.workflows.map((w, i) => ({ ...w, roles: i ? [] : ['Change Owner'] })) };
-    const r = await refine({ source: cc, instruction: 'Split the workflows into role lanes' }, opts(new MockClaude([{ json: reply }])));
-    expect(r.valid).toBe(true);
-    expect(r.diagnostics).toEqual([]);
-    const src = r.source as { roleLanes?: boolean; styleBy?: unknown; info?: unknown; workflows: { roles?: string[] }[] };
-    expect(src).toMatchObject({ roleLanes: true, styleBy: cc.styleBy, info: cc.info });
-    expect(src.workflows.map((w) => w.roles)).toEqual([['Change Owner'], undefined]);
+    const reply = { ...cc, roleLanes: true, styleBy: { owner: { 'QA Reviewer': { fill: '#dbeafe' } } } };
+    const r = await refine({ source: cc, instruction: 'Split workflows into role lanes and make QA blue' }, opts(new MockClaude([{ json: reply }])));
+    expect(r).toMatchObject({ valid: true, source: reply, diagnostics: [] });
+    expect(r.svg).toContain('#dbeafe');
+  });
+
+  it('repairs a reply that breaks the authoring schema', async () => {
+    const client = new MockClaude([{ json: { ...edited, direction: 'sideways' } }, { json: edited }]);
+    const r = await refine({ source: current, instruction: 'x' }, opts(client));
+    expect(r).toMatchObject({ valid: true, attempts: 2, source: edited });
+    expect(JSON.stringify(client.requests[1]!.messages.at(-1))).toContain('/direction');
   });
 
   it('warns when the instruction changed nothing', async () => {
-    const r = await refine({ source: current, instruction: 'Make it blue' }, opts(new MockClaude([{ json: reg.type('flowchart')!.ai.toGenerated(current) }])));
+    const r = await refine({ source: current, instruction: 'Make it blue' }, opts(new MockClaude([{ json: { ...current } }])));
     expect(r.valid).toBe(true);
     expect(r.diagnostics.map((d) => [d.severity, d.code])).toEqual([['warning', 'ai.unchanged']]);
   });
 
-  it('refuses empty instructions and structurally invalid sources', async () => {
+  it('refuses empty instructions and unknown types', async () => {
     const client = new MockClaude([]);
     expect(await code(refine({ source: current, instruction: '  ' }, opts(client)))).toBe('ai.input');
-    expect(await code(refine({ source: { ...current, nodes: 'x' }, instruction: 'x' }, opts(client)))).toBe('ai.input');
     expect(await code(refine({ source: { version: '1', type: 'gantt' }, instruction: 'x' }, opts(client)))).toBe('ai.input');
   });
 
-  it('accepts semantically invalid sources, since fixing them can be the instruction', async () => {
-    const broken = { ...current, nodes: [{ id: 'ask', to: [{ node: 'ghost' }] }] };
-    const r = await refine({ source: broken, instruction: 'fix the dangling edge' }, opts(new MockClaude([{ json: refined }])));
-    expect(r.valid).toBe(true);
+  it('accepts invalid sources, since fixing them can be the instruction', async () => {
+    for (const broken of [{ ...current, nodes: [{ id: 'ask', to: [{ node: 'ghost' }] }] }, { ...current, nodes: 'x' }]) {
+      const r = await refine({ source: broken, instruction: 'fix it' }, opts(new MockClaude([{ json: edited }])));
+      expect(r.valid).toBe(true);
+    }
   });
 });
 

@@ -58,12 +58,6 @@ describe('section styles (URS-DM-015)', () => {
     const doc = parseXml('<diagram version="1" type="flowchart"><styles><nodes fill="#eff6ff" lineWidth="2"/></styles><nodes><node id="a"/></nodes></diagram>', reg);
     expect(ir(doc.value).nodes[0]!.style).toEqual({ fill: '#eff6ff', lineWidth: 2 });
   });
-
-  it('survives AI refinement', () => {
-    const t = reg.type('flowchart')!;
-    const prev = t.ai.fromGenerated(t.ai.toGenerated(flow)) as typeof flow;
-    expect(t.ai.merge({ ...flow }, prev)).toMatchObject({ styles: flow.styles });
-  });
 });
 
 const one = (style: object, to: object[] = [{ node: 'b' }], back: object[] = []) => ({ version: '1', type: 'flowchart', nodes: [{ id: 'a', label: 'Approve the purchase order', style, to }, { id: 'b', to: back }] });
