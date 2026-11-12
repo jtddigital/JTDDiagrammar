@@ -1,9 +1,9 @@
-import { compile, error, hasErrors, validateSchema, warning, type Diagnostic, type DiagramType, type Registry } from '@jtd/core';
+import { compile, error, hasErrors, validateSchema, warning, type Diagnostic, type DiagramType, type JsonSchema, type Registry } from '@jtd/core';
 import type { ClaudeClient, ClaudeReply, InputBlock, Turn, Usage } from './client.ts';
 import { AiError } from './errors.ts';
 import { ingest, type IngestLimits, type InputFile } from './ingest/files.ts';
 import { cost, type Price } from './pricing.ts';
-import { refineTurn, repairTurn, selection, systemPrompt, userTurn } from './prompt.ts';
+import { editPrompt, refineTurn, repairTurn, selection, systemPrompt, userTurn } from './prompt.ts';
 
 export interface GenerateOptions {
   registry: Registry;
@@ -88,21 +88,27 @@ async function pickType(blocks: readonly InputBlock[], o: GenerateOptions, meter
   return { type: o.registry.type(choice.type) ?? types[0]!, reason: choice.reason };
 }
 
+/** What the model is asked for: prompt, reply schema, and whether that schema can be enforced as a structured output. */
+interface Task {
+  system: string;
+  schema: JsonSchema;
+  strict?: boolean;
+}
+
 /**
- * Shared loop: check the token budget, generate under the type's schema, convert with `finish`,
+ * Shared loop: check the token budget, ask under the task's schema, convert with `finish`,
  * validate fully, repair until valid or out of attempts. Returns the best attempt either way.
  */
-async function attempts(t: DiagramType, first: Turn, o: GenerateOptions, meter: Meter, req: Common, finish: (generated: unknown) => unknown) {
-  const system = systemPrompt(t);
+async function attempts(task: Task, first: Turn, o: GenerateOptions, meter: Meter, req: Common, finish: (generated: unknown) => unknown) {
   const messages: Turn[] = [first];
-  const tokens = await o.client.countTokens({ system, messages, schema: t.ai.schema });
+  const tokens = await o.client.countTokens({ ...task, messages });
   if (tokens > o.maxInputTokens) throw new AiError('limit.tokens', `the material is ${tokens} tokens; the limit is ${o.maxInputTokens}`);
 
   let best: { source: unknown; diagnostics: Diagnostic[]; svg?: string; errors: number } | undefined;
   const total = 1 + o.maxRepairs;
   for (let attempt = 1; attempt <= total; attempt++) {
     req.onProgress?.({ stage: attempt === 1 ? 'generate' : 'repair', attempt });
-    const reply = await o.client.complete({ system, messages, schema: t.ai.schema }, req.signal);
+    const reply = await o.client.complete({ ...task, messages }, req.signal);
     meter.add(reply);
     checkStop(reply);
     req.onProgress?.({ stage: 'validate', attempt });
@@ -110,7 +116,7 @@ async function attempts(t: DiagramType, first: Turn, o: GenerateOptions, meter: 
     try {
       const generated: unknown = JSON.parse(reply.text);
       // Checked here too: a schema the API refused to compile is sent as instructions, not enforced (URS-AI-004).
-      const shape = validateSchema(t.ai.schema, generated);
+      const shape = validateSchema(task.schema, generated);
       if (shape.length) r = { source: undefined, diagnostics: shape.map((d) => ({ ...d, message: `generated output: ${d.message}` })) };
       else {
         const source = finish(generated);
@@ -144,31 +150,30 @@ export async function generate(req: GenerateRequest, o: GenerateOptions): Promis
   const blocks = await ingest(req.files, req.text, o.limits);
   const meter = new Meter(o.prices);
   const chosen = req.type === 'auto' ? await pickType(blocks, o, meter, req) : { type: o.registry.type(req.type) ?? fail(`unknown type '${req.type}'`) };
-  const run = await attempts(chosen.type, userTurn(blocks), o, meter, req, (g) => chosen.type.ai.fromGenerated(g));
-  return result(chosen.type, run, meter, 'reason' in chosen ? chosen.reason : undefined);
+  const t = chosen.type;
+  const run = await attempts({ system: systemPrompt(t), schema: t.ai.schema }, userTurn(blocks), o, meter, req, (g) => t.ai.fromGenerated(g));
+  return result(t, run, meter, 'reason' in chosen ? chosen.reason : undefined);
 }
 
 /**
- * Existing diagram + instruction → updated, validated diagram (URS-AI-013). The source must be
- * structurally valid; fields the generation schema cannot express are carried over by `merge`.
+ * Existing diagram + instruction → updated, validated diagram (URS-AI-013). The model edits the
+ * authoring source itself, with the full authoring schema and the type's examples, so any change the
+ * language allows is possible. That schema is outside the structured-output subset, so it is sent as
+ * instructions and the reply is validated and repaired like any other.
  */
 export async function refine(req: RefineRequest, o: GenerateOptions): Promise<GenerateResult> {
   if (!req.instruction.trim()) fail('say what to change');
   const c = compile(req.source, o.registry);
   if (!c.type) fail(c.diagnostics[0]?.message ?? 'not a diagram');
-  if (c.diagnostics.some((d) => d.code.startsWith('schema.'))) fail("fix the diagram's structure first; refine needs a schema-valid source");
   const t = c.type!;
   const meter = new Meter(o.prices);
-  const before = t.ai.toGenerated(req.source);
-  const run = await attempts(t, refineTurn(before, req.instruction), o, meter, req, (g) => t.ai.merge(req.source, t.ai.fromGenerated(g)));
+  const run = await attempts({ system: editPrompt(t), schema: t.schema, strict: false }, refineTurn(req.source, req.instruction), o, meter, req, (g) => g);
   const r = result(t, run, meter);
-  // Say so rather than fail silently, e.g. when the instruction asks for something only the source can set.
-  if (run.valid && canonical(t.ai.toGenerated(run.best.source)) === canonical(before))
-    r.diagnostics = [...r.diagnostics, warning('ai.unchanged', 'the AI made no change; styles, colours and theme are set in the source, not by the AI')];
+  if (run.valid && canonical(run.best.source) === canonical(req.source)) r.diagnostics = [...r.diagnostics, warning('ai.unchanged', 'the AI made no change')];
   return r;
 }
 
-/** JSON with sorted keys, for comparing generation shapes. */
+/** JSON with sorted keys, for comparing sources. */
 const canonical = (v: unknown): string =>
   JSON.stringify(v, (_k, x: unknown) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1))) : x));
 

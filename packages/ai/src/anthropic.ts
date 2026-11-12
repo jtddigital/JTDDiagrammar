@@ -59,10 +59,10 @@ export function anthropicClient(opts: AnthropicOptions): ClaudeClient {
     messages: req.messages as Anthropic.Beta.BetaMessageParam[],
     output_config: { effort: req.effort ?? opts.effort, ...(strict && { format: { type: 'json_schema' as const, schema: req.schema as Record<string, unknown> } }) },
   });
-  /** Strict first; on a refused schema, once more without it. */
+  /** Strict first (unless the request opts out); on a refused schema, once more without it. */
   const withFallback = async <T>(req: ClaudeRequest, run: (strict: boolean) => Promise<T>): Promise<T> => {
     try {
-      if (!refused.has(req.schema)) {
+      if (req.strict !== false && !refused.has(req.schema)) {
         try {
           return await run(true);
         } catch (e) {

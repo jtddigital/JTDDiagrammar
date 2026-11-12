@@ -133,7 +133,7 @@ Drop `lanes`/`phases` and the same file is a plain flowchart.
 ```
 `toIR` turns composite states into containers and builds labels from the `event [guard] / action` parts. Transitions are nested under their source state (`to`), at any depth; `transitionStyle` is their default style.
 
-Both types flatten their nested connections with one helper (`linksOf`, `transitionsOf`). Each connection keeps its source, a generated id (`edge:<source>:<n>` unless the author set `id`) and its JSON Pointer (`/nodes/2/to/0`), so diagnostics point at the right entry. AI generation keeps flat `edges`/`transitions` (`from`, `to`), which are easier for a model to produce reliably; `fromGenerated` nests them and `toGenerated` flattens them again (URS-AI-004).
+Both types flatten their nested connections with one helper (`linksOf`, `transitionsOf`). Each connection keeps its source, a generated id (`edge:<source>:<n>` unless the author set `id`) and its JSON Pointer (`/nodes/2/to/0`), so diagnostics point at the right entry. AI generation keeps flat `edges`/`transitions` (`from`, `to`), which are easier for a model to produce reliably; `fromGenerated` nests them (URS-AI-004). Refine edits the authoring source directly (URS-AI-013).
 
 ## 6. Layout
 One engine at first, `layered` (Sugiyama-style), with optional constraint modules. Types turn features on by populating the IR. Engines never check the type.

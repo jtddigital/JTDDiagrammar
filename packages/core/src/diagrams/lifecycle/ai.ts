@@ -1,4 +1,3 @@
-import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
 import type { AiAssets } from '../../registry/diagram-type.ts';
 import {
   COMPLETIONS,
@@ -102,11 +101,6 @@ interface G {
 const text = <K extends string>(k: K, v: string | undefined) => (v ? ({ [k]: v } as Record<K, string>) : {});
 const list = <K extends string, T>(k: K, v: T[] | undefined) => (v?.length ? ({ [k]: v } as Record<K, T[]>) : {});
 
-/** Connections, verdicts and user actions as from/to pairs; only author-set ids are kept. */
-const linksOf = (m: Lifecycle) => (m.workflows ?? []).flatMap((w) => w.steps.flatMap((s) => (s.to ?? []).map((l) => ({ ...l, from: s.id, to: l.step }))));
-const verdictsOf = (m: Lifecycle) => (m.workflows ?? []).flatMap((w) => w.steps.flatMap((s) => (s.verdicts ?? []).map((v) => ({ ...v, task: s.id, to: v.step }))));
-const actionsOf = (m: Lifecycle) => m.states.flatMap((s) => (s.to ?? []).map((a) => ({ ...a, from: s.id, to: a.state })));
-
 const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault object).
 - "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; a cancelled or withdrawn end state is "cancelled"; the rest "steady". Put entry criteria and entry actions on the state they belong to.
 - "display" sets how the chart is drawn; keep the defaults unless asked. "roleLanes" splits each workflow into bands by step owner (e.g. Owner, Approver); a workflow's "roles" orders them.
@@ -158,33 +152,6 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
   schema,
   guide,
   examples,
-  toGenerated: (m) => ({
-    title: m.title ?? m.object ?? '',
-    display: { ...DISPLAY, ...pick(m, 'direction', 'statesAs', 'view', 'roleLanes', 'legend') },
-    stages: (m.stages ?? []).map((g) => pick(g, 'id', 'label', 'states')),
-    states: m.states.map((s) => ({ id: s.id, label: s.label ?? s.id, stateType: s.stateType ?? 'steady', entryCriteria: s.entryCriteria ?? [], entryActions: s.entryActions ?? [], quote: s.quote ?? '' })),
-    workflows: (m.workflows ?? []).map((w) => ({ id: w.id, label: w.label, startState: w.start?.state ?? '', startAction: w.start?.action ?? '', startBy: w.start?.by ?? 'user', roles: w.roles ?? [] })),
-    steps: (m.workflows ?? []).flatMap((w) =>
-      w.steps.map((s) => ({
-        id: s.id,
-        workflow: w.id,
-        kind: s.kind ?? 'task',
-        label: s.label ?? '',
-        owner: s.owner ?? '',
-        state: s.state ?? '',
-        target: s.target ?? '',
-        fields: s.fields ?? [],
-        signature: s.signature ?? false,
-        due: s.due ?? '',
-        completion: s.completion ?? 'none',
-        quote: s.quote ?? '',
-      })),
-    ),
-    connections: linksOf(m).map((l) => ({ from: l.from, to: l.to, label: l.label ?? '', quote: l.quote ?? '' })),
-    verdicts: verdictsOf(m).map((v) => ({ task: v.task, name: v.name, to: v.to, signature: v.signature ?? false, reasons: v.reasons ?? [], comment: v.comment ?? false, quote: v.quote ?? '' })),
-    userActions: actionsOf(m).map((a) => ({ from: a.from, to: a.to, label: a.label ?? '', by: a.by ?? 'user', after: a.after ?? '', quote: a.quote ?? '' })),
-    sharedActions: (m.sharedActions ?? []).map((a) => ({ to: a.state, label: a.label ?? '', from: a.from ?? [], except: a.except ?? [], quote: a.quote ?? '' })),
-  }),
   // Steps from unknown workflows, and connections, verdicts or actions from unknown sources, are dropped.
   fromGenerated: (generated) => {
     const g = generated as G;
@@ -242,45 +209,6 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
       states,
       ...(sharedActions.length && { sharedActions }),
       ...(workflows.length && { workflows }),
-    };
-  },
-  // Restore what generation cannot express: theme and lane options, title block, security, styles, main path, order and side hints, author-set ids.
-  merge: (prev, next) => {
-    const [stages, states, workflows] = [byId(prev.stages ?? []), byId(prev.states), byId(prev.workflows ?? [])];
-    const steps = byId((prev.workflows ?? []).flatMap((w) => w.steps));
-    const link = edgeMatcher(linksOf(prev), (l) => l.label);
-    const verdict = edgeMatcher(
-      verdictsOf(prev).map((v) => ({ ...v, from: v.task })),
-      (v) => v.name,
-    );
-    const action = edgeMatcher(actionsOf(prev), (a) => a.label);
-    const shared = edgeMatcher(
-      (prev.sharedActions ?? []).map((a) => ({ ...a, from: '', to: a.state })),
-      (a) => a.label,
-    );
-    const linkLook = ['id', 'labels', 'exitSide', 'entrySide', 'main', 'style'] as const;
-    return {
-      ...next,
-      ...pick(prev, 'theme', 'object', 'info', 'actionsLane', 'styles', 'edgeStyle', 'styleBy'),
-      ...(next.stages && { stages: next.stages.map((g) => ({ ...g, ...pick(stages.get(g.id) ?? ({} as LcStage), 'style') })) }),
-      states: next.states.map((s) => ({
-        ...s,
-        ...pick(states.get(s.id) ?? ({} as LcState), 'security', 'style'),
-        ...(s.to && { to: s.to.map((a) => ({ ...a, ...pick(action({ ...a, from: s.id, to: a.state }) ?? ({} as LcAction), 'id', 'labels', 'main', 'style') })) }),
-      })),
-      ...(next.sharedActions && { sharedActions: next.sharedActions.map((a) => ({ ...a, ...pick(shared({ ...a, from: '', to: a.state }) ?? ({} as LcSharedAction), 'id', 'labels', 'by', 'after', 'main', 'style') })) }),
-      ...(next.workflows && {
-        workflows: next.workflows.map((w) => ({
-          ...w,
-          ...pick(workflows.get(w.id) ?? ({} as LcWorkflow), 'style'),
-          steps: w.steps.map((s) => ({
-            ...s,
-            ...pick(steps.get(s.id) ?? ({} as LcStep), 'order', 'style'),
-            ...(s.to && { to: s.to.map((l) => ({ ...l, ...pick(link({ ...l, from: s.id, to: l.step }) ?? ({} as LcLink), ...linkLook) })) }),
-            ...(s.verdicts && { verdicts: s.verdicts.map((v) => ({ ...v, ...pick(verdict({ ...v, task: s.id, from: s.id, to: v.step }) ?? ({} as LcVerdict), ...linkLook) })) }),
-          })),
-        })),
-      }),
     };
   },
 };

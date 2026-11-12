@@ -18,10 +18,6 @@ export interface Example {
 export interface AiAssets<M = unknown> {
   schema: JsonSchema;
   fromGenerated(generated: unknown): M;
-  /** Authoring source → generation shape, for refining an existing diagram (URS-AI-013). */
-  toGenerated(model: M): unknown;
-  /** Carry fields the generation schema cannot express (styles, hints, notes) from `previous` onto `next`, matched by id. */
-  merge(previous: M, next: M): M;
   /** Type-specific instructions appended to the system prompt. */
   guide: string;
   /** Few-shot pairs: material → generation-schema output. */

@@ -1,7 +1,6 @@
 import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
-import { byId, pick } from '../../ai-merge.ts';
 import { styled } from '../section-styles.ts';
 import type { OrgChart, Person } from './model.ts';
 import { orgchartSchema } from './schema.ts';
@@ -23,7 +22,7 @@ const toIR = (m: OrgChart): GraphIR => ({
   ...(m.title !== undefined && { title: m.title }),
   ...(m.theme && { theme: m.theme }),
   direction: m.direction ?? 'TB',
-  nodes: m.people.map((p, i) => ({ id: p.id, shape: 'card', label: p.title ? `${p.name}\n${p.title}` : p.name, ...styled(m.styles, 'people', p.style), ...pick(p, 'quote'), src: pointer('people', i) })),
+  nodes: m.people.map((p, i) => ({ id: p.id, shape: 'card', label: p.title ? `${p.name}\n${p.title}` : p.name, ...styled(m.styles, 'people', p.style), ...(p.quote !== undefined && { quote: p.quote }), src: pointer('people', i) })),
   edges: m.people.flatMap((p, i) => (p.manager === undefined ? [] : [{ id: `edge:${i}`, from: p.manager, to: p.id, marker: 'none' as const, ...styled(m.styles, 'lines', undefined), src: pointer('people', i, 'manager') }])),
   containers: [],
 });
@@ -76,12 +75,6 @@ const ai: AiAssets<OrgChart> = {
   fromGenerated: (g) => {
     const { title, people } = g as { title: string; people: Person[] };
     return { version: '1', type: 'orgchart', title, people };
-  },
-  toGenerated: (m) => ({ title: m.title ?? '', people: m.people.map((p) => pick(p, 'id', 'name', 'title', 'manager', 'quote')) }),
-  // Restore theme, direction and styles by person id.
-  merge: (prev, next) => {
-    const people = byId(prev.people);
-    return { ...next, ...pick(prev, 'theme', 'direction', 'styles'), people: next.people.map((p) => ({ ...p, ...pick(people.get(p.id) ?? ({} as Person), 'style') })) };
   },
   guide: `Diagram type: orgchart.
 - One entry per person or role named in the material; "name" is the person (or the role if no name is given), "title" their role.

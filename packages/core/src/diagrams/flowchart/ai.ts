@@ -1,6 +1,5 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
 import type { FlowBand, Flowchart, FlowLink, FlowNode } from './model.ts';
-import { byId, edgeMatcher, pick } from '../../ai-merge.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
 const id = { type: 'string', description: 'Short unique id: lowercase letters, digits, "_" or "-", starting with a letter.' } as const;
@@ -70,9 +69,6 @@ function nestEdges(nodes: readonly Omit<FlowNode, 'to'>[], edges: readonly (Gene
   });
 }
 
-/** Connections as flat edges, keeping only ids the author set. */
-const flatEdges = (m: Pick<Flowchart, 'nodes'>) => m.nodes.flatMap((n) => (n.to ?? []).map((l) => ({ ...l, from: n.id, to: l.node })));
-
 const guide = `Diagram type: flowchart.
 - Nodes: "terminator" for start and end, "process" for steps, "decision" for questions (label as a question; label each outgoing edge with its answer), "document" for documents produced or used, "data" for inputs and outputs, "subprocess" for steps that are processes of their own, "connector" only to link distant parts.
 - Edges follow the order in which work happens. Every node except the start should be reachable.
@@ -110,37 +106,6 @@ export const flowchartAi: AiAssets<Flowchart> = {
   schema,
   guide,
   examples,
-  toGenerated: (m) => ({
-    title: m.title ?? '',
-    direction: m.direction ?? 'LR',
-    ...(m.lanes && { lanes: m.lanes.map((b) => pick(b, 'id', 'label')) }),
-    ...(m.phases && { phases: m.phases.map((b) => pick(b, 'id', 'label')) }),
-    nodes: m.nodes.map((n) => ({ id: n.id, shape: n.shape ?? 'process', label: n.label ?? n.id, ...pick(n, 'owner', 'lane', 'phase', 'quote') })),
-    edges: flatEdges(m).map((e) => pick(e, 'from', 'to', 'label', 'quote')),
-  }),
-  // Restore what generation cannot express: theme, styles, order and side hints, edge ids, notes on surviving nodes.
-  merge: (prev, next) => {
-    const nodes = byId(prev.nodes);
-    const bands = byId([...(prev.lanes ?? []), ...(prev.phases ?? [])]);
-    const match = edgeMatcher(flatEdges(prev), (e) => e.label);
-    const band = (b: FlowBand) => ({ ...b, ...pick(bands.get(b.id) ?? ({} as FlowBand), 'style') });
-    const kept = new Set(next.nodes.map((n) => n.id));
-    const notes = (prev.notes ?? []).filter((n) => n.for === undefined || kept.has(n.for));
-    return {
-      ...next,
-      ...pick(prev, 'theme', 'styles', 'edgeStyle', 'styleBy'),
-      ...(next.lanes && { lanes: next.lanes.map(band) }),
-      ...(next.phases && { phases: next.phases.map(band) }),
-      nodes: nestEdges(
-        next.nodes.map(({ to: _to, ...n }) => ({ ...n, ...pick(nodes.get(n.id) ?? ({} as FlowNode), 'order', 'style') })),
-        flatEdges(next).map((e) => {
-          const p = match(e);
-          return { from: e.from, to: e.to, ...pick(e, 'label', 'quote'), ...(p && pick(p, 'id', 'labels', 'exitSide', 'entrySide', 'style')) };
-        }),
-      ),
-      ...(notes.length && { notes }),
-    };
-  },
   // Empty lanes/phases arrays are dropped: authoring requires at least one entry.
   fromGenerated: (generated) => {
     const g = generated as Generated;

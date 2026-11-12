@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.32 (draft) |
+| Version | 0.33 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -179,7 +179,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. | Log scrub test; bundle grep in CI. | T | Verified |
 | URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Verified |
 | URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Verified |
-| URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction. The result goes through URS-AI-005/006. Display options a type can be asked to change (e.g. lifecycle direction, states as rows, summary view, role lanes, legend) are in its generation schema; a refine that changes nothing returns warning `ai.unchanged`, shown in the web panel. | Mock test. | T | Verified |
+| URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction, with anything the language allows (content, structure, layout and display options, styles, colours, themes, hints). The model edits the authoring source directly and is given the type's full authoring schema (with every property's description) and its examples; that schema is sent as instructions, not as a structured-output format. The result goes through URS-AI-005/006. A source with errors can be refined (fixing it can be the instruction). A refine that changes nothing returns warning `ai.unchanged`, shown in the web panel. | Mock test. | T | Verified |
 | URS-AI-014 | S | Provenance: generated nodes and edges may carry a `source` quote from the input. This is a schema field, because the Citations API cannot be combined with structured outputs. | Fixture test. | T | Verified |
 | URS-AI-015 | S | Staged progress events: ingest → generate → validate → repair → render. | Event-order test. | T | Verified |
 | URS-AI-016 | S | Prompt caching: the stable prefix (system prompt, type guidance, examples) is cached and kept free of volatile data. | Live check: `cache_read_input_tokens > 0` on a repeat call. | T | Verified |
@@ -301,7 +301,7 @@ Updated with each change. `—` = not started.
 | AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts, `pnpm ai:live` (prompt injection case) | Structural defences tested. Live run 2026-11-11: injected title and `<script>` node ignored, output schema-valid, SVG has no unescaped script. One live fixture so far. |
 | AI-012 | no logging of bodies or material | api/test/api.test.ts (log capture) | Nothing is stored, so retention is moot. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
-| AI-013, API-013 | ai/src/generate.ts (refine), DiagramType.ai.toGenerated/merge, web/src/generate/GeneratePanel.tsx, api/src/routes/generate.ts | ai/test/refine.test.ts (lifecycle role lanes, ai.unchanged), core/test/ai-assets.test.ts (lossless round trip), api/test/generate.test.ts | Styles, hints, notes, ids and theme carried over; display options editable. |
+| AI-013, API-013 | ai/src/generate.ts (refine), ai/src/prompt.ts (editPrompt), ai/src/anthropic.ts (`strict: false`), web/src/generate/GeneratePanel.tsx, api/src/routes/generate.ts | ai/test/refine.test.ts (schema and examples sent, any change incl. lifecycle role lanes and colours, repair, ai.unchanged, invalid sources), ai/test/anthropic.test.ts, core/test/ai-assets.test.ts (self-contained authoring schema), api/test/generate.test.ts | Replaces the toGenerated/merge round trip, which could only change what the generation schema expressed. |
 | AI-014 | quote fields → IR → geometry → SVG `<title>` | core/test/styles.test.ts | Generation schemas ask for short verbatim excerpts. |
 | AI-015, API-014 | generate/refine `onProgress`; SSE in api/src/routes/generate.ts | ai/test/refine.test.ts, api/test/generate.test.ts | Stages: ingest, select, generate, validate, repair. |
 | AI-017 | ai/src/pricing.ts (`AI_PRICES` override) | ai/test/refine.test.ts | Priced per reply by the serving model; undefined if any model is unpriced. |
@@ -333,6 +333,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.33 | 2026-11-12 | At the owner's request ("refine should be able to do anything I ask, with full context of the schemas and instructions"): refine edits the authoring source with the full authoring schema and examples; the toGenerated/merge round trip is removed (AI-013). |
 | 0.32 | 2026-11-12 | Fix (user report: refine "add role lanes" did nothing): lifecycle display options and workflow role order are in the generation schema, so refine can change them; a refine that changes nothing warns `ai.unchanged` (AI-013). |
 | 0.31 | 2026-11-12 | Fix (user report on v1.0.6: "The compiled grammar is too large"): a schema the API refuses to compile is sent as instructions instead of as a structured-output format, and replies are checked against the generation schema before conversion (AI-004). |
 | 0.30 | 2026-11-12 | Added NF-014 (every merge to main releases the next patch version), at the owner's request: no manual GitHub steps. |

@@ -90,8 +90,8 @@ describe('without AI credentials (URS-API-015, URS-API-016, URS-AI-010)', () => 
 
 describe('POST /v1/refine (URS-API-013)', () => {
   it('returns the refined, validated diagram', async () => {
-    const { app } = await start([{ json: flow }]);
     const source = { version: '1', type: 'flowchart', title: 'Refunds', nodes: [{ id: 'ask', style: { fill: '#ff0000' } }] };
+    const { app } = await start([{ json: { ...source, nodes: [{ ...source.nodes[0], to: [{ node: 'pay' }] }, { id: 'pay' }] } }]);
     const res = await app.inject({ method: 'POST', url: '/v1/refine', payload: { source, instruction: 'add the payment step' } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ valid: true, source: { nodes: [{ id: 'ask', style: { fill: '#ff0000' } }, { id: 'pay' }] } });

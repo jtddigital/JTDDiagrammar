@@ -2111,7 +2111,7 @@ Images (PNG, JPEG, GIF, WebP: whiteboard photos, screenshots of old diagrams) wo
 
 The response is `{ type, reason?, source, valid, diagnostics, attempts, usage, svg? }`. `usage` includes token counts and an estimated `costUsd` (published prices; override with `AI_PRICES`).
 
-**Refine** an existing diagram with a plain-language instruction. Styles, hints, notes and ids are kept:
+**Refine** an existing diagram with a plain-language instruction. The AI edits the source itself, with the full language schema and examples, so it can change anything the language allows (content, layout options, styles, colours, hints) and keeps what you did not ask to change. If it changes nothing, the result carries the warning `ai.unchanged`:
 
 ```bash
 curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data '{"source": {...}, "instruction": "Add a manager approval step before payment"}'
