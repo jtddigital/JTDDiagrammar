@@ -252,12 +252,12 @@
     "bends": 281
   },
   "random-200": {
-    "crossings": 2319,
+    "crossings": 2387,
     "overlaps": 0,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 2,
-    "bends": 1791
+    "bends": 1842
   }
 }
