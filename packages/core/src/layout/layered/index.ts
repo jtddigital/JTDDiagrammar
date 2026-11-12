@@ -4,6 +4,7 @@ import type { Band as IRBand, BandGroup, GraphIR } from '../../ir/types.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
 import { flowOf } from '../flow.ts';
 import { placeLabels } from '../labels.ts';
+import { hintsOf, polish } from '../polish.ts';
 import { normalize } from '../normalize.ts';
 import { bands } from './bands.ts';
 import { build, sized } from './build.ts';
@@ -93,7 +94,7 @@ export const layered: LayoutEngine = {
         })
       : { bands: [] };
     return {
-      geometry: normalize(placeLabels({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges })),
+      geometry: normalize(placeLabels(polish({ ...banded, containers: [], nodes: routed.nodes, edges: routed.edges }, hintsOf(ir)))),
       diagnostics: ir.containers.length ? [warning('layout.containers', 'containers cannot be combined with lanes or phases yet; they are not drawn')] : [],
     };
   },

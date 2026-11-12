@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Box, Geometry } from '../src/index.ts';
-import { compile, createRegistry, parseXml, render } from '../src/index.ts';
+import { compile, createRegistry, parseXml, render, toXml } from '../src/index.ts';
 
 const reg = createRegistry();
 const geo = (d: unknown): Geometry => {
@@ -137,7 +137,7 @@ describe('fixed-size nodes and callouts (URS-DM-017)', () => {
   it('places callouts clear of nodes and other labels, inside their lane, joined by a leader', () => {
     for (const direction of ['LR', 'TB']) {
       const g = geo(callouts('callout', { direction }));
-      const labels = g.edges.flatMap((e) => (e.label ? [e.label] : []));
+      const labels = g.edges.flatMap((e) => (e.labels ?? []));
       for (const n of g.nodes) {
         const c = n.callout!;
         for (const m of g.nodes) expect(overlap(c, m), `${direction} ${n.id} callout vs ${m.id}`).toBe(false);
@@ -168,5 +168,48 @@ describe('fixed-size nodes and callouts (URS-DM-017)', () => {
     const l = out.match(/<g id="n-l"[^]*?<\/g>/)![0];
     expect(l).toMatch(/<path d="M[-\d. ]+L[-\d. ]+" fill="none" stroke="#[0-9a-f]+" stroke-width="1"\/><rect [^>]*rx="4"/);
     expect(l).toContain('>A rather long label that</text>');
+  });
+});
+
+describe('owners and style rules (URS-DM-021, URS-DM-023)', () => {
+  const doc = {
+    version: '1',
+    type: 'flowchart',
+    styles: { nodes: { fill: '#111111', text: '#111111' } },
+    styleBy: { shape: { process: { fill: '#222222', stroke: '#222222' } }, owner: { Bill: { fill: '#ff0000' }, 'Martha Jones': { fill: '#008080' } } },
+    nodes: [
+      { id: 'a', owner: 'Bill', to: [{ node: 'b' }] },
+      { id: 'b', owner: 'Martha Jones', shape: 'decision' },
+      { id: 'c' },
+      { id: 'd', owner: 'Bill', style: { fill: '#00ff00' } },
+    ],
+  };
+
+  it('applies section, then shape, then owner, then own style', () => {
+    const style = new Map(ir(doc).nodes.map((n) => [n.id, n.style]));
+    expect(style.get('a')).toEqual({ fill: '#ff0000', stroke: '#222222', text: '#111111' });
+    expect(style.get('b')).toEqual({ fill: '#008080', text: '#111111' });
+    expect(style.get('c')).toEqual({ fill: '#222222', stroke: '#222222', text: '#111111' });
+    expect(style.get('d')!.fill).toBe('#00ff00');
+  });
+
+  it('draws the owner under a divider inside the node, and the node grows to hold both', () => {
+    const g = geo(doc);
+    const [a, c] = ['a', 'c'].map((id) => g.nodes.find((n) => n.id === id)!);
+    expect(a).toMatchObject({ lines: ['a'], sub: ['Bill'] });
+    expect(a!.h).toBeGreaterThan(c!.h);
+    const node = svg(doc).match(/<g id="n-a".*?<\/g>/)![0];
+    expect(node).toMatch(/<text[^>]*>a<\/text><path d="M12 [\d.]+H[\d.]+" fill="none" stroke="#222222" stroke-width="1"\/><text[^>]*font-size="12"[^>]*>Bill<\/text>/);
+  });
+
+  it('keeps owner names that are not XML names through the XML round trip', () => {
+    const xml = toXml(doc);
+    expect(xml).toContain('<entry key="Martha Jones" fill="#008080"/>');
+    expect(parseXml(xml, reg)).toEqual({ value: doc, diagnostics: [] });
+  });
+
+  it('puts the owner in the callout of a fixed-size node', () => {
+    const n = geo({ ...doc, nodes: [{ id: 'a', label: 'Approve', owner: 'Bill', style: { label: 'callout' } }] }).nodes[0]!;
+    expect(n.callout).toMatchObject({ lines: ['Approve'], sub: ['Bill'] });
   });
 });

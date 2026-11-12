@@ -2,11 +2,12 @@ import type { Geometry, PlacedNode, RoutedEdge } from '../../geometry.ts';
 import { FONT_FAMILY, lineHeight, textBlock } from '../../measure/text.ts';
 import { num } from '../../num.ts';
 import { shape } from '../../shapes/library.ts';
-import { fontOf, LABEL_FONT, NODE_FONT, TITLE_FONT } from '../../style.ts';
+import { arrowSize, CALLOUT_PAD, fontOf, LABEL_FONT, NODE_FONT, stackHeight, TITLE_FONT } from '../../style.ts';
+import { innerOf } from '../../shapes/shape.ts';
 import { bands } from './bands.ts';
 import { containers } from './containers.ts';
 import { esc } from './escape.ts';
-import { fontAttrs, lines } from './text.ts';
+import { fontAttrs, lines, stack } from './text.ts';
 import { dash, METRICS as M, opacity, PALETTES, type Palette } from './theme.ts';
 import type { Style } from '../../ir/types.ts';
 
@@ -33,8 +34,6 @@ const HEADS: Record<Head, (c: string) => string> = {
   diamond: (c) => `<path d="M0 5L5 1L10 5L5 9Z" fill="${c}"/>`,
   circle: (c) => `<path d="M1 5A4 4 0 1 1 9 5A4 4 0 1 1 1 5Z" fill="${c}"/>`,
 };
-/** Arrowheads grow with lines thicker than the default so they stay visible (URS-DM-014). */
-const arrowSize = (width: number) => 9 * Math.max(1, width / M.stroke);
 /** One marker per head shape, colour and size; the default keeps the id `jtd-arrow`. */
 const markerId = ({ head, color, width }: Arrow, P: Palette) =>
   'jtd-arrow' + (head === 'triangle' ? '' : `-${head}`) + (color === P.edge ? '' : `-${color.slice(1)}`) + (width > M.stroke ? `-w${num(width).replace('.', '_')}` : '');
@@ -52,11 +51,11 @@ function node(n: PlacedNode, P: Palette): string {
   const width: number = n.style?.lineWidth ?? M.stroke;
   const fill = n.style?.fill ?? (s.paint ? P[s.paint] : P.nodeFill);
   const font = fontOf(NODE_FONT, n.style);
-  const attrs = fontAttrs(font, NODE_FONT) + fillAttr(n.style?.text);
-  const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - (n.lines.length * lineHeight(font)) / 2;
+  const attrs = (f: typeof font) => fontAttrs(f, NODE_FONT) + fillAttr(n.style?.text);
+  const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - stackHeight(n.lines.length, n.sub?.length ?? 0, font) / 2;
   const detail = s.detail ? `<path d="${s.detail(n.w, n.h)}" fill="none" ${stroke(line, width)}/>` : '';
   const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${line}"/>` : '';
-  const text = s.unlabelled ? '' : lines(n.lines, n.w / 2, textTop, font, attrs);
+  const text = s.unlabelled ? '' : stack(n.lines, n.sub, n.w / 2, textTop, font, attrs, innerOf(s, n.w, n.h).w, line);
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})"${opacity(n.style?.opacity)}>` +
     tooltip(n.quote) +
@@ -65,7 +64,7 @@ function node(n: PlacedNode, P: Palette): string {
 }
 
 /** Label beside a fixed-size node with a leader line to it, in the node's local coordinates (URS-DM-017). */
-function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: string, P: Palette): string {
+function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: (f: typeof font) => string, P: Palette): string {
   const c = n.callout;
   if (!c) return '';
   const [x, y] = [c.x - n.x, c.y - n.y];
@@ -74,7 +73,7 @@ function callout(n: PlacedNode, font: ReturnType<typeof fontOf>, attrs: string, 
   return (
     `<path d="M${num(a!.x)} ${num(a!.y)}L${num(b!.x)} ${num(b!.y)}" fill="none" stroke="${border}" stroke-width="1"/>` +
     `<rect x="${num(x)}" y="${num(y)}" width="${num(c.w)}" height="${num(c.h)}" rx="4" fill="${n.style?.labelFill ?? P.labelFill}" stroke="${border}" stroke-width="1"/>` +
-    lines(c.lines, x + c.w / 2, y + (c.h - c.lines.length * lineHeight(font)) / 2, font, attrs)
+    stack(c.lines, c.sub, x + c.w / 2, y + (c.h - stackHeight(c.lines.length, c.sub?.length ?? 0, font)) / 2, font, attrs, c.w - 2 * CALLOUT_PAD.x, border)
   );
 }
 
@@ -84,11 +83,13 @@ function edge(e: RoutedEdge, P: Palette): string {
   const font = fontOf(LABEL_FONT, e.style);
   const arrow = arrowOf(e, P);
   const d = e.points.map((p, i) => `${i ? 'L' : 'M'}${num(p.x)} ${num(p.y)}`).join('');
-  const l = e.label;
-  const label = l
-    ? `<rect x="${num(l.x)}" y="${num(l.y)}" width="${num(l.w)}" height="${num(l.h)}" rx="3" fill="${e.style?.labelFill ?? P.labelFill}"/>` +
-      lines(l.lines, l.x + l.w / 2, l.y + (l.h - l.lines.length * lineHeight(font)) / 2, font, ` font-size="${num(font.size)}"${fontAttrs(font, { size: font.size })}${fillAttr(e.style?.text)}`)
-    : '';
+  const label = (e.labels ?? [])
+    .map(
+      (l) =>
+        `<rect x="${num(l.x)}" y="${num(l.y)}" width="${num(l.w)}" height="${num(l.h)}" rx="2" fill="${e.style?.labelFill ?? P.labelFill}"/>` +
+        lines(l.lines, l.x + l.w / 2, l.y + (l.h - l.lines.length * lineHeight(font)) / 2, font, ` font-size="${num(font.size)}"${fontAttrs(font, { size: font.size })}${fillAttr(e.style?.text)}`),
+    )
+    .join('');
   return (
     `<g id="e-${esc(e.id)}" class="jtd-edge"${opacity(e.style?.opacity)}>` +
     tooltip(e.quote) +

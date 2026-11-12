@@ -1,4 +1,4 @@
-import type { Box, Callout, Geometry, PlacedNode, Point } from '../geometry.ts';
+import type { Box, Callout, Geometry, LabelBox, PlacedNode, Point, RoutedEdge } from '../geometry.ts';
 import type { Side } from '../ir/types.ts';
 import { shape } from '../shapes/library.ts';
 import { CALLOUT_GAP } from '../style.ts';
@@ -12,12 +12,27 @@ type Seg = [Point, Point];
 const segBox = ([a, b]: Seg): Box => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
 const ALONG = [0.5, 0.3, 0.7, 0.15, 0.85];
 
+/** The point `pct` percent of the way along a polyline. */
+export function along(pts: readonly Point[], pct: number): Point {
+  const lens = pts.slice(1).map((p, i) => Math.abs(p.x - pts[i]!.x) + Math.abs(p.y - pts[i]!.y));
+  let rest = (Math.min(100, Math.max(0, pct)) / 100) * lens.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < lens.length; i++) {
+    if (rest <= lens[i]! || i === lens.length - 1) {
+      const t = lens[i]! ? Math.min(1, rest / lens[i]!) : 0;
+      return { x: pts[i]!.x + (pts[i + 1]!.x - pts[i]!.x) * t, y: pts[i]!.y + (pts[i + 1]!.y - pts[i]!.y) * t };
+    }
+    rest -= lens[i]!;
+  }
+  return pts[0]!;
+}
+
 /**
- * Edge label placement (URS-LY-008), independent of the layout engine. Each label sits on its own
- * edge (at the router's spot or along one of its segments) or, failing that, just beside it,
- * whichever collides least: nodes, headers and other labels are near-forbidden, other edges' lines
- * are discouraged, sitting beside the line and moving away from the router's spot cost a little.
- * Earlier edges choose first.
+ * Edge label placement (URS-LY-008, URS-DM-024), independent of the layout engine. A pinned label
+ * (`at`) is centred on its edge at that percentage of the edge's length and never moves. Every
+ * other label sits on its own edge (at the router's spot or along one of its segments) or, failing
+ * that, just beside it, whichever collides least: nodes, headers and other labels are
+ * near-forbidden, other edges' lines are discouraged, sitting beside the line and moving away from
+ * the router's spot cost a little. Pinned labels go first, then earlier edges choose first.
  */
 export function placeLabels(g: Content): Content {
   const obs = new Grid<Box>();
@@ -25,41 +40,52 @@ export function placeLabels(g: Content): Content {
   const lines = new Grid<{ edge: number; seg: Seg }>();
   g.edges.forEach((e, edge) => e.points.slice(1).forEach((p, i) => lines.add(segBox([e.points[i]!, p]), { edge, seg: [e.points[i]!, p] })));
   const placed = new Grid<Box>();
+  const pinned = g.edges.map((e) =>
+    (e.labels ?? []).map((l) => {
+      if (l.at === undefined) return l;
+      const c = along(e.points, l.at);
+      const box = { ...l, x: c.x - l.w / 2, y: c.y - l.h / 2 };
+      placed.add(box, box);
+      return box;
+    }),
+  );
   const nodes = g.nodes.map((n) => (n.callout ? placeCallout(n, n.callout, g, obs, lines, placed) : n));
-
-  const edges = g.edges.map((e, edge) => {
-    if (!e.label) return e;
-    const { w, h } = e.label;
-    const origin = { x: e.label.x + w / 2, y: e.label.y + h / 2 };
-    const segs = e.points
-      .slice(1)
-      .map((p, i): Seg => [e.points[i]!, p])
-      .sort((s, t) => Math.abs(t[1].x - t[0].x) + Math.abs(t[1].y - t[0].y) - (Math.abs(s[1].x - s[0].x) + Math.abs(s[1].y - s[0].y)));
-    const on = segs.flatMap(([a, b]) => ALONG.map((t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, beside: 0 })));
-    // Beside the line, just clear of it: for parallel lines too close for two centred labels.
-    const beside = segs.flatMap(([a, b]) =>
-      ALONG.slice(0, 3).flatMap((t) => {
-        const [x, y] = [a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t];
-        return a.y === b.y ? [{ x, y: y - h / 2 - 3, beside: 1 }, { x, y: y + h / 2 + 3, beside: 1 }] : [{ x: x - w / 2 - 3, y, beside: 1 }, { x: x + w / 2 + 3, y, beside: 1 }];
-      }),
-    );
-    const candidates = [{ ...origin, beside: 0 }, ...on, ...beside];
-
-    let best = { score: Infinity, box: e.label as Box };
-    for (const c of candidates) {
-      const box = { x: c.x - w / 2, y: c.y - h / 2, w, h };
-      let score = Math.hypot(c.x - origin.x, c.y - origin.y) / 50 + 3 * c.beside;
-      for (const o of obs.near(box)) if (overlaps(box, o)) score += 1000;
-      for (const l of placed.near(box)) if (overlaps(box, l)) score += 1000;
-      const crossing = new Set([...lines.near(box)].filter((s) => s.edge !== edge && hits(s.seg, box)).map((s) => s.edge));
-      score += 10 * crossing.size;
-      if (score < best.score) best = { score, box };
-      if (score === 0) break;
-    }
-    placed.add(best.box, best.box);
-    return { ...e, label: { ...e.label, ...best.box } };
-  });
+  const edges = g.edges.map((e, edge) => (e.labels ? { ...e, labels: pinned[edge]!.map((l) => (l.at === undefined ? free(e, edge, l, obs, lines, placed) : l)) } : e));
   return { ...g, nodes, edges };
+}
+
+function free(e: RoutedEdge, edge: number, l: LabelBox, obs: Grid<Box>, lines: Grid<{ edge: number; seg: Seg }>, placed: Grid<Box>): LabelBox {
+  const { w, h } = l;
+  const origin = { x: l.x + w / 2, y: l.y + h / 2 };
+  const segs = e.points
+    .slice(1)
+    .map((p, i): Seg => [e.points[i]!, p])
+    .sort((s, t) => Math.abs(t[1].x - t[0].x) + Math.abs(t[1].y - t[0].y) - (Math.abs(s[1].x - s[0].x) + Math.abs(s[1].y - s[0].y)));
+  const on = segs.flatMap(([a, b]) => ALONG.map((t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, beside: 0 })));
+  // Beside the line, just clear of it (for parallel lines too close for two centred labels), then
+  // clear of a label centred on it.
+  const beside = segs.flatMap(([a, b]) =>
+    ALONG.slice(0, 3).flatMap((t) => {
+      const [x, y] = [a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t];
+      return [1, 2].flatMap((k) => {
+        const [dy, dx] = [(k * h) / 2 + 3, (k * w) / 2 + 3];
+        return a.y === b.y ? [{ x, y: y - dy, beside: k + 2 }, { x, y: y + dy, beside: k + 2 }] : [{ x: x - dx, y, beside: k + 2 }, { x: x + dx, y, beside: k + 2 }];
+      });
+    }),
+  );
+  let best = { score: Infinity, box: l as Box };
+  for (const c of [{ ...origin, beside: 0 }, ...on, ...beside]) {
+    const box = { x: c.x - w / 2, y: c.y - h / 2, w, h };
+    let score = Math.hypot(c.x - origin.x, c.y - origin.y) / 50 + c.beside;
+    for (const o of obs.near(box)) if (overlaps(box, o)) score += 1000;
+    for (const p of placed.near(box)) if (overlaps(box, p)) score += 1000;
+    const crossing = new Set([...lines.near(box)].filter((s) => s.edge !== edge && hits(s.seg, box)).map((s) => s.edge));
+    score += 10 * crossing.size;
+    if (score < best.score) best = { score, box };
+    if (score === 0) break;
+  }
+  placed.add(best.box, best.box);
+  return { ...l, ...best.box };
 }
 
 const inside = (outer: Box, b: Box) => b.x >= outer.x - 0.5 && b.y >= outer.y - 0.5 && b.x + b.w <= outer.x + outer.w + 0.5 && b.y + b.h <= outer.y + outer.h + 0.5;

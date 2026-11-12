@@ -44,11 +44,26 @@ describe('lifecycle type (URS-TYP-008)', () => {
 
   it('maps steps to shapes and states, defaulting labels; state changes sit in their target state', () => {
     const nodes = new Map(ir(ex).nodes.map((n) => [n.id, n]));
-    expect(nodes.get('r_review')).toMatchObject({ shape: 'process', label: 'Review change\nQA Reviewer', phase: 'in_review', lane: 'review' });
-    expect(nodes.get('r_approve')).toMatchObject({ shape: 'chevron', label: '→ Approved', phase: 'approved' });
+    expect(nodes.get('r_review')).toMatchObject({ shape: 'process', label: 'Review change', sub: 'QA Reviewer', phase: 'in_review', lane: 'review' });
+    expect(nodes.get('c_fields')!.shape).toBe('hexagon');
+    expect(nodes.get('r_approve')).toMatchObject({ shape: 'chevron', label: 'Approved', phase: 'approved' });
     expect(nodes.get('r_ok')!.shape).toBe('decision');
     expect(nodes.get('r_notify')!.shape).toBe('document');
     expect(nodes.get('c_end')).toMatchObject({ shape: 'terminator', label: 'End' });
+  });
+
+  it('styles steps by section, then kind, then owner, then their own style (URS-DM-023)', () => {
+    const d = {
+      ...tiny,
+      styles: { steps: { fill: '#111111', stroke: '#111111', text: '#111111' } },
+      styleBy: { kind: { task: { fill: '#222222', stroke: '#222222' } }, owner: { Bill: { fill: '#333333' } } },
+    };
+    const step = (s: object) => ir({ ...d, workflows: [{ id: 'w', label: 'W', steps: [{ id: 's', state: 'a', ...s }] }] }).nodes.find((n) => n.id === 's')!.style;
+    expect(step({})).toEqual({ fill: '#222222', stroke: '#222222', text: '#111111' });
+    expect(step({ owner: 'Bill' })).toEqual({ fill: '#333333', stroke: '#222222', text: '#111111' });
+    expect(step({ owner: 'Bill', style: { fill: '#444444' } })).toMatchObject({ fill: '#444444' });
+    expect(step({ kind: 'decision', owner: 'Martha' })).toEqual({ fill: '#111111', stroke: '#111111', text: '#111111' });
+    expect(codes({ ...tiny, styleBy: { kind: { nope: {} } } })).toEqual([['schema.additionalProperties', '/styleBy/kind/nope']]);
   });
 
   it('draws stages over their states, with filler over ungrouped ones, and entry detail under headers (URS-DM-019, URS-DM-020)', () => {
@@ -70,7 +85,7 @@ describe('lifecycle type (URS-TYP-008)', () => {
     const r = ir(ex);
     expect(r.partitions!.lanes[0]).toMatchObject({ id: 'lifecycle:actions', label: 'Lifecycle actions' });
     expect(r.nodes.filter((n) => n.lane === 'lifecycle:actions').map((n) => n.id)).toEqual(['state:start', 'state:draft', 'state:in_review', 'state:approved', 'state:in_progress', 'state:closed', 'state:cancelled']);
-    expect(r.edges.find((e) => e.id === 'action:draft:0')).toMatchObject({ from: 'state:draft', to: 'state:cancelled', label: 'Cancel', src: '/states/0/to/0' });
+    expect(r.edges.find((e) => e.id === 'action:draft:0')).toMatchObject({ from: 'state:draft', to: 'state:cancelled', labels: [{ text: 'Cancel' }], src: '/states/0/to/0' });
     expect(ir(doc({ actionsLane: false })).partitions!.lanes.map((l) => l.id)).toEqual(['review', 'closure']);
     expect(ir({ ...tiny, actionsLane: true }).nodes.some((n) => n.id === 'state:b')).toBe(true);
     expect(ir(tiny).nodes.some((n) => n.id.startsWith('state:'))).toBe(false);

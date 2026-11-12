@@ -12,6 +12,9 @@ interface Row {
   description: string;
 }
 
+/** An object whose every field is a style, e.g. section defaults or styles by shape: one row, not one per key. */
+const styles = (s: JsonSchema) => Object.values((s.properties ?? {}) as Record<string, JsonSchema>).every((p) => p.title === 'Style') && Object.keys(s.properties ?? {}).length > 0;
+
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function resolve(s: JsonSchema, root: JsonSchema): { schema: JsonSchema; ref?: string } {
@@ -23,6 +26,8 @@ function resolve(s: JsonSchema, root: JsonSchema): { schema: JsonSchema; ref?: s
 function typeOf(s: JsonSchema, root: JsonSchema): string {
   if (s.enum) return (s.enum as unknown[]).map((v) => `\`${String(v)}\``).join(' | ');
   if (s.const !== undefined) return `\`${String(s.const)}\``;
+  if (s.title === 'Style') return 'style';
+  if (styles(s)) return 'styles by key';
   if (s.type === 'array') {
     const items = resolve(s.items as JsonSchema, root).schema;
     return items.type === 'object' ? 'list of objects' : `list of ${typeOf(items, root)}`;
@@ -38,8 +43,8 @@ function rows(s: JsonSchema, root: JsonSchema, prefix: string, seen: Map<string,
     const p = resolve(raw, root).schema;
     const field = `${prefix}${k}`;
     const row: Row = { field, type: typeOf(p, root), required: req.has(k), description: String(p.description ?? raw.description ?? '') };
-    // `style` is documented once, in the Styling section.
-    if (p.type === 'object' && p.properties && k !== 'style') return [row, ...rows(p, root, `${field}.`, seen)];
+    // Styles are documented once, in the Styling section.
+    if (p.type === 'object' && p.properties && p.title !== 'Style' && !styles(p)) return [row, ...rows(p, root, `${field}.`, seen)];
     if (p.type !== 'array') return [row];
     const items = resolve(p.items as JsonSchema, root);
     if (items.schema.type !== 'object') return [row];

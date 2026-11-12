@@ -25,7 +25,7 @@ const schema = obj(['title', 'stages', 'states', 'workflows', 'steps', 'connecti
       workflow: { type: 'string', description: 'Workflow id.' },
       kind: { type: 'string', enum: STEP_KINDS },
       label: { type: 'string', description: 'Empty for start, end and state changes to use the defaults.' },
-      role: str,
+      owner: str,
       state: { type: 'string', description: 'State the record is in during the step; omit for state changes.' },
       target: { type: 'string', description: 'State changes only: the new state.' },
       quote,
@@ -55,7 +55,7 @@ const actionsOf = (m: Lifecycle) => m.states.flatMap((s) => (s.to ?? []).map((a)
 const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault object).
 - "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; the rest "steady". Put entry criteria and entry actions on the state they belong to.
 - "stages" group adjacent states into lifecycle stages; omit if the material names none.
-- "workflows" are the named workflows; each step belongs to one. Kinds: "start" and "end"; "task" for work by a role (set "role"); "decision" for a yes/no or outcome choice (label the outgoing connections with the outcome); "notification" for messages; "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty).
+- "workflows" are the named workflows; each step belongs to one. Kinds: "start" and "end"; "task" for work by a person or group (set "owner" to the role or group); "system" for automated actions such as setting field values or creating records; "decision" for a yes/no or outcome choice (label the outgoing connections with the outcome); "notification" for messages; "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty).
 - Every non-stateChange step has the "state" the record is in while it happens.
 - "connections" link steps in order. "userActions" are state changes users make outside workflows, labelled with the action name.
 - Where the material supports an item directly, set "quote" to a short verbatim excerpt (at most 20 words).`;
@@ -76,7 +76,7 @@ const examples = [
       steps: [
         { id: 'start', workflow: 'handle', kind: 'start', label: '', state: 'draft' },
         { id: 'submit', workflow: 'handle', kind: 'stateChange', label: '', target: 'investigation' },
-        { id: 'investigate', workflow: 'handle', kind: 'task', label: 'Investigate', role: 'QA', state: 'investigation' },
+        { id: 'investigate', workflow: 'handle', kind: 'task', label: 'Investigate', owner: 'QA', state: 'investigation' },
         { id: 'close', workflow: 'handle', kind: 'stateChange', label: '', target: 'closed' },
       ],
       connections: [
@@ -98,7 +98,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
     stages: (m.stages ?? []).map((g) => pick(g, 'id', 'label', 'states')),
     states: m.states.map((s) => ({ id: s.id, label: s.label ?? s.id, stateType: s.stateType ?? 'steady', ...pick(s, 'entryCriteria', 'entryActions', 'quote') })),
     workflows: (m.workflows ?? []).map((w) => pick(w, 'id', 'label')),
-    steps: (m.workflows ?? []).flatMap((w) => w.steps.map((s) => ({ id: s.id, workflow: w.id, kind: s.kind ?? 'task', label: s.label ?? '', ...pick(s, 'role', 'state', 'target', 'quote') }))),
+    steps: (m.workflows ?? []).flatMap((w) => w.steps.map((s) => ({ id: s.id, workflow: w.id, kind: s.kind ?? 'task', label: s.label ?? '', ...pick(s, 'owner', 'state', 'target', 'quote') }))),
     connections: linksOf(m).map((l) => pick(l, 'from', 'to', 'label', 'quote')),
     userActions: actionsOf(m).map((a) => pick(a, 'from', 'to', 'label', 'quote')),
   }),
@@ -122,9 +122,9 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
       label: w.label,
       steps: g.steps
         .filter((s) => s.workflow === w.id)
-        .map(({ workflow: _w, label, role, state, target, quote: q, ...s }) => {
+        .map(({ workflow: _w, label, owner, state, target, quote: q, ...s }) => {
           const to: LcLink[] = g.connections.filter((c) => c.from === s.id).map((c) => ({ step: c.to, ...text('label', c.label), ...text('quote', c.quote) }));
-          return { ...s, ...text('label', label), ...text('role', role), ...text('state', state), ...text('target', target), ...text('quote', q), ...(to.length && { to }) };
+          return { ...s, ...text('label', label), ...text('owner', owner), ...text('state', state), ...text('target', target), ...text('quote', q), ...(to.length && { to }) };
         }),
     }));
     return { version: '1', type: 'lifecycle', title: g.title, ...(g.stages.length && { stages: g.stages }), states, ...(workflows.length && { workflows }) };
@@ -137,12 +137,12 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
     const action = edgeMatcher(actionsOf(prev), (a) => a.label);
     return {
       ...next,
-      ...pick(prev, 'theme', 'object', 'direction', 'statesAs', 'actionsLane', 'styles', 'edgeStyle'),
+      ...pick(prev, 'theme', 'object', 'direction', 'statesAs', 'actionsLane', 'styles', 'edgeStyle', 'styleBy'),
       ...(next.stages && { stages: next.stages.map((g) => ({ ...g, ...pick(stages.get(g.id) ?? ({} as LcStage), 'style') })) }),
       states: next.states.map((s) => ({
         ...s,
         ...pick(states.get(s.id) ?? ({} as LcState), 'style'),
-        ...(s.to && { to: s.to.map((a) => ({ ...a, ...pick(action({ ...a, from: s.id, to: a.state }) ?? ({} as LcAction), 'id', 'style') })) }),
+        ...(s.to && { to: s.to.map((a) => ({ ...a, ...pick(action({ ...a, from: s.id, to: a.state }) ?? ({} as LcAction), 'id', 'labels', 'style') })) }),
       })),
       ...(next.workflows && {
         workflows: next.workflows.map((w) => ({
@@ -151,7 +151,7 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
           steps: w.steps.map((s) => ({
             ...s,
             ...pick(steps.get(s.id) ?? ({} as LcStep), 'order', 'style'),
-            ...(s.to && { to: s.to.map((l) => ({ ...l, ...pick(link({ ...l, from: s.id, to: l.step }) ?? ({} as LcLink), 'id', 'exitSide', 'entrySide', 'style') })) }),
+            ...(s.to && { to: s.to.map((l) => ({ ...l, ...pick(link({ ...l, from: s.id, to: l.step }) ?? ({} as LcLink), 'id', 'labels', 'exitSide', 'entrySide', 'style') })) }),
           })),
         })),
       }),

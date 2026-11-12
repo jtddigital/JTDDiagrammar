@@ -1,4 +1,4 @@
-import { direction, envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { STATE_TYPES, STEP_KINDS } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -20,6 +20,7 @@ export const lifecycleSchema = {
     actionsLane: { type: 'boolean', description: 'Show the lifecycle actions band (states and user actions). Default: when any state has user actions.' },
     styles: sectionStyles(['stages', 'states', 'workflows', 'steps']),
     edgeStyle: { ...style, description: 'Default style for every connection and user action; each one’s own `style` overrides it field by field.' },
+    styleBy: styleBy({ kind: STEP_KINDS, owner: undefined }, 'Step styles by kind and by owner, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: `styles.steps`, then kind, then owner, then the step’s own `style`.'),
     stages: {
       type: 'array',
       description: 'Lifecycle stage groups: a header over adjacent states.',
@@ -52,7 +53,7 @@ export const lifecycleSchema = {
               type: 'object',
               additionalProperties: false,
               required: ['state'],
-              properties: { state: ref('Target state id.'), label: text('Action name.'), id: { ...id, description: 'Optional; generated when absent.' }, quote, style },
+              properties: { state: ref('Target state id.'), label: text('Action name.'), labels: edgeLabels, id: { ...id, description: 'Optional; generated when absent.' }, quote, style },
             },
           },
         },
@@ -77,9 +78,9 @@ export const lifecycleSchema = {
               required: ['id'],
               properties: {
                 id,
-                kind: { type: 'string', enum: STEP_KINDS, default: 'task', description: '`start`, `task` (default), `decision`, `notification`, `stateChange` or `end`.' },
-                label: text('Defaults: the id; for a state change, "→ <target>".'),
-                role: text('Who performs a task; shown as a second line.'),
+                kind: { type: 'string', enum: STEP_KINDS, default: 'task', description: '`start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange` or `end`.' },
+                label: text('Defaults: the id; for a state change, the target state’s name.'),
+                owner: text('Who performs the step; shown under a line below the label, and matched by `styleBy.owner`.'),
                 state: ref('State the record is in during this step. Optional for a state change (defaults to its target).'),
                 target: ref('For a state change: the state it moves the record to.'),
                 order: { type: 'integer', description: 'Hint: steps in the same cell are placed in ascending order.' },
@@ -94,7 +95,8 @@ export const lifecycleSchema = {
                     required: ['step'],
                     properties: {
                       step: ref('Next step id.'),
-                      label: text('Text on the connection.'),
+                      label: text('Text on the connection, placed where it fits best.'),
+                      labels: edgeLabels,
                       exitSide: { ...side, description: 'Side of this step the line leaves by.' },
                       entrySide: { ...side, description: 'Side of the next step the line enters by.' },
                       id: { ...id, description: 'Optional; generated when absent.' },

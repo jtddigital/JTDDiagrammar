@@ -10,6 +10,7 @@ export const examples: [Example, ...Example[]] = [
       type: 'lifecycle',
       title: 'Change Control lifecycle',
       object: 'change_control__c',
+      styleBy: { owner: { 'QA Reviewer': { fill: '#e0f2f1', stroke: '#00897b' }, 'Change Owner': { fill: '#fdecea', stroke: '#c62828' } } },
       stages: [
         { id: 'initiation', label: 'Initiation', states: ['draft', 'in_review'] },
         { id: 'execution', label: 'Execution', states: ['approved', 'in_progress'] },
@@ -30,7 +31,7 @@ export const examples: [Example, ...Example[]] = [
           steps: [
             { id: 'r_start', kind: 'start', state: 'draft', to: [{ step: 'r_submit' }] },
             { id: 'r_submit', kind: 'stateChange', target: 'in_review', to: [{ step: 'r_review' }] },
-            { id: 'r_review', label: 'Review change', role: 'QA Reviewer', state: 'in_review', to: [{ step: 'r_ok' }] },
+            { id: 'r_review', label: 'Review change', owner: 'QA Reviewer', state: 'in_review', to: [{ step: 'r_ok' }] },
             {
               id: 'r_ok',
               kind: 'decision',
@@ -51,7 +52,8 @@ export const examples: [Example, ...Example[]] = [
           label: 'Closure',
           steps: [
             { id: 'c_start', kind: 'start', state: 'in_progress', to: [{ step: 'c_verify' }] },
-            { id: 'c_verify', label: 'Verify effectiveness', role: 'Change Owner', state: 'in_progress', to: [{ step: 'c_close' }] },
+            { id: 'c_verify', label: 'Verify effectiveness', owner: 'Change Owner', state: 'in_progress', to: [{ step: 'c_fields' }] },
+            { id: 'c_fields', kind: 'system', label: 'Set closure date', state: 'in_progress', to: [{ step: 'c_close' }] },
             { id: 'c_close', kind: 'stateChange', target: 'closed', to: [{ step: 'c_end' }] },
             { id: 'c_end', kind: 'end', state: 'closed' },
           ],
@@ -81,7 +83,7 @@ export const examples: [Example, ...Example[]] = [
           steps: [
             { id: 'a_start', kind: 'start', state: 'draft', to: [{ step: 'a_send' }] },
             { id: 'a_send', kind: 'stateChange', target: 'review', to: [{ step: 'a_sign' }] },
-            { id: 'a_sign', label: 'Sign off', role: 'Approver', state: 'review', to: [{ step: 'a_go' }] },
+            { id: 'a_sign', label: 'Sign off', owner: 'Approver', state: 'review', to: [{ step: 'a_go' }] },
             { id: 'a_go', kind: 'stateChange', target: 'effective' },
           ],
         },

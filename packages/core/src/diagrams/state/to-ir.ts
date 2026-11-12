@@ -1,4 +1,5 @@
 import type { GraphIR, IRContainer, IRNode } from '../../ir/types.ts';
+import { edgeLabels } from '../edge-labels.ts';
 import { over, styled } from '../section-styles.ts';
 import { isComposite, transitionLabel, transitionsOf, walk, type StateDiagram } from './model.ts';
 
@@ -17,8 +18,7 @@ export function stateToIR(m: StateDiagram): GraphIR {
     else nodes.push({ id: s.id, shape: SHAPE[kind], label: kind === 'state' ? (s.label ?? s.id) : (s.label ?? ''), ...p, src: path });
   }
   const edges = transitionsOf(m.states).map((t) => {
-    const label = transitionLabel(t);
-    return { id: t.id, from: t.from, to: t.state, ...(label !== undefined && { label }), ...over(m.transitionStyle, t.style), ...(t.quote && { quote: t.quote }), src: t.src };
+    return { id: t.id, from: t.from, to: t.state, ...edgeLabels(transitionLabel(t), t.labels), ...over(m.transitionStyle, t.style), ...(t.quote && { quote: t.quote }), src: t.src };
   });
   return { ...(m.title !== undefined && { title: m.title }), ...(m.theme && { theme: m.theme }), direction: m.direction ?? 'LR', nodes, edges, containers };
 }

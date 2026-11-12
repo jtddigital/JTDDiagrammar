@@ -1,9 +1,10 @@
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
-import { over, styled } from '../section-styles.ts';
+import { merged, over, ruled, styled } from '../section-styles.ts';
 import { ACTIONS_BAND, badStages, pill, showActions, stateOf, statesArePhases, stepsOf, type Lifecycle, type LcState, type StepKind } from './model.ts';
+import { edgeLabels } from '../edge-labels.ts';
 import { pointer } from '../../diagnostics.ts';
 
-const SHAPE: Record<StepKind, string> = { start: 'terminator', end: 'terminator', task: 'process', decision: 'decision', notification: 'document', stateChange: 'chevron' };
+const SHAPE: Record<StepKind, string> = { start: 'terminator', end: 'terminator', task: 'process', decision: 'decision', notification: 'document', system: 'hexagon', stateChange: 'chevron' };
 
 /** Entry criteria and actions under the state header (URS-DM-020). */
 const detail = (s: LcState) =>
@@ -56,7 +57,7 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
           id: a.id ?? `action:${s.id}:${j}`,
           from: pill(s.id),
           to: pill(a.state),
-          ...(a.label !== undefined && { label: a.label }),
+          ...edgeLabels(a.label, a.labels),
           ...over(m.edgeStyle, a.style),
           ...(a.quote && { quote: a.quote }),
           src: pointer('states', i, 'to', j),
@@ -67,14 +68,16 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
 
   for (const { step: s, workflow: w, src } of stepsOf(m)) {
     const kind = s.kind ?? 'task';
-    const base = s.label ?? (kind === 'stateChange' ? `→ ${label.get(s.target ?? '') ?? s.target ?? ''}` : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : s.id);
+    const name = s.label ?? (kind === 'stateChange' ? (label.get(s.target ?? '') ?? s.target ?? '') : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : s.id);
+    const rules = ruled(m.styleBy, { kind, owner: s.owner });
     nodes.push({
       id: s.id,
       shape: SHAPE[kind],
-      label: s.role ? `${base}\n${s.role}` : base,
+      label: name,
+      ...(s.owner && { sub: s.owner }),
       ...place(stateOf(s), w.id),
       ...(s.order !== undefined && { order: s.order }),
-      ...styled(m.styles, 'steps', s.style),
+      ...over(merged(m.styles?.steps, rules), s.style),
       ...(s.quote && { quote: s.quote }),
       src,
     } as IRNode);
@@ -84,7 +87,7 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
         id: l.id ?? `edge:${s.id}:${j}`,
         from: s.id,
         to: l.step,
-        ...(l.label !== undefined && { label: l.label }),
+        ...edgeLabels(l.label, l.labels),
         ...(Object.keys(ports).length && { ports }),
         ...over(m.edgeStyle, l.style),
         ...(l.quote && { quote: l.quote }),

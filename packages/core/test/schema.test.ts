@@ -9,7 +9,7 @@ describe('schema validation (URS-IN-001, URS-IN-004, URS-DM-004)', () => {
       version: '1',
       type: 'flowchart',
       colour: 'red',
-      nodes: [{ id: 'a', shape: 'hexagon' }, { label: 'no id' }],
+      nodes: [{ id: 'a', shape: 'star' }, { label: 'no id' }],
     };
     expect(compile(doc, reg).diagnostics.map((d) => [d.code, d.path])).toEqual([
       ['schema.additionalProperties', '/colour'],
@@ -19,7 +19,7 @@ describe('schema validation (URS-IN-001, URS-IN-004, URS-DM-004)', () => {
   });
 
   it('lists allowed values for a disallowed shape', () => {
-    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 'a', shape: 'hexagon' }] };
+    const doc = { version: '1', type: 'flowchart', nodes: [{ id: 'a', shape: 'star' }] };
     expect(compile(doc, reg).diagnostics[0]?.message).toMatch(/process, decision, terminator/);
   });
 

@@ -38,17 +38,25 @@ export interface IRNode extends Sourced {
   id: string;
   shape: string;
   label: string;
+  /** Secondary text under a divider, e.g. who owns a task (URS-DM-021). */
+  sub?: string;
   parent?: string;
   order?: number;
   lane?: string;
   phase?: string;
 }
 
+/** Text on an edge; `at` pins it at that percentage of the edge's length, else it is placed clear of other things (URS-DM-024). */
+export interface EdgeLabel {
+  text: string;
+  at?: number;
+}
+
 export interface IREdge extends Sourced {
   id: string;
   from: string;
   to: string;
-  label?: string;
+  labels?: EdgeLabel[];
   /** Sides to leave `from` / enter `to` by (URS-DM-009). */
   ports?: { from?: Side; to?: Side };
   /** End marker; default arrow. */

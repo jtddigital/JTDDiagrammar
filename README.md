@@ -586,6 +586,18 @@ The examples and images below are generated from the registered types (`pnpm doc
   "type": "lifecycle",
   "title": "Change Control lifecycle",
   "object": "change_control__c",
+  "styleBy": {
+    "owner": {
+      "QA Reviewer": {
+        "fill": "#e0f2f1",
+        "stroke": "#00897b"
+      },
+      "Change Owner": {
+        "fill": "#fdecea",
+        "stroke": "#c62828"
+      }
+    }
+  },
   "stages": [
     {
       "id": "initiation",
@@ -689,7 +701,7 @@ The examples and images below are generated from the registered types (`pnpm doc
         {
           "id": "r_review",
           "label": "Review change",
-          "role": "QA Reviewer",
+          "owner": "QA Reviewer",
           "state": "in_review",
           "to": [
             {
@@ -753,7 +765,18 @@ The examples and images below are generated from the registered types (`pnpm doc
         {
           "id": "c_verify",
           "label": "Verify effectiveness",
-          "role": "Change Owner",
+          "owner": "Change Owner",
+          "state": "in_progress",
+          "to": [
+            {
+              "step": "c_fields"
+            }
+          ]
+        },
+        {
+          "id": "c_fields",
+          "kind": "system",
+          "label": "Set closure date",
           "state": "in_progress",
           "to": [
             {
@@ -845,7 +868,7 @@ The examples and images below are generated from the registered types (`pnpm doc
         {
           "id": "a_sign",
           "label": "Sign off",
-          "role": "Approver",
+          "owner": "Approver",
           "state": "review",
           "to": [
             {
@@ -909,114 +932,47 @@ Flowcharts. Add lanes (and optional phases) for a cross-functional flowchart.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
-| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
-| `styles.lanes` | object |  | Default style for every item in `lanes`. |
-| `styles.lanes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lanes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lanes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lanes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.lanes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.lanes.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.lanes.bold` | boolean |  | Bold text. |
-| `styles.lanes.italic` | boolean |  | Italic text. |
-| `styles.lanes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.lanes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.lanes.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.lanes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.lanes.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.lanes.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.phases` | object |  | Default style for every item in `phases`. |
-| `styles.phases.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.phases.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.phases.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.phases.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.phases.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.phases.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.phases.bold` | boolean |  | Bold text. |
-| `styles.phases.italic` | boolean |  | Italic text. |
-| `styles.phases.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.phases.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.phases.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.phases.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.phases.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.phases.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.nodes` | object |  | Default style for every item in `nodes`. |
-| `styles.nodes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.nodes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.nodes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.nodes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.nodes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.nodes.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.nodes.bold` | boolean |  | Bold text. |
-| `styles.nodes.italic` | boolean |  | Italic text. |
-| `styles.nodes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.nodes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.nodes.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.nodes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.nodes.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.nodes.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.notes` | object |  | Default style for every item in `notes`. |
-| `styles.notes.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.notes.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.notes.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.notes.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.notes.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.notes.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.notes.bold` | boolean |  | Bold text. |
-| `styles.notes.italic` | boolean |  | Italic text. |
-| `styles.notes.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.notes.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.notes.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.notes.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.notes.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.notes.height` | number |  | Nodes: fixed height in pixels. |
-| `edgeStyle` | object |  | Default style for every connection; each one’s own `style` overrides it field by field. |
-| `edgeStyle.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `edgeStyle.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `edgeStyle.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `edgeStyle.bold` | boolean |  | Bold text. |
-| `edgeStyle.italic` | boolean |  | Italic text. |
-| `edgeStyle.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `edgeStyle.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `edgeStyle.labelFill` | string |  | Background of edge labels and callouts. |
-| `edgeStyle.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `edgeStyle.width` | number |  | Nodes: fixed width in pixels. |
-| `edgeStyle.height` | number |  | Nodes: fixed height in pixels. |
+| `styles` | styles by key |  | Default style per section (`lanes`, `phases`, `nodes`, `notes`); each item’s own `style` overrides it field by field. |
+| `edgeStyle` | style |  | Default style for every connection; each one’s own `style` overrides it field by field. |
+| `styleBy` | object |  | Node styles by shape and by owner, e.g. `{ "owner": { "Bill": { "fill": "#fdd" } } }`. Precedence: `styles.nodes`, then shape, then owner, then the node’s own `style`. |
+| `styleBy.shape` | styles by key |  | Style for every item with this `shape`, by value: `process`, `decision`, `terminator`, `document`, `data`, `subprocess`, `connector`, `hexagon`. |
+| `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
 | `lanes` | list of objects |  | Functional bands (rows for `LR`). Present → cross-functional flowchart. |
 | `lanes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `lanes[].label` | string | yes | Header text. |
-| `lanes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `lanes[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `phases` | list of objects |  | Stages across the lanes. Require lanes. |
 | `phases[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `phases[].label` | string | yes | Header text. |
-| `phases[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `phases[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `nodes` | list of objects | yes | Steps, decisions and other shapes. |
 | `nodes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
-| `nodes[].shape` | `process` \| `decision` \| `terminator` \| `document` \| `data` \| `subprocess` \| `connector` |  | Default `process`. |
+| `nodes[].shape` | `process` \| `decision` \| `terminator` \| `document` \| `data` \| `subprocess` \| `connector` \| `hexagon` |  | Default `process`. |
 | `nodes[].label` | string |  | Defaults to the id. `\n` breaks lines; long text wraps. |
+| `nodes[].owner` | string |  | Who does it; shown under a line below the label, and matched by `styleBy.owner`. |
 | `nodes[].lane` | string |  | Lane id; required when the diagram has lanes. |
 | `nodes[].phase` | string |  | Phase id; required when the diagram has phases. |
 | `nodes[].order` | integer |  | Hint: nodes in the same column and lane are placed in ascending order. |
 | `nodes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `nodes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `nodes[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `nodes[].to` | list of objects |  | Outgoing connections, each to one target node. |
 | `nodes[].to[].node` | string | yes | Target node id. |
-| `nodes[].to[].label` | string |  | Text on the connection. |
+| `nodes[].to[].label` | string |  | Text on the connection, placed where it fits best. |
+| `nodes[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `nodes[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `nodes[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
 | `nodes[].to[].exitSide` | `N` \| `E` \| `S` \| `W` |  | Side of this node the line leaves by (N, E, S, W); default follows the flow. |
 | `nodes[].to[].entrySide` | `N` \| `E` \| `S` \| `W` |  | Side of the target the line enters by; default follows the flow. |
 | `nodes[].to[].id` | string |  | Optional; generated when absent. |
 | `nodes[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `nodes[].to[].style` | object |  | Overrides `edgeStyle` field by field. |
+| `nodes[].to[].style` | style |  | Overrides `edgeStyle` field by field. |
 | `notes` | list of objects |  | Annotations, drawn as folded-corner notes. |
 | `notes[].id` | string |  | Optional; generated when absent. |
 | `notes[].text` | string | yes | Note text; `\n` breaks lines. |
 | `notes[].for` | string |  | Node the note is attached to (dotted line, no arrow). |
 | `notes[].lane` | string |  | Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s. |
 | `notes[].phase` | string |  | Phase, likewise. |
-| `notes[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `notes[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 
 ### `state`
 
@@ -1025,52 +981,26 @@ States and the transitions between them, with composite (nested) states. For lif
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
-| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
-| `styles.states` | object |  | Default style for every item in `states`. |
-| `styles.states.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.states.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.states.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.states.bold` | boolean |  | Bold text. |
-| `styles.states.italic` | boolean |  | Italic text. |
-| `styles.states.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.states.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.states.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.states.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.states.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.states.height` | number |  | Nodes: fixed height in pixels. |
+| `styles` | styles by key |  | Default style per section (`states`); each item’s own `style` overrides it field by field. |
 | `states` | list of objects | yes | Top-level states. |
 | `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `states[].kind` | `state` \| `initial` \| `final` \| `choice` |  | `state` (default) or a pseudostate; pseudostates draw no label and cannot contain states. |
 | `states[].label` | string |  | Defaults to the id for ordinary states. |
 | `states[].states` | list of objects |  | Nested states make this a composite state. Same fields as `states[]`. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | Outgoing transitions; targets may be any state, composite or nested. |
 | `states[].to[].state` | string | yes | Target state id. |
 | `states[].to[].event` | string |  | Trigger. |
 | `states[].to[].guard` | string |  | Condition, shown in brackets. |
 | `states[].to[].action` | string |  | Effect, shown after a slash. |
+| `states[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `states[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `states[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
 | `states[].to[].id` | string |  | Optional; generated when absent. |
 | `states[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].to[].style` | object |  | Overrides `transitionStyle` field by field. |
-| `transitionStyle` | object |  | Default style for every transition; each one’s own `style` overrides it field by field. |
-| `transitionStyle.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `transitionStyle.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `transitionStyle.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `transitionStyle.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `transitionStyle.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `transitionStyle.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `transitionStyle.bold` | boolean |  | Bold text. |
-| `transitionStyle.italic` | boolean |  | Italic text. |
-| `transitionStyle.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `transitionStyle.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `transitionStyle.labelFill` | string |  | Background of edge labels and callouts. |
-| `transitionStyle.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `transitionStyle.width` | number |  | Nodes: fixed width in pixels. |
-| `transitionStyle.height` | number |  | Nodes: fixed height in pixels. |
+| `states[].to[].style` | style |  | Overrides `transitionStyle` field by field. |
+| `transitionStyle` | style |  | Default style for every transition; each one’s own `style` overrides it field by field. |
 
 ### `orgchart`
 
@@ -1079,44 +1009,14 @@ People and who they report to. For teams and organisations.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
-| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
-| `styles.people` | object |  | Default style for every item in `people`. |
-| `styles.people.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.people.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.people.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.people.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.people.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.people.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.people.bold` | boolean |  | Bold text. |
-| `styles.people.italic` | boolean |  | Italic text. |
-| `styles.people.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.people.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.people.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.people.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.people.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.people.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.lines` | object |  | Default style for every item in `lines`. |
-| `styles.lines.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lines.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lines.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.lines.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.lines.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.lines.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.lines.bold` | boolean |  | Bold text. |
-| `styles.lines.italic` | boolean |  | Italic text. |
-| `styles.lines.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.lines.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.lines.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.lines.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.lines.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.lines.height` | number |  | Nodes: fixed height in pixels. |
+| `styles` | styles by key |  | Default style per section (`people`, `lines`); each item’s own `style` overrides it field by field. |
 | `people` | list of objects | yes | Everyone in the chart. |
 | `people[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `people[].name` | string | yes | Shown first, on its own line. |
 | `people[].title` | string |  | Role, shown under the name. |
 | `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
 | `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `people[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `people[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 
 ### `lifecycle`
 
@@ -1128,87 +1028,16 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `direction` | `LR` \| `TB` |  | Flow direction: left to right (default) or top to bottom. |
 | `statesAs` | `columns` \| `rows` |  | States as columns (default) or rows; workflows take the other axis. Independent of `direction`. |
 | `actionsLane` | boolean |  | Show the lifecycle actions band (states and user actions). Default: when any state has user actions. |
-| `styles` | object |  | Default style per section; each item’s own `style` overrides it field by field. |
-| `styles.stages` | object |  | Default style for every item in `stages`. |
-| `styles.stages.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.stages.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.stages.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.stages.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.stages.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.stages.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.stages.bold` | boolean |  | Bold text. |
-| `styles.stages.italic` | boolean |  | Italic text. |
-| `styles.stages.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.stages.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.stages.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.stages.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.stages.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.stages.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.states` | object |  | Default style for every item in `states`. |
-| `styles.states.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.states.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.states.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.states.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.states.bold` | boolean |  | Bold text. |
-| `styles.states.italic` | boolean |  | Italic text. |
-| `styles.states.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.states.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.states.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.states.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.states.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.states.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.workflows` | object |  | Default style for every item in `workflows`. |
-| `styles.workflows.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.workflows.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.workflows.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.workflows.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.workflows.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.workflows.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.workflows.bold` | boolean |  | Bold text. |
-| `styles.workflows.italic` | boolean |  | Italic text. |
-| `styles.workflows.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.workflows.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.workflows.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.workflows.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.workflows.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.workflows.height` | number |  | Nodes: fixed height in pixels. |
-| `styles.steps` | object |  | Default style for every item in `steps`. |
-| `styles.steps.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.steps.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.steps.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `styles.steps.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `styles.steps.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `styles.steps.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `styles.steps.bold` | boolean |  | Bold text. |
-| `styles.steps.italic` | boolean |  | Italic text. |
-| `styles.steps.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `styles.steps.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `styles.steps.labelFill` | string |  | Background of edge labels and callouts. |
-| `styles.steps.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `styles.steps.width` | number |  | Nodes: fixed width in pixels. |
-| `styles.steps.height` | number |  | Nodes: fixed height in pixels. |
-| `edgeStyle` | object |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
-| `edgeStyle.fill` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.stroke` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.text` | string |  | Hex colour, `#rgb` or `#rrggbb`. |
-| `edgeStyle.dash` | `solid` \| `dashed` \| `dotted` |  | Line style. |
-| `edgeStyle.lineWidth` | number |  | Line thickness in pixels, 0.5 to 8. |
-| `edgeStyle.fontSize` | number |  | Text size in pixels, 8 to 32. |
-| `edgeStyle.bold` | boolean |  | Bold text. |
-| `edgeStyle.italic` | boolean |  | Italic text. |
-| `edgeStyle.opacity` | number |  | Whole-element opacity, 0.1 to 1. |
-| `edgeStyle.arrowhead` | `triangle` \| `open` \| `diamond` \| `circle` \| `none` |  | Edges: arrowhead shape (default `triangle`). |
-| `edgeStyle.labelFill` | string |  | Background of edge labels and callouts. |
-| `edgeStyle.label` | `inside` \| `callout` \| `auto` |  | Nodes: `inside` (default; the node grows to fit), `callout` (fixed-size node, label in a callout beside it) or `auto` (callout only when the label does not fit). |
-| `edgeStyle.width` | number |  | Nodes: fixed width in pixels. |
-| `edgeStyle.height` | number |  | Nodes: fixed height in pixels. |
+| `styles` | styles by key |  | Default style per section (`stages`, `states`, `workflows`, `steps`); each item’s own `style` overrides it field by field. |
+| `edgeStyle` | style |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
+| `styleBy` | object |  | Step styles by kind and by owner, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: `styles.steps`, then kind, then owner, then the step’s own `style`. |
+| `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `end`. |
+| `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
 | `stages` | list of objects |  | Lifecycle stage groups: a header over adjacent states. |
 | `stages[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `stages[].label` | string | yes | Stage name. |
 | `stages[].states` | list of string | yes | Adjacent states, in lifecycle order. |
-| `stages[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `stages[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states` | list of objects | yes | Object states, in lifecycle order: one column (or row) each. |
 | `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `states[].label` | string |  | Defaults to the id. |
@@ -1216,35 +1045,41 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].entryCriteria` | list of string |  | Shown under the state header. |
 | `states[].entryActions` | list of string |  | Shown under the state header. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
 | `states[].to[].state` | string | yes | Target state id. |
 | `states[].to[].label` | string |  | Action name. |
+| `states[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `states[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `states[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
 | `states[].to[].id` | string |  | Optional; generated when absent. |
 | `states[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `states[].to[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].to[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows` | list of objects |  | Workflows: one row (or column) each. |
 | `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].label` | string | yes | Workflow name. |
-| `workflows[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows[].steps` | list of objects | yes |  |
 | `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
-| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `stateChange` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `stateChange` or `end`. |
-| `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, "→ <target>". |
-| `workflows[].steps[].role` | string |  | Who performs a task; shown as a second line. |
+| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange` or `end`. |
+| `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, the target state’s name. |
+| `workflows[].steps[].owner` | string |  | Who performs the step; shown under a line below the label, and matched by `styleBy.owner`. |
 | `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
 | `workflows[].steps[].target` | string |  | For a state change: the state it moves the record to. |
 | `workflows[].steps[].order` | integer |  | Hint: steps in the same cell are placed in ascending order. |
 | `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `workflows[].steps[].style` | object |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows[].steps[].to` | list of objects |  | Next steps. |
 | `workflows[].steps[].to[].step` | string | yes | Next step id. |
-| `workflows[].steps[].to[].label` | string |  | Text on the connection. |
+| `workflows[].steps[].to[].label` | string |  | Text on the connection, placed where it fits best. |
+| `workflows[].steps[].to[].labels` | list of objects |  | Labels on the connection, after `label`. Each sits `at` percent of the way along it, or wherever fits best when `at` is absent. |
+| `workflows[].steps[].to[].labels[].text` | string | yes | Label text; `\n` breaks lines. |
+| `workflows[].steps[].to[].labels[].at` | number |  | Position along the connection in percent of its length: 0 at the start, 50 in the middle, 100 at the end. |
 | `workflows[].steps[].to[].exitSide` | `N` \| `E` \| `S` \| `W` |  | Side of this step the line leaves by. |
 | `workflows[].steps[].to[].entrySide` | `N` \| `E` \| `S` \| `W` |  | Side of the next step the line enters by. |
 | `workflows[].steps[].to[].id` | string |  | Optional; generated when absent. |
 | `workflows[].steps[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
-| `workflows[].steps[].to[].style` | object |  | Overrides `edgeStyle` field by field. |
+| `workflows[].steps[].to[].style` | style |  | Overrides `edgeStyle` field by field. |
 
 <!-- END GENERATED: reference -->
 
@@ -1299,6 +1134,23 @@ Every node, edge, lane, phase, note, state, transition and person can take a `st
 ```
 
 Sections are `lanes`, `phases`, `nodes` and `notes` for flowcharts; `states` for state diagrams; `stages`, `states`, `workflows` and `steps` for lifecycles (with `edgeStyle` for connections and user actions); `people` and `lines` (reporting lines) for org charts.
+
+**Style rules.** `styleBy` styles every node of a shape (flowcharts) or step of a kind (lifecycles), and every one with a given owner. Precedence, lowest first: section default, shape or kind, owner, the item's own `style`:
+
+```json
+"styleBy": {
+  "kind": { "system": { "fill": "#f1f5f9", "dash": "dashed" } },
+  "owner": { "Bill": { "fill": "#fee2e2", "stroke": "#b91c1c" }, "Martha": { "fill": "#ccfbf1", "stroke": "#0f766e" } }
+}
+```
+
+**Owners.** A flowchart node's or lifecycle step's `owner` is drawn under the label, below a thin line.
+
+**Edge labels.** `label` is placed wherever it fits best. `labels` adds more, each pinned at `at` percent of the connection's length (`50` is the exact middle) or, without `at`, placed automatically clear of everything else:
+
+```json
+"to": [{ "node": "ship", "label": "Yes", "labels": [{ "text": "same day", "at": 85 }] }]
+```
 
 **Standard-size nodes and callouts.** By default a node grows to fit its label. To keep nodes the same size, set `label`:
 
@@ -1510,7 +1362,7 @@ packages/core/src
   adapters/     source formats (JSON)
   measure/      text metrics from a generated font table (no DOM)
   shapes/       shape library: size, outline, ports
-  layout/       layered engine: cycles → rank → order → place → route
+  layout/       layered engine: cycles → rank → order → place → route, then polish (fewer bends) and labels
   render/svg/   geometry → SVG string
 packages/ai/src    Claude client (SDK + mock), ingest, prompts, generate + repair loop
 packages/api/src   Fastify server: route table → routes + OpenAPI, worker-thread render pool

@@ -1,14 +1,16 @@
 import { pointer } from '../../diagnostics.ts';
 import type { GraphIR, IREdge, IRNode } from '../../ir/types.ts';
-import { over, styled } from '../section-styles.ts';
+import { merged, over, ruled, styled } from '../section-styles.ts';
+import { edgeLabels } from '../edge-labels.ts';
 import { linksOf, type FlowBand, type Flowchart } from './model.ts';
 
 const bands = (m: Flowchart, key: 'lanes' | 'phases', list: FlowBand[]) => list.map((b, i) => ({ ...b, ...styled(m.styles, key, b.style), src: pointer(key, i) }));
 
 export function flowchartToIR(m: Flowchart): GraphIR {
   const nodes = m.nodes.map((n, i): IRNode => {
-    const { shape = 'process', label = n.id, to: _to, ...rest } = n;
-    return { ...rest, shape, label, ...styled(m.styles, 'nodes', n.style), src: pointer('nodes', i) };
+    const { shape = 'process', label = n.id, owner, to: _to, ...rest } = n;
+    const rules = ruled(m.styleBy, { shape, owner });
+    return { ...rest, shape, label, ...(owner && { sub: owner }), ...over(merged(m.styles?.nodes, rules), n.style), src: pointer('nodes', i) };
   });
   const edges = linksOf(m).map((l): IREdge => {
     const ports = { ...(l.exitSide && { from: l.exitSide }), ...(l.entrySide && { to: l.entrySide }) };
@@ -16,7 +18,7 @@ export function flowchartToIR(m: Flowchart): GraphIR {
       id: l.id,
       from: l.from,
       to: l.node,
-      ...(l.label !== undefined && { label: l.label }),
+      ...edgeLabels(l.label, l.labels),
       ...(Object.keys(ports).length && { ports }),
       ...over(m.edgeStyle, l.style),
       ...(l.quote && { quote: l.quote }),

@@ -1,7 +1,8 @@
 import { pointer } from '../../diagnostics.ts';
-import type { Direction, Side, Style, Theme } from '../../ir/types.ts';
+import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
+import type { StyleBy } from '../section-styles.ts';
 
-export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'stateChange', 'end'] as const;
+export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'end'] as const;
 export type StepKind = (typeof STEP_KINDS)[number];
 export const STATE_TYPES = ['initial', 'steady', 'final'] as const;
 
@@ -11,6 +12,8 @@ export interface LcAction {
   /** Target state id. */
   state: string;
   label?: string;
+  /** More labels, optionally pinned along the line (URS-DM-024). */
+  labels?: EdgeLabel[];
   quote?: string;
   style?: Style;
 }
@@ -42,6 +45,8 @@ export interface LcLink {
   /** Target step id. */
   step: string;
   label?: string;
+  /** More labels, optionally pinned along the line (URS-DM-024). */
+  labels?: EdgeLabel[];
   exitSide?: Side;
   entrySide?: Side;
   quote?: string;
@@ -52,8 +57,8 @@ export interface LcStep {
   id: string;
   kind?: StepKind;
   label?: string;
-  /** Who performs a task; shown as a second line. */
-  role?: string;
+  /** Who performs a step; shown under a divider (URS-DM-021) and matched by `styleBy.owner`. */
+  owner?: string;
   /** State the record is in during this step; a state change defaults to its target. */
   state?: string;
   /** For `stateChange`: the state it moves the record to. */
@@ -86,6 +91,8 @@ export interface Lifecycle {
   actionsLane?: boolean;
   styles?: Partial<Record<'stages' | 'states' | 'workflows' | 'steps', Style>>;
   edgeStyle?: Style;
+  /** Step styles by kind and by owner (URS-DM-023). */
+  styleBy?: StyleBy<'kind' | 'owner'>;
   stages?: LcStage[];
   states: LcState[];
   workflows?: LcWorkflow[];

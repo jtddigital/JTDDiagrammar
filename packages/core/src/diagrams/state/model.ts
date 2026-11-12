@@ -1,4 +1,4 @@
-import type { Direction, Style, Theme } from '../../ir/types.ts';
+import type { Direction, EdgeLabel, Style, Theme } from '../../ir/types.ts';
 
 export const STATE_KINDS = ['state', 'initial', 'final', 'choice'] as const;
 export type StateKind = (typeof STATE_KINDS)[number];
@@ -23,6 +23,8 @@ export interface StateLink {
   event?: string;
   guard?: string;
   action?: string;
+  /** More labels, optionally pinned along the line (URS-DM-024). */
+  labels?: EdgeLabel[];
   quote?: string;
   style?: Style;
 }
