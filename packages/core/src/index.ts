@@ -10,6 +10,7 @@ export { parseJson, type ParseResult } from './adapters/json.ts';
 export { parseXml, toXml } from './adapters/xml.ts';
 export { parseYaml } from './adapters/yaml.ts';
 export { parseSource, type SourceFormat } from './adapters/index.ts';
+export { validateSchema } from './validate/schema.ts';
 export { compile, type CompileResult } from './compile.ts';
 export { render, type RenderOptions, type RenderResult } from './render.ts';
 export { renderSvg, type SvgOptions } from './render/svg/index.ts';
