@@ -4,6 +4,7 @@ import type { Diagnostic } from '@jtd/core';
 import { basicSetup, EditorView } from 'codemirror';
 import { useEffect, useRef } from 'react';
 import { registry } from '../registry.ts';
+import { colorPicker } from './colors.ts';
 import { schemaCompletion } from './complete.ts';
 import { tokenHighlight } from './theme.ts';
 import { locate, type Range } from './locate.ts';
@@ -20,7 +21,7 @@ interface Props {
   onCursor?(offset: number): void;
 }
 
-/** CodeMirror JSON editor with inline diagnostics (URS-WEB-001, URS-WEB-004) and schema completion (URS-WEB-005). */
+/** CodeMirror JSON editor with inline diagnostics (URS-WEB-001, URS-WEB-004), schema completion (URS-WEB-005) and colour pickers (URS-WEB-021). */
 export function Editor({ value, onChange, diagnostics, source, reveal, onCursor }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -33,7 +34,7 @@ export function Editor({ value, onChange, diagnostics, source, reveal, onCursor 
     const v = new EditorView({
       parent: host.current!,
       doc: value,
-      extensions: [basicSetup, tokenHighlight, json(), jsonLanguage.data.of({ autocomplete: schemaCompletion(registry) }), lintGutter(), EditorView.updateListener.of((u) => {
+      extensions: [basicSetup, tokenHighlight, colorPicker, json(), jsonLanguage.data.of({ autocomplete: schemaCompletion(registry) }), lintGutter(), EditorView.updateListener.of((u) => {
           if (u.docChanged) change.current(u.state.doc.toString());
           if (u.selectionSet) cursor.current?.(u.state.selection.main.head);
         }),
