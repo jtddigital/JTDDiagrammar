@@ -9,7 +9,21 @@ export const orgchartSchema = {
   properties: {
     ...envelope('orgchart'),
     direction: { type: 'string', enum: ['TB', 'LR'], default: 'TB', description: 'Top to bottom (default) or left to right.' },
-    styles: sectionStyles(['people', 'lines']),
+    styles: sectionStyles(['people', 'lines', 'departments']),
+    departments: {
+      type: 'array',
+      description: 'Optional: a style, or a parent department, for departments named on people. Each department is drawn as one box around its people.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name'],
+        properties: {
+          name: { type: 'string', minLength: 1, description: 'As written in `people[].department`.' },
+          parent: { type: 'string', description: 'The department this one is drawn inside.' },
+          style,
+        },
+      },
+    },
     stack: { type: 'boolean', default: false, description: 'Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right.' },
     multi: { type: 'integer', minimum: 1, maximum: 12, description: 'Split each stacked team into this many columns (rows when left to right). Implies `stack`.' },
     people: {
@@ -28,6 +42,7 @@ export const orgchartSchema = {
           style,
           stack: { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." },
           multi: { type: 'integer', minimum: 1, maximum: 12, description: "This person's team stacked in this many columns (rows when left to right)." },
+          department: { type: 'string', minLength: 1, description: 'Department name. Everyone in a department is drawn inside one box labelled with it.' },
         },
       },
     },

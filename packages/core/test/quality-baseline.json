@@ -206,6 +206,15 @@
     "edgeThroughLabel": 0,
     "bends": 15
   },
+  "orgchart-departments": {
+    "crossings": 0,
+    "overlaps": 4,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 14
+  },
   "orgchart-multi": {
     "crossings": 0,
     "overlaps": 27,

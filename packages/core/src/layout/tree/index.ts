@@ -1,13 +1,17 @@
-import type { PlacedNode, Point, RoutedEdge } from '../../geometry.ts';
+import type { Box, PlacedContainer, PlacedNode, Point, RoutedEdge } from '../../geometry.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { LayoutEngine } from '../../registry/layout-engine.ts';
-import { CALLOUT_GAP } from '../../style.ts';
+import { CALLOUT_GAP, CONTAINER_FONT, CONTAINER_HEAD_PAD, CONTAINER_TEXT_MAX, fontOf } from '../../style.ts';
+import { textBlock } from '../../measure/text.ts';
 import { placeLabels } from '../labels.ts';
 import { sized } from '../layered/build.ts';
 import { labelsOf } from '../layered/route.ts';
 import { normalize } from '../normalize.ts';
 import { arrange, GAP } from './arrange.ts';
-import type { Block } from './block.ts';
+import { wrap, type Block, type Frame } from './block.ts';
+
+/** Container padding on the sides without the label. */
+const PAD = 14;
 
 /**
  * Tree engine (URS-LY-014): each node's first incoming edge makes it a child; children sit in a row
@@ -34,12 +38,35 @@ export const tree: LayoutEngine = {
     }
     const stack = new Map(ir.nodes.map((n) => [n.id, n.stack]));
 
+    // Containers (URS-TYP-012): a subtree entering one is framed with padding and the label strip.
+    const containers = new Map(ir.containers.map((c) => [c.id, c]));
+    const chain = (c: string | undefined): string[] => {
+      const out: string[] = [];
+      for (let x = c; x !== undefined && containers.has(x) && !out.includes(x); x = containers.get(x)!.parent) out.push(x);
+      return out;
+    };
+    const labels = new Map(ir.containers.map((c) => [c.id, textBlock(c.label ?? '', CONTAINER_TEXT_MAX, fontOf(CONTAINER_FONT, c.style))]));
+    const head = (c: string) => labels.get(c)!.height + 2 * CONTAINER_HEAD_PAD;
+    // Left to right is laid out turned, so the label strip, on top when drawn, is on the left here.
+    const frame = (c: string): Frame => {
+      const [strip, need] = [head(c) + PAD / 2, labels.get(c)!.width + 2 * PAD];
+      return lr
+        ? { container: c, top: PAD, left: strip, right: PAD, bottom: PAD, minW: 0, minH: need, strip: 'left' }
+        : { container: c, top: strip, left: PAD, right: PAD, bottom: PAD, minW: need, minH: 0, strip: 'top' };
+    };
+    const containerOf = new Map(ir.nodes.map((n) => [n.id, n.parent]));
+
     // Roots in source order; a cycle has none, so its first member becomes one.
     const seen = new Set<string>();
     const build = (id: string): Block => {
       seen.add(id);
       const kids = (children.get(id) ?? []).filter((c) => !seen.has(c)).map((c) => ({ block: build(c), edge: parent.get(c)! }));
-      return arrange(id, dims(id), kids, stack.get(id));
+      const up = parent.get(id);
+      const outer = new Set(chain(up === undefined ? undefined : containerOf.get(ir.edges[up]!.from)));
+      // Innermost first, so nested containers frame inside their parents.
+      return chain(containerOf.get(id))
+        .filter((c) => !outer.has(c))
+        .reduce((b, c) => wrap(b, frame(c)), arrange(id, dims(id), kids, stack.get(id)));
     };
     const roots: Block[] = [];
     for (const n of ir.nodes) if (!parent.has(n.id) && !seen.has(n.id)) roots.push(build(n.id));
@@ -54,6 +81,18 @@ export const tree: LayoutEngine = {
     const flip = (p: Point): Point => (lr ? { x: p.y, y: p.x } : p);
     const pos = new Map(placed.flatMap(({ b, at }) => b.nodes.map((n) => [n.id, flip({ x: n.x + at, y: n.y })] as const)));
     const paths = new Map(placed.flatMap(({ b, at }) => b.paths.map((p) => [p.edge, p.points.map((q) => flip({ x: q.x + at, y: q.y }))] as const)));
+    // One box per container: the union of where its subtrees were framed.
+    const union = new Map<string, Box>();
+    for (const { b, at } of placed)
+      for (const { container, box } of b.boxes) {
+        const r = lr ? { x: box.y, y: box.x + at, w: box.h, h: box.w } : { ...box, x: box.x + at };
+        const u = union.get(container);
+        union.set(container, u ? { x: Math.min(u.x, r.x), y: Math.min(u.y, r.y), w: Math.max(u.x + u.w, r.x + r.w) - Math.min(u.x, r.x), h: Math.max(u.y + u.h, r.y + r.h) - Math.min(u.y, r.y) } : r);
+      }
+    const placedContainers: PlacedContainer[] = ir.containers.flatMap((c) => {
+      const box = union.get(c.id);
+      return box ? [{ id: c.id, lines: labels.get(c.id)!.lines, head: head(c.id), ...box, depth: chain(c.id).length - 1 }] : [];
+    });
 
     const nodes: PlacedNode[] = ir.nodes.map((n) => {
       const s = sizes.get(n.id)!;
@@ -76,6 +115,6 @@ export const tree: LayoutEngine = {
       const labels = labelsOf(e).map(({ w, h, ...l }) => ({ ...l, x: (p.x + q.x - w) / 2, y: (p.y + q.y - h) / 2, w, h }));
       return [{ id: e.id, from: e.from, to: e.to, points, ...(e.marker && { marker: e.marker }), ...(labels.length && { labels }) }];
     });
-    return { geometry: normalize(placeLabels({ bands: [], containers: [], nodes, edges })), diagnostics: [] };
+    return { geometry: normalize(placeLabels({ bands: [], containers: placedContainers.sort((a, b) => a.depth - b.depth), nodes, edges })), diagnostics: [] };
   },
 };
