@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { ClaudeClient, ClaudeRequest, Effort } from './client.ts';
+import type { AiClient, AiRequest, Effort } from './client.ts';
 import { AiError } from './errors.ts';
+import { jsonOf, schemaInstruction } from './instructions.ts';
 
 export interface AnthropicOptions {
   model: string;
@@ -34,25 +35,15 @@ function mapError(e: unknown): unknown {
 /** The API refused to compile the schema into a grammar (too large or too complex). */
 const tooLarge = (e: unknown) => e instanceof Anthropic.BadRequestError && /grammar is too large|too complex for compilation/i.test(apiMessage(e));
 
-/** Without structured outputs, the schema goes into the instructions instead. */
-const schemaInstruction = (schema: unknown) =>
-  `Reply with one JSON object and nothing else: no prose, no code fences. It must match this JSON Schema exactly:\n${JSON.stringify(schema)}`;
-
-/** The JSON object in a reply that may wrap it in prose or a code fence. */
-const jsonOf = (text: string) => {
-  const [a, b] = [text.indexOf('{'), text.lastIndexOf('}')];
-  return a >= 0 && b > a ? text.slice(a, b + 1) : text;
-};
-
 /**
  * Claude via the official TypeScript SDK (URS-AI-002): streamed, schema-constrained, system prompt cached.
  * A schema the API refuses to compile is remembered and sent as instructions instead (URS-AI-004);
  * the generation loop validates and repairs the reply either way.
  */
-export function anthropicClient(opts: AnthropicOptions): ClaudeClient {
+export function anthropicClient(opts: AnthropicOptions): AiClient {
   const sdk = opts.sdk ?? new Anthropic();
   const refused = new WeakSet<object>();
-  const base = (req: ClaudeRequest, strict: boolean) => ({
+  const base = (req: AiRequest, strict: boolean) => ({
     model: opts.model,
     // Stable prefix (system + type guide + examples) is cached (URS-AI-016).
     system: [{ type: 'text' as const, text: strict ? req.system : `${req.system}\n\n${schemaInstruction(req.schema)}`, cache_control: { type: 'ephemeral' as const } }],
@@ -60,7 +51,7 @@ export function anthropicClient(opts: AnthropicOptions): ClaudeClient {
     output_config: { effort: req.effort ?? opts.effort, ...(strict && { format: { type: 'json_schema' as const, schema: req.schema as Record<string, unknown> } }) },
   });
   /** Strict first (unless the request opts out); on a refused schema, once more without it. */
-  const withFallback = async <T>(req: ClaudeRequest, run: (strict: boolean) => Promise<T>): Promise<T> => {
+  const withFallback = async <T>(req: AiRequest, run: (strict: boolean) => Promise<T>): Promise<T> => {
     try {
       if (req.strict !== false && !refused.has(req.schema)) {
         try {

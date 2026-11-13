@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { pretty } from '../registry.ts';
 import { Plus, Sparkle } from '../ui/icons.tsx';
-import { aiAvailable, generateDiagram, refineDiagram, type Generated, type Progress } from './api.ts';
+import { graphToken, signedIn, signIn, signOut, type MicrosoftSettings } from '../auth/microsoft.ts';
+import { aiInfo, generateDiagram, refineDiagram, type AiInfo, type Generated, type Progress, type Provider, type Via } from './api.ts';
 import { Composer, type Mode } from './Composer.tsx';
 import { describe, loadChat, newId, saveChat, stepBack, update, type Message } from './history.ts';
 import { MessageView } from './MessageView.tsx';
+import { PROVIDER_NAMES, ProviderPicker } from './ProviderPicker.tsx';
 import { stageText } from './progress.ts';
 
 const SUGGEST: Record<Mode, string[]> = {
@@ -22,8 +24,12 @@ interface Props {
 }
 
 /** Chat with the AI about the diagram (URS-WEB-016): create from notes and documents, or ask for changes; every change can be stepped back (URS-WEB-017). */
+const PROVIDER_KEY = 'jtd:provider';
+
 export function ChatPane({ text, value, onSource }: Props) {
-  const [available, setAvailable] = useState<boolean>();
+  const [info, setInfo] = useState<AiInfo>();
+  const [chosen, setChosen] = useState(() => localStorage.getItem(PROVIDER_KEY) ?? 'claude');
+  const [account, setAccount] = useState<string>();
   const [messages, setMessages] = useState<Message[]>(loadChat);
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState<File[]>([]);
@@ -37,10 +43,31 @@ export function ChatPane({ text, value, onSource }: Props) {
   latest.current = text;
   const canEdit = value !== undefined;
 
+  const available = info?.enabled;
+  // The chosen provider if the server offers it, else the first it does (URS-AI-023).
+  const provider: Provider | undefined = info?.providers.find((p) => p.id === chosen) ?? info?.providers[0];
+  const microsoft = provider?.id === 'copilot' ? (provider as MicrosoftSettings) : undefined;
+
   useEffect(() => {
-    void aiAvailable().then(setAvailable);
+    void aiInfo().then(setInfo);
     return () => abort.current?.abort();
   }, []);
+  useEffect(() => {
+    if (microsoft) void signedIn(microsoft).then(setAccount, () => setAccount(undefined));
+  }, [microsoft]);
+
+  const choose = (id: Provider['id']) => {
+    setChosen(id);
+    localStorage.setItem(PROVIDER_KEY, id);
+  };
+  const fail = (e: unknown) => setMessages((ms) => [...ms, { id: newId(), role: 'assistant', tone: 'error', text: e instanceof Error ? e.message : String(e) }]);
+  /** Who to ask; for Copilot, with a Graph token (signing in if needed). */
+  const via = async (): Promise<Via> => {
+    if (!microsoft) return provider ? { provider: provider.id } : {};
+    const graph = await graphToken(microsoft);
+    setAccount(await signedIn(microsoft));
+    return { provider: 'copilot', graphToken: graph };
+  };
   useEffect(() => saveChat(messages), [messages]);
   useEffect(() => {
     // Braced: scrollIntoView returns a promise in some browsers, which must not become the cleanup.
@@ -59,7 +86,10 @@ export function ChatPane({ text, value, onSource }: Props) {
     const ac = (abort.current = new AbortController());
     const progress = (p: Progress) => setMessages((ms) => update(ms, reply, { text: stageText(p) }));
     try {
-      const g: Generated = editing ? await refineDiagram(value, instruction, ac.signal, progress) : await generateDiagram({ text: instruction, files: attached, type }, ac.signal, progress);
+      const who = await via();
+      const g: Generated = editing
+        ? await refineDiagram(value, instruction, ac.signal, progress, who)
+        : await generateDiagram({ text: instruction, files: attached, type }, ac.signal, progress, who);
       const before = latest.current;
       if (g.source) onSource(pretty(g.source));
       setMessages((ms) => update(ms, reply, { ...describe(g, editing ? 'refine' : 'generate'), ...(g.source ? { before } : {}) }));
@@ -79,7 +109,7 @@ export function ChatPane({ text, value, onSource }: Props) {
   if (available === false)
     return (
       <p className="notice" role="note">
-        AI generation is not configured on this server. Set <code>ANTHROPIC_API_KEY</code> where the server runs to turn it on.
+        AI generation is not configured on this server. Set <code>ANTHROPIC_API_KEY</code> for Claude, or <code>COPILOT_CLIENT_ID</code> for Microsoft 365 Copilot, where the server runs to turn it on.
       </p>
     );
 
@@ -88,6 +118,7 @@ export function ChatPane({ text, value, onSource }: Props) {
     <div className="chat frame">
       <div className="pane__header cluster">
         <span className="pane__title">Assistant</span>
+        {provider && <span className="text-muted text-small">{PROVIDER_NAMES[provider.id]}</span>}
         <button type="button" className="btn push-right" data-variant="ghost" disabled={busy || !messages.length} onClick={() => setMessages([])}>
           <Plus /> New chat
         </button>
@@ -129,6 +160,19 @@ export function ChatPane({ text, value, onSource }: Props) {
         disabled={!available}
         onSend={() => void send()}
         onStop={() => abort.current?.abort()}
+        extra={
+          info && provider ? (
+            <ProviderPicker
+              providers={info.providers}
+              value={provider.id}
+              onChange={choose}
+              {...(account && { account })}
+              onSignIn={() => void signIn(microsoft!).then(setAccount, fail)}
+              onSignOut={() => void signOut(microsoft!).then(() => setAccount(undefined), fail)}
+              disabled={busy}
+            />
+          ) : undefined
+        }
       />
     </div>
   );

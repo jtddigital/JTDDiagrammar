@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.34 (draft) |
+| Version | 0.35 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -144,7 +144,8 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Verified |
 | URS-API-014 | S | `generate` and `refine` stream progress as SSE when called with `Accept: text/event-stream` (URS-AI-015). | Integration test. | T | Verified |
 | URS-API-015 | M | With no AI credentials configured, the AI endpoints return `503`; every other endpoint keeps working. | Integration test. | T | Verified |
-| URS-API-016 | S | `GET /v1/ai` reports whether AI generation is available, so clients can hide it when it isn't. | Integration test. | T | Verified |
+| URS-API-016 | S | `GET /v1/ai` reports whether AI generation is available and which providers are configured (with Copilot's public sign-in settings), so clients can hide or offer them. | Integration test. | T | Verified |
+| URS-API-017 | S | `/v1/generate` and `/v1/refine` take `provider` (`claude` or `copilot`; default Claude when configured). Copilot needs the user's Graph token in `X-Graph-Token`, else `401 ai.signin`; an unconfigured provider is `503`, an unknown one `400`. | Integration test. | T | Verified |
 
 ### 3.8 Web App (WEB)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -182,7 +183,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-007 | M | The caller sets `type`, or `auto` lets the model choose from the registered types and return its reason. | Mock test for both. | T | Verified |
 | URS-AI-008 | M | Stop reasons are handled: `refusal` (with server-side fallbacks enabled) and `max_tokens` (truncation counts as a failure and is never parsed as success). Each surfaces as a distinct error code. | Mock test per stop reason. | T | Verified |
 | URS-AI-009 | M | Input limits on file size, file count and pages (PDF ≤ 600 pages, request ≤ 32 MB), plus a token pre-check with `count_tokens`. Over-limit input returns `413` with the reason. No silent truncation. | Limit tests. | T | Verified |
-| URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. | Log scrub test; bundle grep in CI. | T | Verified |
+| URS-AI-010 | M | The Anthropic API key exists only on the server. It is never sent to the browser and never logged. A Microsoft Graph token (URS-AI-023) is the user's own: held by MSAL in the browser's session storage, sent only to this app's API for the request it is for, and never stored or logged by the server. | Log scrub test; bundle grep in CI. | T | Verified |
 | URS-AI-011 | M | Input documents are untrusted data. The model gets no tools, and the requested type and schema are fixed by the server, so instructions inside a document cannot change them. The output is data only and is escaped at render time (URS-RN-004). | Injection fixtures produce schema-valid, escaped output. | T | Verified |
 | URS-AI-012 | M | Input documents and generated output are not persisted or logged by default. Retention is configurable. | Inspection plus log test. | T/I | Verified |
 | URS-AI-013 | S | Refine: modify an existing source from a natural-language instruction, with anything the language allows (content, structure, layout and display options, styles, colours, themes, hints). The model edits the authoring source directly and is given the type's full authoring schema (with every property's description) and its examples; that schema is sent as instructions, not as a structured-output format. The result goes through URS-AI-005/006. A source with errors can be refined (fixing it can be the instruction). A refine that changes nothing returns warning `ai.unchanged`, shown in the web panel. | Mock test. | T | Verified |
@@ -192,9 +193,10 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-017 | S | Usage reported per request: input/output tokens, cache reads, attempts and estimated cost. | Mock test. | T | Verified |
 | URS-AI-018 | S | Evaluation suite: a corpus of input documents with reference diagrams. Metrics: valid on first try, valid after repairs, node/edge recall, lane-assignment accuracy. It runs on demand (it costs money), not on every CI run. | Report produced. | D | Partial |
 | URS-AI-019 | S | Rate limits per client and a token budget per request. | Limit test. | T | Verified |
-| URS-AI-020 | M | The Claude client sits behind an interface with a deterministic mock. CI never calls the live API. | CI has no key; tests pass. | T | Verified |
+| URS-AI-020 | M | AI providers sit behind one client interface with a deterministic mock. CI never calls a live AI service. | CI has no key; tests pass. | T | Verified |
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
 | URS-AI-022 | W | Bulk generation via the Message Batches API. | — | T | Proposed |
+| URS-AI-023 | S | Second provider: Microsoft 365 Copilot through the Microsoft Graph Copilot Chat API, acting as the signed-in user (delegated; Microsoft sign-in in the browser). Chosen per request and in the web app's AI pane, which remembers the choice. Generation and refine go through the same validation and repair loop, with the schema sent as instructions. Text input only. | Mock tests of the Graph calls, API and web; not yet run against a live tenant. | T | Implemented |
 
 ### 3.10 Documentation (DOC)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -307,6 +309,7 @@ Updated with each change. `—` = not started.
 | AI-011 | ingest wrapper, prompt rules, no tools, fixed schema | ai/test/ingest.test.ts, `pnpm ai:live` (prompt injection case) | Structural defences tested. Live run 2026-11-11: injected title and `<script>` node ignored, output schema-valid, SVG has no unescaped script. One live fixture so far. |
 | AI-012 | no logging of bodies or material | api/test/api.test.ts (log capture) | Nothing is stored, so retention is moot. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
+| AI-023, API-017 | ai/src/copilot.ts, ai/src/instructions.ts, api/src/routes/generate.ts (`clientFor`), api/src/config.ts (`COPILOT_*`), web/src/auth/*, web/auth-redirect.html, web/src/chat/{api,ProviderPicker,ChatPane}.* | ai/test/copilot.test.ts (Graph stand-in), api/test/generate.test.ts (provider, token, time zone, log scrub), web/e2e/chat.spec.ts (picker) | Each call starts a fresh Copilot conversation and sends the exchange as one message, with the prompt and schema as additional context. Request shape from Microsoft's Graph beta reference; not verified against a live tenant. |
 | AI-013, API-013 | ai/src/generate.ts (refine), ai/src/prompt.ts (editPrompt), ai/src/anthropic.ts (`strict: false`), web/src/generate/GeneratePanel.tsx, api/src/routes/generate.ts | ai/test/refine.test.ts (schema and examples sent, any change incl. lifecycle role lanes and colours, repair, ai.unchanged, invalid sources), ai/test/anthropic.test.ts, core/test/ai-assets.test.ts (self-contained authoring schema), api/test/generate.test.ts | Replaces the toGenerated/merge round trip, which could only change what the generation schema expressed. |
 | AI-014 | quote fields → IR → geometry → SVG `<title>` | core/test/styles.test.ts | Generation schemas ask for short verbatim excerpts. |
 | AI-015, API-014 | generate/refine `onProgress`; SSE in api/src/routes/generate.ts | ai/test/refine.test.ts, api/test/generate.test.ts | Stages: ingest, select, generate, validate, repair. |
@@ -342,6 +345,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.35 | 2026-11-13 | At the owner's request: Microsoft 365 Copilot via Graph as a second AI provider, selectable in the AI pane. Added AI-023 (implemented, not yet live-tested) and API-017; AI-010, AI-020 and API-016 extended. |
 | 0.34 | 2026-11-13 | At the owner's request: web app redesign. Added WEB-015 (three-pane workspace, design tokens), WEB-016 (AI conversation), WEB-017 (step back), WEB-018 (click a problem to jump), WEB-019 (open and save files), WEB-020 (interactive diagram); WEB-011..013 restated for the conversation. All verified. |
 | 0.33 | 2026-11-12 | At the owner's request ("refine should be able to do anything I ask, with full context of the schemas and instructions"): refine edits the authoring source with the full authoring schema and examples; the toGenerated/merge round trip is removed (AI-013). |
 | 0.32 | 2026-11-12 | Fix (user report: refine "add role lanes" did nothing): lifecycle display options and workflow role order are in the generation schema, so refine can change them; a refine that changes nothing warns `ai.unchanged` (AI-013). |

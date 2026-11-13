@@ -160,3 +160,26 @@ test('keeps the conversation across reloads and starts a new chat on request', a
   await chat(page).getByRole('button', { name: 'New chat' }).click();
   await expect(log(page)).not.toContainText('remember me');
 });
+
+test('offers each configured AI, sends the choice, and remembers it (URS-AI-023)', async ({ page }) => {
+  await page.route('/v1/ai', (r) =>
+    r.fulfill({ json: { enabled: true, model: 'claude-opus-5-5', providers: [{ id: 'claude', model: 'claude-opus-5-5' }, { id: 'copilot', clientId: 'app', tenantId: 'organizations', scopes: ['https://graph.microsoft.com/Mail.Read'] }] } }),
+  );
+  let body: { provider?: string } = {};
+  await page.route('/v1/refine', (r) => {
+    body = r.request().postDataJSON() as typeof body;
+    return r.fulfill({ json: { ...generated, attempts: 1 } });
+  });
+  await open(page);
+  const pick = chat(page).getByLabel('AI', { exact: true });
+  await expect(pick.locator('option')).toHaveText(['Claude', 'Microsoft 365 Copilot']);
+  await ask(page, 'rename it');
+  await expect(log(page)).toContainText('Updated the flowchart diagram.');
+  expect(body.provider).toBe('claude');
+
+  await pick.selectOption('copilot');
+  await expect(chat(page).getByRole('button', { name: 'Sign in with Microsoft' })).toBeVisible();
+  await page.reload();
+  await expect(chat(page).getByLabel('AI', { exact: true })).toHaveValue('copilot');
+  await expect(chat(page).locator('.pane__header')).toContainText('Microsoft 365 Copilot');
+});

@@ -16,7 +16,7 @@ export interface Turn {
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-export interface ClaudeRequest {
+export interface AiRequest {
   system: string;
   messages: readonly Turn[];
   /** Schema the reply must match (URS-AI-003). */
@@ -33,7 +33,7 @@ export interface Usage {
   cacheWrite: number;
 }
 
-export interface ClaudeReply {
+export interface AiReply {
   content: readonly unknown[];
   /** Concatenated text blocks: the JSON document. */
   text: string;
@@ -42,8 +42,8 @@ export interface ClaudeReply {
   model: string;
 }
 
-/** Seam between generation logic and the Anthropic SDK; tests use MockClaude (URS-AI-020). */
-export interface ClaudeClient {
-  complete(req: ClaudeRequest, signal?: AbortSignal): Promise<ClaudeReply>;
-  countTokens(req: ClaudeRequest): Promise<number>;
+/** Seam between generation logic and an AI provider (Claude, Microsoft 365 Copilot); tests use MockClaude (URS-AI-020, URS-AI-023). */
+export interface AiClient {
+  complete(req: AiRequest, signal?: AbortSignal): Promise<AiReply>;
+  countTokens(req: AiRequest): Promise<number>;
 }

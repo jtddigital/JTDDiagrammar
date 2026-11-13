@@ -33,7 +33,23 @@ export interface AiConfig {
   ratePerMinute: number;
   /** Price table override, USD per million tokens (URS-AI-017). */
   prices?: Record<string, Price>;
+  /** Microsoft 365 Copilot through Microsoft Graph, on behalf of the signed-in user (URS-AI-023). */
+  copilot?: CopilotConfig;
 }
+
+/** Public settings for Microsoft sign-in in the browser; there is no secret (the app registration is a single-page app). */
+export interface CopilotConfig {
+  /** Entra ID application (client) id. */
+  clientId: string;
+  /** Tenant id or domain; `organizations` for any work or school account. */
+  tenantId: string;
+  graphUrl: string;
+  /** Delegated Graph permissions the Copilot Chat API needs. */
+  scopes: string[];
+}
+
+/** Delegated permissions the Microsoft 365 Copilot Chat API requires, all together. Override with COPILOT_SCOPES. */
+export const COPILOT_SCOPES = ['Sites.Read.All', 'Mail.Read', 'People.Read.All', 'OnlineMeetingTranscript.Read.All', 'Chat.Read', 'ChannelMessage.Read.All', 'ExternalItem.Read.All'];
 
 export interface Config {
   host: string;
@@ -92,6 +108,14 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
       maxOutputTokens: int(env.AI_MAX_OUTPUT_TOKENS, 64000),
       ratePerMinute: count(env.AI_RATE_LIMIT, 10),
       ...(json(env.AI_PRICES) && { prices: json(env.AI_PRICES)! }),
+      ...(env.COPILOT_CLIENT_ID && {
+        copilot: {
+          clientId: env.COPILOT_CLIENT_ID,
+          tenantId: env.COPILOT_TENANT_ID || 'organizations',
+          graphUrl: env.COPILOT_GRAPH_URL || 'https://graph.microsoft.com/beta',
+          scopes: (env.COPILOT_SCOPES ? env.COPILOT_SCOPES.split(/[\s,]+/).filter(Boolean) : COPILOT_SCOPES).map((s) => (s.includes('://') ? s : `https://graph.microsoft.com/${s}`)),
+        },
+      }),
     },
   };
 };
