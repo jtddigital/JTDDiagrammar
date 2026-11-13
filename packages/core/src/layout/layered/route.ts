@@ -204,7 +204,7 @@ interface Measured {
   icon?: Icon;
 }
 /** An edge's labels, measured with their margin (URS-DM-024). */
-const labelsOf = (e: IREdge): Measured[] =>
+export const labelsOf = (e: IREdge): Measured[] =>
   (e.labels ?? []).map((l) => {
     const t = textBlock(l.text, LABEL_TEXT_MAX, fontOf(LABEL_FONT, e.style));
     // An icon sits before the text (URS-DM-025).

@@ -2,7 +2,7 @@ import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
 import { styled } from '../section-styles.ts';
-import type { OrgChart, Person } from './model.ts';
+import { stacksOf, type OrgChart, type Person } from './model.ts';
 import { orgchartSchema } from './schema.ts';
 
 /** Reporting lines must form a tree: nobody manages themselves, directly or through others. */
@@ -22,7 +22,18 @@ const toIR = (m: OrgChart): GraphIR => ({
   ...(m.title !== undefined && { title: m.title }),
   ...(m.theme && { theme: m.theme }),
   direction: m.direction ?? 'TB',
-  nodes: m.people.map((p, i) => ({ id: p.id, shape: 'card', label: p.title ? `${p.name}\n${p.title}` : p.name, ...styled(m.styles, 'people', p.style), ...(p.quote !== undefined && { quote: p.quote }), src: pointer('people', i) })),
+  nodes: m.people.map((p, i) => {
+    const stack = stacksOf(m, p);
+    return {
+      id: p.id,
+      shape: 'card',
+      label: p.title ? `${p.name}\n${p.title}` : p.name,
+      ...styled(m.styles, 'people', p.style),
+      ...(p.quote !== undefined && { quote: p.quote }),
+      ...(stack !== undefined && { stack }),
+      src: pointer('people', i),
+    };
+  }),
   edges: m.people.flatMap((p, i) => (p.manager === undefined ? [] : [{ id: `edge:${i}`, from: p.manager, to: p.id, marker: 'none' as const, ...styled(m.styles, 'lines', undefined), src: pointer('people', i, 'manager') }])),
   containers: [],
 });
@@ -43,6 +54,51 @@ const examples: [Example, ...Example[]] = [
         { id: 'eng1', name: 'Riley Kim', title: 'Engineer', manager: 'cto' },
         { id: 'eng2', name: 'Morgan Diaz', title: 'Engineer', manager: 'cto' },
         { id: 'pm', name: 'Casey Ford', title: 'Product Manager', manager: 'cpo' },
+      ],
+    },
+  },
+  {
+    name: 'stacked',
+    title: 'Org chart, stacked teams',
+    description: '`stack: true`: each team hangs in a column under its manager. The leadership team keeps its row with `stack: false` on its manager.',
+    source: {
+      version: '1',
+      type: 'orgchart',
+      title: 'Engineering',
+      stack: true,
+      people: [
+        { id: 'vp', name: 'Avery Chen', title: 'VP Engineering', stack: false },
+        { id: 'web', name: 'Sam Patel', title: 'Web lead', manager: 'vp' },
+        { id: 'app', name: 'Jordan Lee', title: 'Mobile lead', manager: 'vp' },
+        { id: 'ops', name: 'Riley Kim', title: 'Platform lead', manager: 'vp' },
+        { id: 'w1', name: 'Morgan Diaz', title: 'Frontend engineer', manager: 'web' },
+        { id: 'w2', name: 'Casey Ford', title: 'Frontend engineer', manager: 'web' },
+        { id: 'w3', name: 'Quinn Ross', title: 'Designer', manager: 'web' },
+        { id: 'a1', name: 'Drew Park', title: 'iOS engineer', manager: 'app' },
+        { id: 'a2', name: 'Jamie Cole', title: 'Android engineer', manager: 'app' },
+        { id: 'o1', name: 'Taylor Wu', title: 'SRE', manager: 'ops' },
+        { id: 'o2', name: 'Alex Moore', title: 'SRE', manager: 'ops' },
+        { id: 'o3', name: 'Sky Rivera', title: 'Security engineer', manager: 'ops' },
+        { id: 'o4', name: 'Robin Hale', title: 'DBA', manager: 'ops' },
+      ],
+    },
+  },
+  {
+    name: 'multi',
+    title: 'Org chart, a team in two columns',
+    description: '`multi: 2` on a manager: their team is stacked in two columns.',
+    source: {
+      version: '1',
+      type: 'orgchart',
+      title: 'Customer support',
+      people: [
+        { id: 'lead', name: 'Avery Chen', title: 'Head of Support', multi: 2 },
+        { id: 's1', name: 'Sam Patel', title: 'Agent', manager: 'lead' },
+        { id: 's2', name: 'Jordan Lee', title: 'Agent', manager: 'lead' },
+        { id: 's3', name: 'Riley Kim', title: 'Agent', manager: 'lead' },
+        { id: 's4', name: 'Morgan Diaz', title: 'Agent', manager: 'lead' },
+        { id: 's5', name: 'Casey Ford', title: 'Senior agent', manager: 'lead' },
+        { id: 's6', name: 'Quinn Ross', title: 'Team coach', manager: 'lead' },
       ],
     },
   },
@@ -95,7 +151,7 @@ export const orgchart: DiagramType<OrgChart> = {
   title: 'Org chart',
   description: 'People and who they report to. For teams and organisations.',
   schema: orgchartSchema,
-  engine: 'layered',
+  engine: 'tree',
   validate,
   toIR,
   examples,

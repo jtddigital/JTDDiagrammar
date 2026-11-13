@@ -79,6 +79,7 @@ packages/
       simplify.ts, normalize.ts
       layered/                graph.ts, constants.ts, cycles.ts, rank.ts, layering.ts (phases), order.ts, place.ts (lanes),
                               main-axis.ts (phase spans), route.ts, bands.ts, index.ts; containers in P5
+      tree/                   block.ts, arrange.ts (row or stacks), index.ts: hierarchies, e.g. org charts (URS-LY-014)
     render/svg/               index.ts, bands.ts, text.ts, escape.ts, theme.ts; containers in P5
     index.ts                  render(src) → { svg, diagnostics }
   ai/src/                     Node only; core never imports it (URS-NF-009)
@@ -146,7 +147,7 @@ One engine at first, `layered` (Sugiyama-style), with optional constraint module
 6. **Labels**: place on the longest segment, then nudge off obstacles. (URS-LY-008)
 7. **Direction**: lay out in LR coordinates, then swap axes for TB. (URS-DM-003)
 
-Future types that don't fit a layered layout (sequence, ER) add a new engine and change nothing else.
+Future types that don't fit a layered layout (sequence, ER) add a new engine and change nothing else. The second engine, `tree` (`layout/tree/`), lays out hierarchies such as org charts: children in a row under their parent, or in `IRNode.stack` stacks, with orthogonal connectors; left to right is the top-to-bottom layout turned (URS-LY-014).
 
 **Text measurement** (URS-LY-009), as built in P1: `scripts/fonts/metrics.ts` generates a table of advance widths (code points 32–255, regular and bold) from **Liberation Sans** (OFL), committed as `measure/font-metrics.ts`. Liberation Sans is metric-compatible with Arial, and Arial is close to Helvetica. The SVG declares `Arial, 'Liberation Sans', Helvetica, sans-serif` with kerning and ligatures off, so text measures the same everywhere **without embedding a font**. Chromium measurements match the table to within 0.02 px. Characters outside the table count as 1 em, which over-estimates and is safe. Embedding a font remains an option (URS-RN-006) if a non-Arial font is ever wanted.
 

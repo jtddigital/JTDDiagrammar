@@ -45,6 +45,8 @@ export interface IRNode extends Sourced {
   order?: number;
   lane?: string;
   phase?: string;
+  /** Tree layout: put this node's children in this many stacks (columns, or rows across the flow) instead of one row (URS-LY-014). */
+  stack?: number;
 }
 
 /** Small pictograms for badges, edge labels and legends (URS-DM-025). */

@@ -572,6 +572,167 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Org chart, stacked teams
+
+`type: orgchart` · `stack: true`: each team hangs in a column under its manager. The leadership team keeps its row with `stack: false` on its manager.
+
+![Org chart, stacked teams](docs/img/orgchart-stacked.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Engineering",
+  "stack": true,
+  "people": [
+    {
+      "id": "vp",
+      "name": "Avery Chen",
+      "title": "VP Engineering",
+      "stack": false
+    },
+    {
+      "id": "web",
+      "name": "Sam Patel",
+      "title": "Web lead",
+      "manager": "vp"
+    },
+    {
+      "id": "app",
+      "name": "Jordan Lee",
+      "title": "Mobile lead",
+      "manager": "vp"
+    },
+    {
+      "id": "ops",
+      "name": "Riley Kim",
+      "title": "Platform lead",
+      "manager": "vp"
+    },
+    {
+      "id": "w1",
+      "name": "Morgan Diaz",
+      "title": "Frontend engineer",
+      "manager": "web"
+    },
+    {
+      "id": "w2",
+      "name": "Casey Ford",
+      "title": "Frontend engineer",
+      "manager": "web"
+    },
+    {
+      "id": "w3",
+      "name": "Quinn Ross",
+      "title": "Designer",
+      "manager": "web"
+    },
+    {
+      "id": "a1",
+      "name": "Drew Park",
+      "title": "iOS engineer",
+      "manager": "app"
+    },
+    {
+      "id": "a2",
+      "name": "Jamie Cole",
+      "title": "Android engineer",
+      "manager": "app"
+    },
+    {
+      "id": "o1",
+      "name": "Taylor Wu",
+      "title": "SRE",
+      "manager": "ops"
+    },
+    {
+      "id": "o2",
+      "name": "Alex Moore",
+      "title": "SRE",
+      "manager": "ops"
+    },
+    {
+      "id": "o3",
+      "name": "Sky Rivera",
+      "title": "Security engineer",
+      "manager": "ops"
+    },
+    {
+      "id": "o4",
+      "name": "Robin Hale",
+      "title": "DBA",
+      "manager": "ops"
+    }
+  ]
+}
+```
+
+</details>
+
+### Org chart, a team in two columns
+
+`type: orgchart` · `multi: 2` on a manager: their team is stacked in two columns.
+
+![Org chart, a team in two columns](docs/img/orgchart-multi.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Customer support",
+  "people": [
+    {
+      "id": "lead",
+      "name": "Avery Chen",
+      "title": "Head of Support",
+      "multi": 2
+    },
+    {
+      "id": "s1",
+      "name": "Sam Patel",
+      "title": "Agent",
+      "manager": "lead"
+    },
+    {
+      "id": "s2",
+      "name": "Jordan Lee",
+      "title": "Agent",
+      "manager": "lead"
+    },
+    {
+      "id": "s3",
+      "name": "Riley Kim",
+      "title": "Agent",
+      "manager": "lead"
+    },
+    {
+      "id": "s4",
+      "name": "Morgan Diaz",
+      "title": "Agent",
+      "manager": "lead"
+    },
+    {
+      "id": "s5",
+      "name": "Casey Ford",
+      "title": "Senior agent",
+      "manager": "lead"
+    },
+    {
+      "id": "s6",
+      "name": "Quinn Ross",
+      "title": "Team coach",
+      "manager": "lead"
+    }
+  ]
+}
+```
+
+</details>
+
 ### Object lifecycle
 
 `type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
@@ -1728,6 +1889,8 @@ People and who they report to. For teams and organisations.
 |-------|------|----------|-------------|
 | `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
 | `styles` | styles by key |  | Default style per section (`people`, `lines`); each item’s own `style` overrides it field by field. |
+| `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
+| `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |
 | `people` | list of objects | yes | Everyone in the chart. |
 | `people[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `people[].name` | string | yes | Shown first, on its own line. |
@@ -1735,6 +1898,8 @@ People and who they report to. For teams and organisations.
 | `people[].manager` | string |  | Id of the person this person reports to; omit at the top. |
 | `people[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `people[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `people[].stack` | boolean |  | This person's team: stacked (true) or in a row (false). Default: the chart's `stack`. |
+| `people[].multi` | integer |  | This person's team stacked in this many columns (rows when left to right). |
 
 ### `lifecycle`
 
