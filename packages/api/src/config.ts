@@ -55,6 +55,12 @@ export interface CopilotConfig {
   loginUrl: string;
 }
 
+/**
+ * Microsoft Graph Command Line Tools: Microsoft's public client app that `Connect-MgGraph` signs in
+ * with. The default, so Copilot needs no app registration and no settings (URS-AI-024).
+ */
+export const GRAPH_CLI_APP = '14d82eec-204b-4c2f-b7e8-296a70dab67e';
+
 /** Delegated permissions the Microsoft 365 Copilot Chat API requires, all together. Override with COPILOT_SCOPES. */
 export const COPILOT_SCOPES = ['Sites.Read.All', 'Mail.Read', 'People.Read.All', 'OnlineMeetingTranscript.Read.All', 'Chat.Read', 'ChannelMessage.Read.All', 'ExternalItem.Read.All'];
 
@@ -115,12 +121,14 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
       maxOutputTokens: int(env.AI_MAX_OUTPUT_TOKENS, 64000),
       ratePerMinute: count(env.AI_RATE_LIMIT, 10),
       ...(json(env.AI_PRICES) && { prices: json(env.AI_PRICES)! }),
-      ...(env.COPILOT_CLIENT_ID && {
+      // On unless COPILOT=off: with no settings, device sign-in through Microsoft's own public app.
+      ...(env.COPILOT !== 'off' && {
         copilot: {
-          clientId: env.COPILOT_CLIENT_ID,
+          clientId: env.COPILOT_CLIENT_ID || GRAPH_CLI_APP,
           tenantId: env.COPILOT_TENANT_ID || 'organizations',
           graphUrl: env.COPILOT_GRAPH_URL || 'https://graph.microsoft.com/beta',
-          signIn: env.COPILOT_SIGNIN === 'device' ? ('device' as const) : ('browser' as const),
+          // A registered single-page app signs in with a popup; Microsoft's public app with a device code.
+          signIn: (env.COPILOT_SIGNIN || ((env.COPILOT_CLIENT_ID || GRAPH_CLI_APP) === GRAPH_CLI_APP ? 'device' : 'browser')) === 'device' ? ('device' as const) : ('browser' as const),
           loginUrl: (env.COPILOT_LOGIN_URL || 'https://login.microsoftonline.com').replace(/\/$/, ''),
           scopes: (env.COPILOT_SCOPES ? env.COPILOT_SCOPES.split(/[\s,]+/).filter(Boolean) : COPILOT_SCOPES).map((s) => (s.includes('://') ? s : `https://graph.microsoft.com/${s}`)),
         },

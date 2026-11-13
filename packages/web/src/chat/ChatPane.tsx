@@ -135,7 +135,7 @@ export function ChatPane({ text, value, onSource }: Props) {
   if (available === false)
     return (
       <p className="notice" role="note">
-        AI generation is not configured on this server. Set <code>ANTHROPIC_API_KEY</code> for Claude, or <code>COPILOT_CLIENT_ID</code> for Microsoft 365 Copilot, where the server runs to turn it on.
+        AI generation is not configured on this server. Set <code>ANTHROPIC_API_KEY</code> for Claude, or remove <code>COPILOT=off</code> for Microsoft 365 Copilot, in <code>config.env</code> where the server runs.
       </p>
     );
 

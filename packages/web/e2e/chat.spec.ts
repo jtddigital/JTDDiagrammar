@@ -81,9 +81,12 @@ test('says so when the server has no AI configured (URS-API-016)', async ({ page
   await expect(chat(page).getByText('AI generation is not configured on this server.')).toBeVisible();
 });
 
-test('the real server without credentials reports AI as unavailable (URS-API-015)', async ({ page }) => {
+test('the real server with no settings offers Copilot, with Claude not set up (URS-API-015, URS-AI-024)', async ({ page }) => {
   await open(page);
-  await expect(chat(page).getByText('AI generation is not configured on this server.')).toBeVisible();
+  const pick = chat(page).getByLabel('AI', { exact: true });
+  await expect(pick).toHaveValue('copilot');
+  await expect(pick.locator('option')).toHaveText(['Claude (not set up)', 'Microsoft 365 Copilot']);
+  await expect(chat(page).getByRole('button', { name: 'Sign in with Microsoft' })).toBeVisible();
 });
 
 const sse = (events: [string, unknown][]) => events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join('');
@@ -189,7 +192,7 @@ test('shows an AI the server is not set up for, disabled, with how to set it up 
   const pick = chat(page).getByLabel('AI', { exact: true });
   await expect(pick.locator('option')).toHaveText(['Claude', 'Microsoft 365 Copilot (not set up)']);
   await expect(pick.locator('option[value="copilot"]')).toBeDisabled();
-  await expect(pick).toHaveAttribute('title', /COPILOT_CLIENT_ID.*config\.env, then restart/);
+  await expect(pick).toHaveAttribute('title', /COPILOT=off in config\.env, then restart/);
 });
 
 test('signs in to Microsoft with a device code, then sends the token with Copilot requests (URS-AI-024)', async ({ page }) => {
