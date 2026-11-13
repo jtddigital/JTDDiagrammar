@@ -233,6 +233,15 @@
     "edgeThroughLabel": 0,
     "bends": 8
   },
+  "orgchart-compact": {
+    "crossings": 0,
+    "overlaps": 31,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 34
+  },
   "lifecycle-change-control": {
     "crossings": 0,
     "overlaps": 0,

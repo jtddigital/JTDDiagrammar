@@ -915,6 +915,104 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Org chart, saving space
+
+`type: orgchart` · `compact: "both"`: teams whose members manage no one become balanced grids, with tighter spacing. `horizontal` or `vertical` saves one way only.
+
+![Org chart, saving space](docs/img/orgchart-compact.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Operations",
+  "compact": "both",
+  "people": [
+    {
+      "id": "coo",
+      "name": "Avery Chen",
+      "title": "COO"
+    },
+    {
+      "id": "sup",
+      "name": "Sam Patel",
+      "title": "Support lead",
+      "manager": "coo"
+    },
+    {
+      "id": "s0",
+      "name": "Riley Kim",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "s1",
+      "name": "Morgan Diaz",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "s2",
+      "name": "Casey Ford",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "s3",
+      "name": "Quinn Ross",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "s4",
+      "name": "Drew Park",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "s5",
+      "name": "Jordan Lee",
+      "title": "Agent",
+      "manager": "sup"
+    },
+    {
+      "id": "log",
+      "name": "Blake Ross",
+      "title": "Logistics lead",
+      "manager": "coo"
+    },
+    {
+      "id": "l0",
+      "name": "Cass Lee",
+      "title": "Coordinator",
+      "manager": "log"
+    },
+    {
+      "id": "l1",
+      "name": "Dana Moe",
+      "title": "Coordinator",
+      "manager": "log"
+    },
+    {
+      "id": "l2",
+      "name": "Eli Shaw",
+      "title": "Coordinator",
+      "manager": "log"
+    },
+    {
+      "id": "l3",
+      "name": "Fay Wu",
+      "title": "Coordinator",
+      "manager": "log"
+    }
+  ]
+}
+```
+
+</details>
+
 ### Object lifecycle
 
 `type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
@@ -2076,6 +2174,7 @@ People and who they report to. For teams and organisations.
 | `departments[].parent` | string |  | The department this one is drawn inside. |
 | `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `tags` | object |  | A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person's own `style` overrides it field by field. A tag styled here that no one has is a warning. |
+| `compact` | `horizontal` \| `vertical` \| `both` |  | Save space: `horizontal` makes the chart narrower, `vertical` shorter, `both` both. Spacing gets tighter that way, and teams whose members manage no one are stacked (to save width when top to bottom, height when left to right); stacked teams spread into balanced columns to save the other way. A person's own `stack` or `multi`, and the chart's `multi`, still win. |
 | `legend` | boolean |  | Draw a legend under the chart: a sample card in each styled tag's style, with the tag's name. Only tags someone has are shown. |
 | `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
 | `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |

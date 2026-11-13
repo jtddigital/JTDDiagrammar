@@ -129,4 +129,8 @@ export interface GraphIR {
   legend?: LegendItem[];
   /** Title block: key–value pairs under the title (URS-DM-027). */
   meta?: [string, string][];
+  /** Save space along these drawn axes: engines use tighter spacing there (URS-LY-014). */
+  compact?: Compact;
 }
+
+export type Compact = 'horizontal' | 'vertical' | 'both';

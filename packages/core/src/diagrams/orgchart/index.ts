@@ -3,7 +3,8 @@ import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
 import { merged, styled } from '../section-styles.ts';
 import { checkDepartments, departmentsOf, loopOf } from './departments.ts';
-import { stacksOf, type OrgChart, type Person } from './model.ts';
+import { teamStacks } from './compact.ts';
+import { type OrgChart, type Person } from './model.ts';
 import { checkTags, tagLegend, tagStyle } from './tags.ts';
 import { orgchartSchema } from './schema.ts';
 
@@ -24,6 +25,7 @@ function validate(m: OrgChart): Diagnostic[] {
 const toIR = (m: OrgChart): GraphIR => {
   const depts = departmentsOf(m);
   const legend = tagLegend(m);
+  const stacks = teamStacks(m);
   const idOf = new Map(depts.map((d) => [d.name, d.id]));
   // A circular parent is reported by the rules; the boxes simply aren't nested.
   const parentOf = new Map(depts.map((d) => [d.name, d.entry?.parent]));
@@ -32,8 +34,9 @@ const toIR = (m: OrgChart): GraphIR => {
   ...(m.title !== undefined && { title: m.title }),
   ...(m.theme && { theme: m.theme }),
   direction: m.direction ?? 'TB',
+  ...(m.compact && { compact: m.compact }),
   nodes: m.people.map((p, i) => {
-    const stack = stacksOf(m, p);
+    const stack = stacks.get(p.id);
     return {
       id: p.id,
       shape: 'card',
@@ -169,6 +172,24 @@ const examples: [Example, ...Example[]] = [
         { id: 'p2', name: 'Riley Kim', title: 'Engineer', manager: 'lead', tags: ['contractor', 'remote'] },
         { id: 'p3', name: 'Morgan Diaz', title: 'SRE', manager: 'lead', tags: ['contractor'], style: { fill: '#ecfdf5' } },
         { id: 'p4', name: 'Open role', title: 'Engineer', manager: 'lead', tags: ['open'] },
+      ],
+    },
+  },
+  {
+    name: 'compact',
+    title: 'Org chart, saving space',
+    description: '`compact: "both"`: teams whose members manage no one become balanced grids, with tighter spacing. `horizontal` or `vertical` saves one way only.',
+    source: {
+      version: '1',
+      type: 'orgchart',
+      title: 'Operations',
+      compact: 'both',
+      people: [
+        { id: 'coo', name: 'Avery Chen', title: 'COO' },
+        { id: 'sup', name: 'Sam Patel', title: 'Support lead', manager: 'coo' },
+        ...['Riley Kim', 'Morgan Diaz', 'Casey Ford', 'Quinn Ross', 'Drew Park', 'Jordan Lee'].map((name, i) => ({ id: `s${i}`, name, title: 'Agent', manager: 'sup' })),
+        { id: 'log', name: 'Blake Ross', title: 'Logistics lead', manager: 'coo' },
+        ...['Cass Lee', 'Dana Moe', 'Eli Shaw', 'Fay Wu'].map((name, i) => ({ id: `l${i}`, name, title: 'Coordinator', manager: 'log' })),
       ],
     },
   },

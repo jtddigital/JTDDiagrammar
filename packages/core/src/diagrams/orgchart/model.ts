@@ -1,4 +1,4 @@
-import type { Direction, Style, Theme } from '../../ir/types.ts';
+import type { Compact, Direction, Style, Theme } from '../../ir/types.ts';
 
 export interface Person {
   id: string;
@@ -37,6 +37,8 @@ export interface OrgChart {
   departments?: Department[];
   /** A style per tag, for every person with that tag; a person's own `style` wins (URS-TYP-013). */
   tags?: Record<string, Style>;
+  /** Save space across, down or both: stack teams and tighten spacing that way (URS-TYP-014). */
+  compact?: Compact;
   /** Draw a legend of the styled tags in use (URS-TYP-013, URS-DM-026); default true. */
   legend?: boolean;
   /** Stack each team under its manager instead of spreading it in a row (URS-TYP-011). */
