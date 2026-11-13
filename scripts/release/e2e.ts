@@ -5,7 +5,7 @@
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -70,7 +70,12 @@ const launcher = (...extra: string[]): [string, string[]] =>
 function stop(p: ChildProcess | undefined): void {
   if (!p?.pid || p.exitCode !== null) return;
   if (win) spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F']);
-  else process.kill(-p.pid, 'SIGTERM'); // the launcher's whole process group
+  else
+    try {
+      process.kill(-p.pid, 'SIGTERM'); // the launcher's whole process group
+    } catch {
+      /* Already gone, e.g. after a restart replaced it. */
+    }
 }
 
 /** Async, so the stand-in server in this process keeps answering. */
@@ -106,6 +111,41 @@ try {
 
   const again = await run(...installer(TAG));
   check(again.status === 0 && gh.downloads() === 4, 'updates in place to a named release');
+
+  // Running the launcher again reuses the server, unless config.env changed since it started: then it restarts it (URS-NF-011).
+  const health = async () => (await fetch(`${url}/health`).then((r) => r.json(), () => undefined)) as { version?: string; startedAt: number } | undefined;
+  const before = await health();
+  check(before?.version === TAG, 'the server reports its version');
+  const reuse = await run(...launcher('start', '--port', String(port), '--no-open'));
+  check(reuse.status === 0 && /already running/.test(reuse.stdout) && (await health())?.startedAt === before?.startedAt, 'reuses a current server');
+  appendFileSync(join(home, 'config.env'), '# changed\n');
+  const second = spawn(...launcher('start', '--port', String(port), '--no-open'), { env, stdio: ['ignore', 'pipe', 'inherit'], shell: win, detached: !win });
+  let said = '';
+  second.stdout!.on('data', (d) => (said += d));
+  let restarted = false;
+  for (let i = 0; i < 120 && !restarted; i++) {
+    restarted = ((await health())?.startedAt ?? 0) > (before?.startedAt ?? Infinity);
+    if (!restarted) await new Promise((r) => setTimeout(r, 500));
+  }
+  // Let the new launcher see its server up before stopping it.
+  for (let i = 0; i < 40 && !/JTDDiagrammar \S+ at http/.test(said); i++) await new Promise((r) => setTimeout(r, 250));
+  check(restarted && /Restarting: settings in config\.env changed/.test(said), 'restarts the server when config.env changed');
+  stop(app);
+  app = second;
+  const stopped = await run(...launcher('stop'));
+  let down = false;
+  for (let i = 0; i < 40 && !down; i++) {
+    down = !(await health());
+    if (!down) await new Promise((r) => setTimeout(r, 500));
+  }
+  check(stopped.status === 0 && /stopped/.test(stopped.stdout) && down, 'stops the server');
+  app = spawn(...launcher('restart', '--port', String(port), '--no-open'), { env, stdio: 'inherit', shell: win, detached: !win });
+  up = false;
+  for (let i = 0; i < 120 && !up; i++) {
+    up = Boolean(await health());
+    if (!up) await new Promise((r) => setTimeout(r, 500));
+  }
+  check(up, 'restart starts it again');
   const bare = await run(...installer('v0.0.1'));
   check(bare.status !== 0 && /v0\.0\.1 has no jtddiagrammar\.tar\.gz attached/.test(bare.stderr + bare.stdout), 'explains a release without the app bundle');
   const denied = await run(...installer(), { GITHUB_TOKEN: 'wrong' });

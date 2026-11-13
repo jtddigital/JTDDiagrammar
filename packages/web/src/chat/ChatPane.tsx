@@ -7,7 +7,7 @@ import { aiInfo, generateDiagram, refineDiagram, type AiInfo, type Generated, ty
 import { Composer, type Mode } from './Composer.tsx';
 import { describe, loadChat, newId, saveChat, stepBack, update, type Message } from './history.ts';
 import { MessageView } from './MessageView.tsx';
-import { PROVIDER_NAMES, ProviderPicker } from './ProviderPicker.tsx';
+import { ProviderPicker } from './ProviderPicker.tsx';
 import { stageText } from './progress.ts';
 
 const SUGGEST: Record<Mode, string[]> = {
@@ -143,10 +143,21 @@ export function ChatPane({ text, value, onSource }: Props) {
   return (
     <div className="chat frame">
       <div className="pane__header cluster">
-        <span className="pane__title">Assistant</span>
-        {provider && <span className="text-muted text-small">{PROVIDER_NAMES[provider.id]}</span>}
-        <button type="button" className="btn push-right" data-variant="ghost" disabled={busy || !messages.length} onClick={() => setMessages([])}>
-          <Plus /> New chat
+        {info && provider ? (
+          <ProviderPicker
+            providers={info.providers}
+            value={provider.id}
+            onChange={choose}
+            {...(account && { account })}
+            onSignIn={() => void (device ? deviceSignIn() : signIn(microsoft!).then(setAccount, fail))}
+            onSignOut={() => (device ? (deviceSignOut(), setAccount(undefined)) : void signOut(microsoft!).then(() => setAccount(undefined), fail))}
+            disabled={busy}
+          />
+        ) : (
+          <span className="pane__title">Assistant</span>
+        )}
+        <button type="button" className="icon-btn push-right" aria-label="New chat" title="New chat" disabled={busy || !messages.length} onClick={() => setMessages([])}>
+          <Plus />
         </button>
       </div>
       <div className="chat__log frame__body" role="log" aria-label="Conversation" aria-live="polite">
@@ -186,19 +197,6 @@ export function ChatPane({ text, value, onSource }: Props) {
         disabled={!available}
         onSend={() => void send()}
         onStop={() => abort.current?.abort()}
-        extra={
-          info && provider ? (
-            <ProviderPicker
-              providers={info.providers}
-              value={provider.id}
-              onChange={choose}
-              {...(account && { account })}
-              onSignIn={() => void (device ? deviceSignIn() : signIn(microsoft!).then(setAccount, fail))}
-              onSignOut={() => (device ? (deviceSignOut(), setAccount(undefined)) : void signOut(microsoft!).then(() => setAccount(undefined), fail))}
-              disabled={busy}
-            />
-          ) : undefined
-        }
       />
     </div>
   );
