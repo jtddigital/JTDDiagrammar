@@ -62,7 +62,10 @@ jobs:
           curl -sf localhost:8080/ | grep -q '<div id="root">'
           curl -sf -X POST -H 'content-type: application/json' \
             --data '{"version":"1","type":"flowchart","nodes":[{"id":"a"}]}' localhost:8080/v1/render | grep -q '<svg'
-          curl -sf localhost:8080/v1/ai | grep -q '"enabled":false'
+          # No Anthropic key: Claude is off; Copilot is on by default and needs no secret (URS-API-015, URS-AI-024).
+          ai="$(curl -sf localhost:8080/v1/ai)"
+          echo "$ai" | grep -q '"id":"copilot"'
+          if echo "$ai" | grep -q '"id":"claude"'; then echo "Claude enabled without a key" >&2; exit 1; fi
 
   install:
     # URS-NF-010/011/013: install a packed release from a stand-in GitHub API, launch it, update, uninstall.

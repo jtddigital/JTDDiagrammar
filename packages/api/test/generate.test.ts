@@ -2,7 +2,7 @@ import { MockClaude, type ScriptedReply } from '@jtd/ai';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
-import { fromEnv, type Config } from '../src/config.ts';
+import { fromEnv, GRAPH_CLI_APP, type Config } from '../src/config.ts';
 
 const flow = {
   title: 'Refunds',
@@ -16,7 +16,8 @@ const flow = {
 };
 
 const cfg = (ai: Partial<Config['ai']> = {}): Config => {
-  const base = fromEnv({});
+  // Copilot is on by default; these tests turn it on explicitly where they need it.
+  const base = fromEnv({ COPILOT: 'off' });
   return { ...base, webDist: undefined, renderWorkers: 1, ai: { ...base.ai, ...ai } } as Config;
 };
 
@@ -211,8 +212,13 @@ describe('Microsoft 365 Copilot provider (URS-AI-023, URS-API-017)', () => {
     expect(logs.join('\n')).not.toContain('GRAPH-SECRET-42');
   });
 
-  it('reads the app registration from the environment', () => {
-    expect(fromEnv({}).ai.copilot).toBeUndefined();
+  it('is on by default, with device sign-in through Microsoft Graph Command Line Tools, so nothing needs setting (URS-AI-024)', () => {
+    expect(fromEnv({}).ai.copilot).toMatchObject({ clientId: GRAPH_CLI_APP, tenantId: 'organizations', signIn: 'device' });
+    expect(GRAPH_CLI_APP).toBe('14d82eec-204b-4c2f-b7e8-296a70dab67e');
+    expect(fromEnv({ COPILOT: 'off' }).ai.copilot).toBeUndefined();
+  });
+
+  it('reads an app registration of your own from the environment', () => {
     expect(fromEnv({ COPILOT_CLIENT_ID: 'id' }).ai.copilot).toEqual({
       clientId: 'id',
       tenantId: 'organizations',

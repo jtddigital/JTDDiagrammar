@@ -2102,7 +2102,7 @@ Rendering runs in worker threads, so one slow diagram can't stall the server. Re
 
 ## AI generation
 
-Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. The AI drafts the diagram source, and you review and edit it like anything else. Two AI providers are supported: **Claude** (the default) and **Microsoft 365 Copilot**; see [Microsoft 365 Copilot](#microsoft-365-copilot).
+Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. The AI drafts the diagram source, and you review and edit it like anything else. Two AI providers are supported: **Claude** (with `ANTHROPIC_API_KEY`) and **Microsoft 365 Copilot** (on by default, with a Microsoft sign-in); see [Microsoft 365 Copilot](#microsoft-365-copilot).
 
 ![AI pane: paste notes or attach documents to create a diagram](docs/img/web-generate.png)
 
@@ -2149,24 +2149,23 @@ In the web app, the AI pane shows each stage as it happens and can stop a job. I
 
 ### Microsoft 365 Copilot
 
-Copilot works on behalf of the person using the app: they sign in with their Microsoft work account in the browser, and the server calls the Microsoft Graph Copilot Chat API with their token. There is no server secret.
+Copilot works on behalf of the person using the app: they sign in with their Microsoft work account, and the server calls the Microsoft Graph Copilot Chat API with their token. **It needs no settings and no app registration:** pick **Microsoft 365 Copilot** in the list at the top of the AI pane, then **Sign in**. A code appears in the conversation; enter it at the Microsoft page it links to, as with `Connect-MgGraph -UseDeviceCode`. The choice is remembered.
 
-1. In the Microsoft Entra admin center, register an application (**App registrations → New registration**). Add a **Single-page application** platform with the redirect URI `https://<your host>/auth-redirect.html` (and `http://localhost:8080/auth-redirect.html` for local use).
-2. Under **API permissions**, add these Microsoft Graph *delegated* permissions and grant admin consent: `Sites.Read.All`, `Mail.Read`, `People.Read.All`, `OnlineMeetingTranscript.Read.All`, `Chat.Read`, `ChannelMessage.Read.All`, `ExternalItem.Read.All`. The Copilot Chat API needs all of them.
-3. Set `COPILOT_CLIENT_ID` (the application id) and `COPILOT_TENANT_ID` (your tenant id or domain) where the server runs. `COPILOT_GRAPH_URL` and `COPILOT_SCOPES` override the endpoint and permissions if Microsoft changes them.
-4. Each user needs a Microsoft 365 Copilot licence.
+- Each user needs a Microsoft 365 Copilot licence.
+- The first sign-in asks for consent to the seven Microsoft Graph permissions the Copilot Chat API needs: `Sites.Read.All`, `Mail.Read`, `People.Read.All`, `OnlineMeetingTranscript.Read.All`, `Chat.Read`, `ChannelMessage.Read.All`, `ExternalItem.Read.All`. Where your tenant requires it, an admin has to consent instead.
+- Sign-in goes through *Microsoft Graph Command Line Tools*, Microsoft's own public app (the one `Connect-MgGraph` uses), so it shows in your tenant's sign-in logs under that name and your organisation's policies for it apply.
+- The token stays in that browser tab and is refreshed as needed. The server only relays the sign-in requests (Microsoft refuses them from a browser for this kind of app) and keeps nothing.
 
-**Without registering an app.** If you can't register one, sign in with a device code instead, the way `Connect-MgGraph -UseDeviceCode` does. Set `COPILOT_SIGNIN=device` and point `COPILOT_CLIENT_ID` at a public client app your tenant already allows. Microsoft Graph PowerShell's own app, *Microsoft Graph Command Line Tools*, is the one `Connect-MgGraph` uses:
+Settings, all optional, in `config.env`:
 
-```
-COPILOT_SIGNIN=device
-COPILOT_CLIENT_ID=14d82eec-204b-4c2f-b7e8-296a70dab67e
-COPILOT_TENANT_ID=<your tenant id or domain>
-```
+| Setting | Does |
+|---------|------|
+| `COPILOT=off` | Turn Copilot off |
+| `COPILOT_TENANT_ID` | Your tenant id or domain (default `organizations`: any work or school account) |
+| `COPILOT_CLIENT_ID` | Use an app of your own instead. A single-page app (redirect URI `https://<your host>/auth-redirect.html`, the seven delegated permissions) signs in with a popup; for a public client app, also set `COPILOT_SIGNIN=device` |
+| `COPILOT_GRAPH_URL`, `COPILOT_SCOPES` | Override the endpoint and permissions if Microsoft changes them |
 
-Sign-ins then show in your tenant's logs as that app, and your organisation's policies for it apply: the Copilot permissions still need consent (yours, or an admin's where the tenant requires it). **Sign in with Microsoft** shows a code in the conversation; enter it at the Microsoft page it links to. The token stays in that browser tab and is refreshed as needed; the server only relays the sign-in requests (Microsoft refuses them from a browser for this kind of app) and keeps nothing.
-
-In the web app, pick **Microsoft 365 Copilot** in the list at the top of the AI pane, then **Sign in**. If it shows *(not set up)*, the running server hasn't read `COPILOT_CLIENT_ID`: check `config.env` and run `jtddiagrammar restart`. The choice is remembered. Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
+Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
 
 Copilot has no structured outputs, so the schema is sent as instructions and every reply is checked and repaired like Claude's. It takes text only, so PDFs and images need Claude, and it does not report token usage or cost.
 

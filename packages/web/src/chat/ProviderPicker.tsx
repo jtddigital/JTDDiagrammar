@@ -3,7 +3,7 @@ import type { Provider } from './api.ts';
 export const PROVIDER_NAMES: Record<Provider['id'], string> = { claude: 'Claude', copilot: 'Microsoft 365 Copilot' };
 const SETUP: Record<Provider['id'], string> = {
   claude: 'set ANTHROPIC_API_KEY',
-  copilot: 'set COPILOT_CLIENT_ID (see the README, Microsoft 365 Copilot)',
+  copilot: 'remove COPILOT=off',
 };
 
 interface Props {

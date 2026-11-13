@@ -141,7 +141,20 @@ describe('other endpoints', () => {
   it('GET /v1/openapi.json documents every route (URS-API-008)', async () => {
     const doc = (await app.inject('/v1/openapi.json')).json();
     expect(doc.openapi).toBe('3.1.0');
-    expect(Object.keys(doc.paths).sort()).toEqual(['/health', '/v1/ai', '/v1/generate', '/v1/openapi.json', '/v1/refine', '/v1/render', '/v1/schema', '/v1/schema/{type}', '/v1/types', '/v1/validate']);
+    expect(Object.keys(doc.paths).sort()).toEqual([
+      '/health',
+      '/v1/ai',
+      '/v1/auth/microsoft/device',
+      '/v1/auth/microsoft/token',
+      '/v1/generate',
+      '/v1/openapi.json',
+      '/v1/refine',
+      '/v1/render',
+      '/v1/schema',
+      '/v1/schema/{type}',
+      '/v1/types',
+      '/v1/validate',
+    ]);
     expect(Object.keys(doc.paths['/v1/generate'].post.requestBody.content)).toEqual(['multipart/form-data', 'application/json']);
     expect(doc.paths['/v1/render'].post.requestBody.content['application/json'].schema).toEqual({ $ref: '#/components/schemas/Diagram' });
   });

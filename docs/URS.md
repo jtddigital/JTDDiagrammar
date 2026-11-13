@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.38 (draft) |
+| Version | 0.39 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -143,7 +143,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-API-012 | M | `POST /v1/generate` (multipart: `files[]`, `text`, `type` or `auto`, options) returns `{ source, valid, diagnostics, attempts, usage }`, plus `svg` when valid. | Integration test with a mock client. | T | Verified |
 | URS-API-013 | S | `POST /v1/refine` (`{ source, instruction }`) returns the same shape as URS-API-012. | Integration test with a mock client. | T | Verified |
 | URS-API-014 | S | `generate` and `refine` stream progress as SSE when called with `Accept: text/event-stream` (URS-AI-015). | Integration test. | T | Verified |
-| URS-API-015 | M | With no AI credentials configured, the AI endpoints return `503`; every other endpoint keeps working. | Integration test. | T | Verified |
+| URS-API-015 | M | With no AI provider (no Anthropic credentials and `COPILOT=off`), the AI endpoints return `503`; every other endpoint keeps working. Copilot is on by default and needs only the user's sign-in. | Integration test. | T | Verified |
 | URS-API-016 | S | `GET /v1/ai` reports whether AI generation is available and which providers are configured (with Copilot's public sign-in settings), so clients can hide or offer them. | Integration test. | T | Verified |
 | URS-API-017 | S | `/v1/generate` and `/v1/refine` take `provider` (`claude` or `copilot`; default Claude when configured). Copilot needs the user's Graph token in `X-Graph-Token`, else `401 ai.signin`; an unconfigured provider is `503`, an unknown one `400`. | Integration test. | T | Verified |
 | URS-API-018 | S | With device sign-in, `POST /v1/auth/microsoft/device` starts a sign-in and `POST /v1/auth/microsoft/token` finishes or refreshes it, relaying Microsoft's answer (pending, tokens, or its reason for refusing). Stateless: nothing is stored or logged. | Integration test. | T | Verified |
@@ -198,7 +198,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
 | URS-AI-022 | W | Bulk generation via the Message Batches API. | — | T | Proposed |
 | URS-AI-023 | S | Second provider: Microsoft 365 Copilot through the Microsoft Graph Copilot Chat API, acting as the signed-in user (delegated; Microsoft sign-in in the browser). Chosen per request and in the web app's AI pane header, which always lists both AIs (one not set up is disabled, with how to set it up) and remembers the choice. Generation and refine go through the same validation and repair loop, with the schema sent as instructions. Text input only. | Mock tests of the Graph calls, API and web; not yet run against a live tenant. | T | Implemented |
-| URS-AI-024 | S | Copilot sign-in without an app registration of one's own: a device code, as `Connect-MgGraph -UseDeviceCode` does, for any public client app the tenant allows (`COPILOT_SIGNIN=device`). The code shows in the conversation; the token is kept in the browser tab and refreshed when needed. | Unit, integration and E2E tests with a stand-in for Microsoft's login service. | T | Implemented |
+| URS-AI-024 | S | Copilot needs no settings and no app registration: by default it signs in with a device code, as `Connect-MgGraph -UseDeviceCode` does, through Microsoft Graph Command Line Tools (Microsoft's public client app), for any work or school account. `COPILOT=off` turns it off; `COPILOT_CLIENT_ID` uses an app of one's own. The code shows in the conversation; the token is kept in the browser tab and refreshed when needed. | Unit, integration and E2E tests with a stand-in for Microsoft's login service. | T | Implemented |
 
 ### 3.10 Documentation (DOC)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -348,6 +348,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.39 | 2026-11-13 | Owner request: Copilot should need no app id. It is now on by default through Microsoft Graph Command Line Tools with device sign-in (AI-024); API-015 restated (503 only with no provider at all). |
 | 0.38 | 2026-11-13 | Fix (intermittent CI failure, 514.7 ms against 500): LY-010's benchmark now runs in its own test run without coverage instrumentation or parallel test files, after a full-size warm-up, best of five. The 500 ms budget is unchanged; the acceptance criterion now states how it is measured. |
 | 0.37 | 2026-11-13 | Owner report: could not switch to Copilot. The AI choice moves to the AI pane header and always lists both AIs (AI-023); the launcher restarts a running app that is outdated or predates a config.env change, and gains `restart` and `stop` (NF-011). |
 | 0.36 | 2026-11-13 | Owner report: no permission to register an app. Added AI-024 (device-code sign-in for Copilot, as Connect-MgGraph does; implemented, not yet live-tested) and API-018. |
