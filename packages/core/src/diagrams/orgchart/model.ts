@@ -37,6 +37,8 @@ export interface OrgChart {
   departments?: Department[];
   /** A style per tag, for every person with that tag; a person's own `style` wins (URS-TYP-013). */
   tags?: Record<string, Style>;
+  /** Draw a legend of the styled tags in use (URS-TYP-013, URS-DM-026); default true. */
+  legend?: boolean;
   /** Stack each team under its manager instead of spreading it in a row (URS-TYP-011). */
   stack?: boolean;
   /** Split each stacked team into this many columns (rows when left to right). Implies `stack`. */

@@ -30,6 +30,7 @@ export const orgchartSchema = {
       additionalProperties: style,
       description: 'A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person\'s own `style` overrides it field by field. A tag styled here that no one has is a warning.',
     },
+    legend: { type: 'boolean', default: true, description: 'Draw a legend under the chart: a sample card in each styled tag\'s style, with the tag\'s name. Only tags someone has are shown.' },
     stack: { type: 'boolean', default: false, description: 'Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right.' },
     multi: { type: 'integer', minimum: 1, maximum: 12, description: 'Split each stacked team into this many columns (rows when left to right). Implies `stack`.' },
     people: {

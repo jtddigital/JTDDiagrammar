@@ -1,10 +1,19 @@
 import { pointer, warning, type Diagnostic } from '../../diagnostics.ts';
-import type { Style } from '../../ir/types.ts';
+import type { LegendItem, Style } from '../../ir/types.ts';
 import { merged } from '../section-styles.ts';
 import type { OrgChart, Person } from './model.ts';
 
 /** The styles of a person's tags, merged in the order the person lists them (later wins) (URS-TYP-013). */
 export const tagStyle = (m: Pick<OrgChart, 'tags'>, p: Pick<Person, 'tags'>): Style | undefined => (p.tags ?? []).reduce<Style | undefined>((s, t) => merged(s, m.tags?.[t]), undefined);
+
+/** The legend (URS-DM-026): a card in each styled tag's style, over the people default, for tags someone has. */
+export function tagLegend(m: OrgChart): LegendItem[] {
+  if (m.legend === false) return [];
+  const worn = new Set(m.people.flatMap((p) => p.tags ?? []));
+  return Object.entries(m.tags ?? {})
+    .filter(([t]) => worn.has(t))
+    .map(([t, s]) => ({ label: t, shape: 'card', style: merged(m.styles?.people, s)! }));
+}
 
 /** A tag styled in `tags` that no one wears is a warning: likely a typo or left over. */
 export function checkTags(m: OrgChart): Diagnostic[] {
