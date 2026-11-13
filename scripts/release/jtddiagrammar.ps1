@@ -18,8 +18,13 @@ function Test-Up($Url) {
   try { (Invoke-WebRequest -Uri "$Url/health" -UseBasicParsing -TimeoutSec 2).StatusCode -eq 200 } catch { $false }
 }
 
+# The running server's version and start time, or $null if none answers. Retried: the first web request
+# in Windows PowerShell 5.1 can stall for seconds (proxy detection).
 function Get-Health($Url) {
-  try { Invoke-RestMethod -Uri "$Url/health" -TimeoutSec 2 } catch { $null }
+  for ($try = 0; $try -lt 3; $try++) {
+    try { return (Invoke-WebRequest -Uri "$Url/health" -UseBasicParsing -TimeoutSec 5).Content | ConvertFrom-Json } catch { Start-Sleep -Milliseconds 300 }
+  }
+  $null
 }
 
 # The server this launcher started, so a later run can stop or restart it.
