@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.37 (draft) |
+| Version | 0.38 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -108,7 +108,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-LY-007 | S | Edge crossings and bends are minimised (heuristic). | Crossing and bend counts ≤ baseline on fixtures. | T | Verified |
 | URS-LY-008 | S | Edge labels do not overlap nodes. | Box intersection test. | T | Verified |
 | URS-LY-009 | M | Text measurement is identical in Node and the browser (bundled font metrics, no DOM). | Same widths in both runtimes. | T | Verified |
-| URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI. | T | Verified |
+| URS-LY-010 | S | 200 nodes / 300 edges laid out in < 500 ms on the server. | Benchmark in CI, measured as a server sees it: process CPU time in a warm process (first warmed on another 200/300 graph), best of five, in its own test run without coverage instrumentation or parallel test files (`pnpm test:budget`, part of `pnpm check`). | T | Verified |
 | URS-LY-011 | S | Self-loop edges are routed without overlapping their node. | Geometry assertion. | T | Verified |
 | URS-LY-013 | S | Few bends, clean entries. Nodes are lined up so edges run straight where they can. Each edge takes the route with the fewest bends that stays clear of nodes and other edges and adds no crossings: straight, then an L, then Z/U, then three bends. For example, a task left of and below a decision runs across, then turns up into the decision's bottom tip. Every edge leaves and enters perpendicular to the side it uses, and its last leg shows at least 6 px of line past the arrowhead. | Last-leg length and perpendicular entry over all fixtures; L into a diamond's bottom tip; lifecycle example ≤ 2 bends; side hints kept; bends gated by the quality baseline. | T | Verified |
 | URS-LY-012 | S | Compound layout: containers are sized to their children, and edges may cross container boundaries. | Geometry assertion. | T | Verified |
@@ -296,7 +296,7 @@ Updated with each change. `—` = not started.
 | TYP-003..005 | core/src/diagrams/state/* | core/test/state.test.ts, golden/state-* | |
 | DM-013, LY-012 | core/src/layout/layered/compound.ts, render/svg/containers.ts | core/test/layout.test.ts (containers: *) | Containers inside lanes are not supported (warning). |
 | LY-011 | core/src/layout/layered/route.ts (self-loops) | golden/cycle, state-composite example | Labels kept in compound layouts. |
-| LY-010 | packages/core (math.ts: no spread min/max) | core/test/scale.test.ts | 200/300 in ~105 ms warm locally (0.28). Polish searches less on graphs over 150 edges: up to two bends, three port samples per side. That was ~170 ms with the full search, which CI measured at 511–515 ms with coverage on. The test warms up and takes the best of three runs, measured as process CPU time. |
+| LY-010 | packages/core (math.ts: no spread min/max; layout/polish.ts: less search over 150 edges) | core/test/layout.budget.test.ts (`pnpm test:budget`, vitest.budget.config.ts) | Budget unchanged at 500 ms; how it is measured changed in 0.38. Before, the benchmark ran inside the covered suite: v8 coverage inflated it by about 1.2–1.4×, and its best of three runs were still warming the JIT (runs 1–2 take about twice as long as later ones). CI measured 511–515 ms that way, intermittently failing. Now it runs alone, uncovered, after a full-size warm-up: ~110–145 ms on the development container, where the old measurement gave ~200–235 ms; First CI run: best 95 ms (runs 259, 133, 153, 153, 95). The test prints all five runs, so CI logs show the margin. Polish searches less on graphs over 150 edges (0.28): up to two bends, three port samples per side. |
 | NF-006 | Dockerfile, CI `docker` job | CI | Image built and served in CI (P3 run green). |
 | EXT-009, AI-004 | core/src/registry/diagram-type.ts (AiAssets), core/src/diagrams/flowchart/ai.ts | core/test/ai-assets.test.ts | Subset lint plus a 300-sample property test: only `pattern` errors survive conversion. |
 | AI-001 | packages/ai/src/ingest/files.ts, generate.ts (count_tokens) | ai/test/ingest.test.ts, generate.test.ts | |
@@ -348,6 +348,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.38 | 2026-11-13 | Fix (intermittent CI failure, 514.7 ms against 500): LY-010's benchmark now runs in its own test run without coverage instrumentation or parallel test files, after a full-size warm-up, best of five. The 500 ms budget is unchanged; the acceptance criterion now states how it is measured. |
 | 0.37 | 2026-11-13 | Owner report: could not switch to Copilot. The AI choice moves to the AI pane header and always lists both AIs (AI-023); the launcher restarts a running app that is outdated or predates a config.env change, and gains `restart` and `stop` (NF-011). |
 | 0.36 | 2026-11-13 | Owner report: no permission to register an app. Added AI-024 (device-code sign-in for Copilot, as Connect-MgGraph does; implemented, not yet live-tested) and API-018. |
 | 0.35 | 2026-11-13 | At the owner's request: Microsoft 365 Copilot via Graph as a second AI provider, selectable in the AI pane. Added AI-023 (implemented, not yet live-tested) and API-017; AI-010, AI-020 and API-016 extended. |

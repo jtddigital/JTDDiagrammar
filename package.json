@@ -10,7 +10,8 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc -p packages/core && tsc -p packages/ai && tsc -p packages/api && tsc -p packages/web && tsc -p .",
-    "test": "vitest run --coverage",
+    "test": "pnpm test:budget && vitest run --coverage",
+    "test:budget": "vitest run -c vitest.budget.config.ts",
     "docs:build": "tsx scripts/docs/cli.ts build",
     "docs:check": "tsx scripts/docs/cli.ts check",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm docs:check && pnpm licences",
