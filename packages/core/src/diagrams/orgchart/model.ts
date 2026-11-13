@@ -14,6 +14,8 @@ export interface Person {
   multi?: number;
   /** Department name: everyone in one department is drawn inside one box (URS-TYP-012). */
   department?: string;
+  /** Tags whose styles (from the chart's `tags`) decorate this person, in order (URS-TYP-013). */
+  tags?: string[];
 }
 
 /** A department's box: its style, and the department it sits inside. */
@@ -33,6 +35,8 @@ export interface OrgChart {
   styles?: Partial<Record<'people' | 'lines' | 'departments', Style>>;
   /** Optional: styles and nesting for departments named on people (URS-TYP-012). */
   departments?: Department[];
+  /** A style per tag, for every person with that tag; a person's own `style` wins (URS-TYP-013). */
+  tags?: Record<string, Style>;
   /** Stack each team under its manager instead of spreading it in a row (URS-TYP-011). */
   stack?: boolean;
   /** Split each stacked team into this many columns (rows when left to right). Implies `stack`. */

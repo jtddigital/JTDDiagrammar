@@ -1,9 +1,10 @@
 import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
-import { styled } from '../section-styles.ts';
+import { merged, styled } from '../section-styles.ts';
 import { checkDepartments, departmentsOf, loopOf } from './departments.ts';
 import { stacksOf, type OrgChart, type Person } from './model.ts';
+import { checkTags, tagStyle } from './tags.ts';
 import { orgchartSchema } from './schema.ts';
 
 /** Reporting lines must form a tree: nobody manages themselves, directly or through others. */
@@ -17,7 +18,7 @@ function validate(m: OrgChart): Diagnostic[] {
     }
     return [];
   });
-  return [...cycles, ...(cycles.length ? [] : checkDepartments(m))];
+  return [...cycles, ...(cycles.length ? [] : checkDepartments(m)), ...checkTags(m)];
 }
 
 const toIR = (m: OrgChart): GraphIR => {
@@ -36,7 +37,8 @@ const toIR = (m: OrgChart): GraphIR => {
       id: p.id,
       shape: 'card',
       label: p.title ? `${p.name}\n${p.title}` : p.name,
-      ...styled(m.styles, 'people', p.style),
+      // Section default, then tags, then the person's own style (URS-DM-015, URS-TYP-013).
+      ...styled(m.styles, 'people', merged(tagStyle(m, p), p.style)),
       ...(p.quote !== undefined && { quote: p.quote }),
       ...(stack !== undefined && { stack }),
       ...(p.department !== undefined && { parent: idOf.get(p.department)! }),
@@ -143,6 +145,28 @@ const examples: [Example, ...Example[]] = [
         { id: 's4', name: 'Morgan Diaz', title: 'Agent', manager: 'lead' },
         { id: 's5', name: 'Casey Ford', title: 'Senior agent', manager: 'lead' },
         { id: 's6', name: 'Quinn Ross', title: 'Team coach', manager: 'lead' },
+      ],
+    },
+  },
+  {
+    name: 'tags',
+    title: 'Org chart, tags',
+    description: '`tags` on people, styled once at the top: contractors dashed, open roles faded. A person\'s own `style` still wins.',
+    source: {
+      version: '1',
+      type: 'orgchart',
+      title: 'Platform team',
+      tags: {
+        contractor: { dash: 'dashed', fill: '#fff7ed', stroke: '#f97316' },
+        open: { opacity: 0.55, italic: true },
+        remote: { stroke: '#2563eb', lineWidth: 2 },
+      },
+      people: [
+        { id: 'lead', name: 'Avery Chen', title: 'Platform lead' },
+        { id: 'p1', name: 'Sam Patel', title: 'Engineer', manager: 'lead', tags: ['remote'] },
+        { id: 'p2', name: 'Riley Kim', title: 'Engineer', manager: 'lead', tags: ['contractor', 'remote'] },
+        { id: 'p3', name: 'Morgan Diaz', title: 'SRE', manager: 'lead', tags: ['contractor'], style: { fill: '#ecfdf5' } },
+        { id: 'p4', name: 'Open role', title: 'Engineer', manager: 'lead', tags: ['open'] },
       ],
     },
   },

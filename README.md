@@ -835,6 +835,86 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Org chart, tags
+
+`type: orgchart` · `tags` on people, styled once at the top: contractors dashed, open roles faded. A person's own `style` still wins.
+
+![Org chart, tags](docs/img/orgchart-tags.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Platform team",
+  "tags": {
+    "contractor": {
+      "dash": "dashed",
+      "fill": "#fff7ed",
+      "stroke": "#f97316"
+    },
+    "open": {
+      "opacity": 0.55,
+      "italic": true
+    },
+    "remote": {
+      "stroke": "#2563eb",
+      "lineWidth": 2
+    }
+  },
+  "people": [
+    {
+      "id": "lead",
+      "name": "Avery Chen",
+      "title": "Platform lead"
+    },
+    {
+      "id": "p1",
+      "name": "Sam Patel",
+      "title": "Engineer",
+      "manager": "lead",
+      "tags": [
+        "remote"
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "Riley Kim",
+      "title": "Engineer",
+      "manager": "lead",
+      "tags": [
+        "contractor",
+        "remote"
+      ]
+    },
+    {
+      "id": "p3",
+      "name": "Morgan Diaz",
+      "title": "SRE",
+      "manager": "lead",
+      "tags": [
+        "contractor"
+      ],
+      "style": {
+        "fill": "#ecfdf5"
+      }
+    },
+    {
+      "id": "p4",
+      "name": "Open role",
+      "title": "Engineer",
+      "manager": "lead",
+      "tags": [
+        "open"
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 ### Object lifecycle
 
 `type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
@@ -1995,6 +2075,7 @@ People and who they report to. For teams and organisations.
 | `departments[].name` | string | yes | As written in `people[].department`. |
 | `departments[].parent` | string |  | The department this one is drawn inside. |
 | `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `tags` | object |  | A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person's own `style` overrides it field by field. A tag styled here that no one has is a warning. |
 | `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
 | `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |
 | `people` | list of objects | yes | Everyone in the chart. |
@@ -2006,6 +2087,7 @@ People and who they report to. For teams and organisations.
 | `people[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `people[].stack` | boolean |  | This person's team: stacked (true) or in a row (false). Default: the chart's `stack`. |
 | `people[].multi` | integer |  | This person's team stacked in this many columns (rows when left to right). |
+| `people[].tags` | list of string |  | Tag names, e.g. `["contractor", "remote"]`. Each tag styled in the chart's `tags` decorates this person; where tags set the same field, the later one wins, and this person's own `style` wins over all of them. |
 | `people[].department` | string |  | Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each. |
 
 ### `lifecycle`

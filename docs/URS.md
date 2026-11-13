@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.43 (draft) |
+| Version | 0.44 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -50,6 +50,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-TYP-010 | S | Role lanes: `roleLanes` splits each workflow into one band per role (step owner), grouped under the workflow. Order: listed `roles`, then owners as they appear, then System for unowned steps. Role headers take the owner's colour. Works with states as columns or rows. | Group members and order; steps inside their role band in both orientations. | T | Verified |
 | URS-TYP-011 | S | Org chart team stacking: `stack: true` hangs each team in a column under its manager (a row when left to right) instead of spreading it in a row; `multi: N` splits each stacked team into N columns (N rows when left to right) and implies `stack`. Both can be set for the whole chart or on one person for their own team, which wins (`stack: false` keeps that team in a row). | Stacking rules; examples render without problems; README examples. | T | Verified |
 | URS-TYP-012 | S | Org chart departments: `department` on a person puts them in a labelled box with the rest of their department. An optional `departments` list styles boxes (also `styles.departments`) and nests one department inside another (`parent`). A department needs no head: its people are grouped into one box whoever they report to, and the manager need not be in it. Where they report to different managers outside it, each group gets its own box with the department's name, so no box covers anyone between. Unknown or circular parents and duplicate names are errors; nothing else is asked of a department. AI generation can set each person's department, guided by its instructions and an example. | Every member sits in a box of its department, nested boxes sit inside their parents, unrelated boxes never overlap, nobody else sits in a box, no line crosses a label strip (60 random trees with headless and split departments, both directions); headless and split examples; rules tested; a generated example with departments converts to boxes. | T | Verified |
+| URS-TYP-013 | S | Org chart tags: `tags` on a person is a list of tag names; the chart's top-level `tags` maps a tag name to a style block that decorates everyone with that tag. Precedence, field by field: `styles.people`, then the person's tags in the order listed (later wins), then the person's own `style`. A tag styled in `tags` that no one has is a warning; a tag with no style is only a label. | Precedence and order tested; unused tag warned at `/tags/<name>`; bad shapes rejected; XML round trip; README example. | T | Verified |
 | URS-TYP-007 | W | Sequence and ER diagram types. | — | T | Proposed |
 
 ### 3.3 Input / Language (IN)
@@ -274,6 +275,7 @@ Updated with each change. `—` = not started.
 | TYP-010 | diagrams/lifecycle/to-ir.ts (`rolesOf`, band groups on the workflow axis) | core/test/lifecycle-vault.test.ts (role lanes), README example | Reuses DM-019 band groups; DM-011 (nested sub-lanes) stays open for other types. |
 | TYP-011, LY-014 | diagrams/orgchart/{model,schema,index}.ts (`stacksOf`, engine `tree`), ir/types.ts (`IRNode.stack`), layout/tree/{index,arrange,block}.ts | core/test/tree.test.ts, quality baseline, README examples | The org chart now uses the tree engine for every chart, so the classic org-chart connectors replace the layered routing. Its siblings share the line from their manager, which the quality metrics count as overlaps (orgchart-basic 0 → 2) and bends (3 → 8); the baseline was raised for org-chart fixtures only, on purpose. |
 | TYP-012 | diagrams/orgchart/departments.ts (`departmentsOf`, `checkDepartments`), index.ts (containers), layout/tree/arrange.ts (`unitsOf`, `lay`: siblings in one container share a box), layout/tree/index.ts (frames, one box per container) | core/test/tree.test.ts (containers, departments), quality baseline | A line from outside ends at the department's box (top, or side for stacked teams), never crossing its label strip (LY-006: edgeThroughNode 0); the box widens so that point misses the centred label. 0.42: no head needed and no warning; sibling members are grouped, a department split across managers gets a box per group (rendered as one `c-` group so selection marks all of them), and the line runs beside the box and under its strip (TB) or above the box to a trunk inside (LR stacks). Quality baseline unchanged. 0.43: the org chart AI assets (index.ts `ai`: schema, guide, example, `fromGenerated` dropping an empty department) can set departments. |
+| TYP-013 | diagrams/orgchart/{tags,model,schema,index}.ts (`tagStyle`, `checkTags`), adapters/xml.ts (`tag` items) | core/test/orgchart-tags.test.ts, README example `tags` | Tag styles sit between the section default (DM-015) and the person's own style; merge is shallow per field, as DM-015. |
 | DM-025 | ir/types.ts (`Icon`, `Badge`), render/svg/{icons,index}.ts, render/styles.ts, layout/layered/route.ts (label width) | core/test/lifecycle-vault.test.ts | Icons are plain paths: no new SVG elements or attributes. |
 | DM-026 | layout/legend.ts, render/svg/legend.ts, render.ts | core/test/lifecycle-vault.test.ts (legend) | |
 | DM-027 | ir/types.ts (`meta`), render/svg/index.ts | core/test/lifecycle-vault.test.ts | |
@@ -353,6 +355,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.44 | 2026-11-13 | Owner request: decorate people globally via tags, overridable locally, with a warning for unused tags. Added TYP-013. |
 | 0.43 | 2026-11-13 | Owner report: instructions unclear for department boxes. TYP-012: AI generation of org charts can set departments (generation schema, guide, example). |
 | 0.42 | 2026-11-13 | Owner request: departments need no head (a sub-department may have no true head). TYP-012 and LY-014 updated: members are grouped whoever they report to; a department under several managers gets a box under each; the split warning is removed. |
 | 0.41 | 2026-11-13 | Owner request: box people into their departments. Added TYP-012; LY-014 extended to containers. |

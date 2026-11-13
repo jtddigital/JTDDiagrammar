@@ -208,7 +208,7 @@
   },
   "orgchart-departments": {
     "crossings": 0,
-    "overlaps": 4,
+    "overlaps": 3,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
@@ -223,6 +223,15 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
     "bends": 18
+  },
+  "orgchart-tags": {
+    "crossings": 0,
+    "overlaps": 8,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 8
   },
   "lifecycle-change-control": {
     "crossings": 0,

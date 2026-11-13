@@ -75,7 +75,7 @@ export function parseXml(text: string, reg: Registry): ParseResult {
   return { value: convert(root, type?.schema, type?.schema ?? {}), diagnostics: [] };
 }
 
-const SINGULAR: Record<string, string> = { nodes: 'node', lanes: 'lane', phases: 'phase', states: 'state', to: 'link', labels: 'label', notes: 'note', verdicts: 'verdict', sharedActions: 'action', workflows: 'workflow', steps: 'step', stages: 'stage', fields: 'field', roles: 'role', reasons: 'reason', people: 'person' };
+const SINGULAR: Record<string, string> = { nodes: 'node', lanes: 'lane', phases: 'phase', states: 'state', to: 'link', labels: 'label', notes: 'note', verdicts: 'verdict', sharedActions: 'action', workflows: 'workflow', steps: 'step', stages: 'stage', fields: 'field', roles: 'role', reasons: 'reason', people: 'person', tags: 'tag' };
 const attr = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
 
 const text = (v: unknown) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
