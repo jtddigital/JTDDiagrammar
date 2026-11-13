@@ -1,4 +1,4 @@
-import type { ClaudeClient, ClaudeReply, ClaudeRequest } from './client.ts';
+import type { AiClient, AiReply, AiRequest } from './client.ts';
 
 export interface ScriptedReply {
   /** Reply body as JSON (serialised) or raw text. */
@@ -10,8 +10,8 @@ export interface ScriptedReply {
 }
 
 /** Deterministic stand-in for Claude: replays scripted replies and records requests (URS-AI-020). */
-export class MockClaude implements ClaudeClient {
-  readonly requests: ClaudeRequest[] = [];
+export class MockClaude implements AiClient {
+  readonly requests: AiRequest[] = [];
   readonly #replies: ScriptedReply[];
   readonly #tokens: number;
 
@@ -20,7 +20,7 @@ export class MockClaude implements ClaudeClient {
     this.#tokens = tokens;
   }
 
-  async complete(req: ClaudeRequest, signal?: AbortSignal): Promise<ClaudeReply> {
+  async complete(req: AiRequest, signal?: AbortSignal): Promise<AiReply> {
     signal?.throwIfAborted();
     this.requests.push({ ...req, messages: [...req.messages] });
     const r = this.#replies.shift();

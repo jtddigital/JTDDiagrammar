@@ -8,6 +8,7 @@ const api = 'http://localhost:8080';
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@jtd/registry': registryModule(process.env) } },
-  build: { outDir: 'dist', emptyOutDir: true },
+  // auth-redirect.html is where Microsoft sign-in returns to (URS-AI-023).
+  build: { outDir: 'dist', emptyOutDir: true, rolldownOptions: { input: { main: 'index.html', redirect: 'auth-redirect.html' } } },
   server: { proxy: { '/v1': api, '/health': api } },
 });

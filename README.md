@@ -2100,7 +2100,7 @@ Rendering runs in worker threads, so one slow diagram can't stall the server. Re
 
 ## AI generation
 
-Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. Claude drafts the diagram source, and you review and edit it like anything else.
+Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. The AI drafts the diagram source, and you review and edit it like anything else. Two AI providers are supported: **Claude** (the default) and **Microsoft 365 Copilot**; see [Microsoft 365 Copilot](#microsoft-365-copilot).
 
 ![AI pane: paste notes or attach documents to create a diagram](docs/img/web-generate.png)
 
@@ -2136,7 +2136,7 @@ curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data
 - Limits on file count, file size, total size and input tokens are in [`.env.example`](.env.example). Input is checked with token counting *before* any generation spend.
 
 **Safety:**
-- The key is read only by the SDK on the server. The browser never sees it, and lint rules stop the web app from importing AI code.
+- The key is read only by the SDK on the server. The browser never sees it, and lint rules stop the web app from importing AI code. A Microsoft Graph token for Copilot stays in the browser's session storage and goes only to this app's API, for the request it is for; the server never stores or logs it.
 - Uploaded material is treated as data. It's wrapped and can't close its own wrapper, Claude gets no tools, and the server fixes the type and schema. Any text that ends up in the diagram is escaped when rendered.
 - Material and results are not logged or stored.
 - Closing the request (or **Stop** in the web app) aborts the Claude call.
@@ -2144,6 +2144,21 @@ curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data
 In the web app, the AI pane shows each stage as it happens and can stop a job. In **Edit diagram** mode a message refines whatever is in the editor; each change can be stepped back.
 
 **Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; its first run (2026-11-11, `claude-opus-5-5`) passed all three, each valid on the first attempt, with the cached prefix read on repeat calls. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
+
+### Microsoft 365 Copilot
+
+Copilot works on behalf of the person using the app: they sign in with their Microsoft work account in the browser, and the server calls the Microsoft Graph Copilot Chat API with their token. There is no server secret.
+
+1. In the Microsoft Entra admin center, register an application (**App registrations → New registration**). Add a **Single-page application** platform with the redirect URI `https://<your host>/auth-redirect.html` (and `http://localhost:8080/auth-redirect.html` for local use).
+2. Under **API permissions**, add these Microsoft Graph *delegated* permissions and grant admin consent: `Sites.Read.All`, `Mail.Read`, `People.Read.All`, `OnlineMeetingTranscript.Read.All`, `Chat.Read`, `ChannelMessage.Read.All`, `ExternalItem.Read.All`. The Copilot Chat API needs all of them.
+3. Set `COPILOT_CLIENT_ID` (the application id) and `COPILOT_TENANT_ID` (your tenant id or domain) where the server runs. `COPILOT_GRAPH_URL` and `COPILOT_SCOPES` override the endpoint and permissions if Microsoft changes them.
+4. Each user needs a Microsoft 365 Copilot licence.
+
+In the web app, pick **Microsoft 365 Copilot** in the AI pane and **Sign in with Microsoft**. The choice is remembered. Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
+
+Copilot has no structured outputs, so the schema is sent as instructions and every reply is checked and repaired like Claude's. It takes text only, so PDFs and images need Claude, and it does not report token usage or cost.
+
+**Status:** tested against a stand-in for Graph, not yet against a live tenant. The request shape follows Microsoft's Graph beta reference for the Copilot Chat API, which is a preview API and may change.
 
 ## Architecture
 

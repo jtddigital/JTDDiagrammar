@@ -11,6 +11,7 @@
     "screens": "playwright test --project=screens"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.29.1",
     "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/language": "^6.13.1",

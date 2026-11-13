@@ -1,5 +1,5 @@
 import { compile, error, hasErrors, validateSchema, warning, type Diagnostic, type DiagramType, type JsonSchema, type Registry } from '@jtd/core';
-import type { ClaudeClient, ClaudeReply, InputBlock, Turn, Usage } from './client.ts';
+import type { AiClient, AiReply, InputBlock, Turn, Usage } from './client.ts';
 import { AiError } from './errors.ts';
 import { ingest, type IngestLimits, type InputFile } from './ingest/files.ts';
 import { cost, type Price } from './pricing.ts';
@@ -7,7 +7,7 @@ import { editPrompt, refineTurn, repairTurn, selection, systemPrompt, userTurn }
 
 export interface GenerateOptions {
   registry: Registry;
-  client: ClaudeClient;
+  client: AiClient;
   /** Full validation + layout of a candidate source (URS-AI-005). The API passes its worker pool. */
   render(source: unknown): Promise<{ svg?: string; diagnostics: Diagnostic[] }>;
   /** Repair attempts after the first (URS-AI-006). */
@@ -60,7 +60,7 @@ class Meter {
   constructor(prices?: Record<string, Price>) {
     this.#prices = prices;
   }
-  add(r: ClaudeReply): void {
+  add(r: AiReply): void {
     for (const k of ['input', 'output', 'cacheRead', 'cacheWrite'] as const) this.usage[k] += r.usage[k];
     const c = cost(r.model, r.usage, this.#prices);
     this.#cost = c === undefined || this.#cost === undefined ? undefined : this.#cost + c;
@@ -71,7 +71,7 @@ class Meter {
 }
 
 /** Refusals and truncation are failures, never parsed as output (URS-AI-008). */
-function checkStop(r: ClaudeReply): void {
+function checkStop(r: AiReply): void {
   if (r.stop === 'refusal') throw new AiError('ai.refusal', 'the AI declined to process this material');
   if (r.stop === 'max_tokens') throw new AiError('ai.truncated', 'the generated diagram was too long and was cut off');
 }

@@ -109,6 +109,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@azure/msal-browser':
+        specifier: ^5.29.1
+        version: 5.29.1
       '@codemirror/autocomplete':
         specifier: ^6.20.4
         version: 6.20.4
@@ -172,6 +175,14 @@ packages:
     peerDependenciesMeta:
       zod:
         optional: true
+
+  '@azure/msal-browser@5.29.1':
+    resolution: {integrity: sha512-+TMoU/4h3KYUvQKZH+p1/9/iDaepDlVJQ7UMUAB6q8prPsMfsOoqA9m2alpPqLUQ48Bp7sXqN2wdhA9rOg9q1A==}
+    engines: {node: '>=0.8.0'}
+
+  '@azure/msal-common@16.16.2':
+    resolution: {integrity: sha512-IVoPgAup0hnpzwC8esxPxrrnDDVe0n3mmK+UU3JRmKWySKxBQrl+a30tTP3okmJ9Wc7dh+IgoNaUXkCxb2DBSg==}
+    engines: {node: '>=0.8.0'}
 
   '@babel/helper-string-parser@7.29.13':
     resolution: {integrity: sha512-fWegr+WsEsiMVW4KUNdIIzzMTZSzNiqhy0//6+2MRi2d5NFNsL/AYwBQW8eBnRbTBVRnDVzjaJEUqKaCWjMMdQ==}
@@ -2221,6 +2232,12 @@ snapshots:
       '@opentelemetry/api': 1.10.0
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
+
+  '@azure/msal-browser@5.29.1':
+    dependencies:
+      '@azure/msal-common': 16.16.2
+
+  '@azure/msal-common@16.16.2': {}
 
   '@babel/helper-string-parser@7.29.13': {}
 

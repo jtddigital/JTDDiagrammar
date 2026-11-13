@@ -74,14 +74,14 @@ describe('without AI credentials (URS-API-015, URS-API-016, URS-AI-010)', () => 
     const { app } = await start(undefined, { enabled: false });
     const res = await app.inject({ method: 'POST', url: '/v1/generate', payload: { text: 'x' } });
     expect([res.statusCode, res.json().diagnostics[0].code]).toEqual([503, 'ai.disabled']);
-    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: false });
+    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: false, providers: [] });
     const render = await app.inject({ method: 'POST', url: '/v1/render', payload: { version: '1', type: 'flowchart', nodes: [{ id: 'a' }] } });
     expect(render.statusCode).toBe(200);
   });
 
   it('reports the model when enabled, and never holds or returns the key itself', async () => {
     const { app } = await start([]);
-    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: true, model: 'claude-opus-5-5' });
+    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: true, model: 'claude-opus-5-5', providers: [{ id: 'claude', model: 'claude-opus-5-5' }] });
     const c = fromEnv({ ANTHROPIC_API_KEY: 'sk-ant-secret-value' });
     expect(c.ai.enabled).toBe(true);
     expect(JSON.stringify(c)).not.toContain('sk-ant-secret-value');
@@ -147,5 +147,78 @@ describe('rate limit (URS-AI-019)', () => {
     const c = fromEnv({ AI_RATE_LIMIT: '0', AI_MAX_OUTPUT_TOKENS: '8000', AI_PRICES: '{"m":{"input":1,"output":2,"cacheRead":0,"cacheWrite":0}}' }).ai;
     expect([c.ratePerMinute, c.maxOutputTokens, c.prices?.m?.output]).toEqual([0, 8000, 2]);
     expect(fromEnv({ AI_PRICES: 'not json' }).ai.prices).toBeUndefined();
+  });
+});
+
+describe('Microsoft 365 Copilot provider (URS-AI-023, URS-API-017)', () => {
+  const copilotCfg = { clientId: 'app-id', tenantId: 'contoso.com', graphUrl: 'https://graph.example/beta', scopes: ['https://graph.microsoft.com/Mail.Read'] };
+  async function withCopilot(replies: ScriptedReply[], claude = false, logger?: { level: string; stream: { write(l: string): void } }) {
+    const seen: { token: string; timeZone?: string }[] = [];
+    const mock = new MockClaude(replies);
+    app = await buildApp(cfg({ copilot: copilotCfg }), {
+      copilot: (token, timeZone) => (seen.push({ token, ...(timeZone && { timeZone }) }), mock),
+      ...(claude && { claude: new MockClaude([]) }),
+      ...(logger && { logger }),
+    });
+    return { app, seen, mock };
+  }
+
+  it('lists the public sign-in settings, and enables AI with Copilot alone', async () => {
+    const { app } = await withCopilot([]);
+    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: true, providers: [{ id: 'copilot', clientId: 'app-id', tenantId: 'contoso.com', scopes: copilotCfg.scopes }] });
+  });
+
+  it('acts as the signed-in user: the Graph token from the request, per request', async () => {
+    const { app, seen } = await withCopilot([{ json: flow }]);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/generate',
+      headers: { 'x-graph-token': 'user-token', 'x-time-zone': 'Europe/London' },
+      payload: { text: 'x', type: 'flowchart', provider: 'copilot' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ valid: true });
+    expect(seen).toEqual([{ token: 'user-token', timeZone: 'Europe/London' }]);
+  });
+
+  it('needs a Microsoft sign-in, and a known provider', async () => {
+    const { app } = await withCopilot([], true);
+    const no = await app.inject({ method: 'POST', url: '/v1/refine', payload: { source: { version: '1', type: 'flowchart', nodes: [] }, instruction: 'x', provider: 'copilot' } });
+    expect([no.statusCode, no.json().diagnostics[0].code]).toEqual([401, 'ai.signin']);
+    const bad = await app.inject({ method: 'POST', url: '/v1/generate', payload: { text: 'x', provider: 'gpt' } });
+    expect([bad.statusCode, bad.json().diagnostics[0].code]).toEqual([400, 'ai.input']);
+  });
+
+  it('takes the provider from a multipart form, and ignores a malformed time zone', async () => {
+    const { app, seen } = await withCopilot([{ json: flow }]);
+    const m = await multipart({ text: 'x', type: 'flowchart', provider: 'copilot' }, []);
+    const res = await app.inject({ method: 'POST', url: '/v1/generate', headers: { ...m.headers, 'x-graph-token': 't', 'x-time-zone': '../../etc' }, payload: m.payload });
+    expect(res.statusCode).toBe(200);
+    expect(seen).toEqual([{ token: 't' }]);
+  });
+
+  it('is unavailable when only Claude is configured', async () => {
+    const { app } = await start([]);
+    const res = await app.inject({ method: 'POST', url: '/v1/generate', headers: { 'x-graph-token': 't' }, payload: { text: 'x', provider: 'copilot' } });
+    expect([res.statusCode, res.json().diagnostics[0].code]).toEqual([503, 'ai.disabled']);
+  });
+
+  it('never logs the Graph token (URS-AI-010)', async () => {
+    const logs: string[] = [];
+    const { app } = await withCopilot([{ json: flow }], false, { level: 'trace', stream: { write: (l: string) => void logs.push(l) } });
+    await app.inject({ method: 'POST', url: '/v1/generate', headers: { 'x-graph-token': 'GRAPH-SECRET-42' }, payload: { text: 'x', type: 'flowchart', provider: 'copilot' } });
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs.join('\n')).not.toContain('GRAPH-SECRET-42');
+  });
+
+  it('reads the app registration from the environment', () => {
+    expect(fromEnv({}).ai.copilot).toBeUndefined();
+    expect(fromEnv({ COPILOT_CLIENT_ID: 'id' }).ai.copilot).toEqual({
+      clientId: 'id',
+      tenantId: 'organizations',
+      graphUrl: 'https://graph.microsoft.com/beta',
+      scopes: ['Sites.Read.All', 'Mail.Read', 'People.Read.All', 'OnlineMeetingTranscript.Read.All', 'Chat.Read', 'ChannelMessage.Read.All', 'ExternalItem.Read.All'].map((s) => `https://graph.microsoft.com/${s}`),
+    });
+    expect(fromEnv({ COPILOT_CLIENT_ID: 'id', COPILOT_TENANT_ID: 't', COPILOT_SCOPES: 'WorkIQAgent.Ask, api://x/y' }).ai.copilot).toMatchObject({ tenantId: 't', scopes: ['https://graph.microsoft.com/WorkIQAgent.Ask', 'api://x/y'] });
   });
 });
