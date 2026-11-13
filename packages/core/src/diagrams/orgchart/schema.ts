@@ -24,6 +24,12 @@ export const orgchartSchema = {
         },
       },
     },
+    tags: {
+      type: 'object',
+      propertyNames: { minLength: 1 },
+      additionalProperties: style,
+      description: 'A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person\'s own `style` overrides it field by field. A tag styled here that no one has is a warning.',
+    },
     stack: { type: 'boolean', default: false, description: 'Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right.' },
     multi: { type: 'integer', minimum: 1, maximum: 12, description: 'Split each stacked team into this many columns (rows when left to right). Implies `stack`.' },
     people: {
@@ -42,6 +48,11 @@ export const orgchartSchema = {
           style,
           stack: { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." },
           multi: { type: 'integer', minimum: 1, maximum: 12, description: "This person's team stacked in this many columns (rows when left to right)." },
+          tags: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description: 'Tag names, e.g. `["contractor", "remote"]`. Each tag styled in the chart\'s `tags` decorates this person; where tags set the same field, the later one wins, and this person\'s own `style` wins over all of them.',
+          },
           department: { type: 'string', minLength: 1, description: 'Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each.' },
         },
       },
