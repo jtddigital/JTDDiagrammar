@@ -7,8 +7,8 @@ import { placeLabels } from '../labels.ts';
 import { sized } from '../layered/build.ts';
 import { labelsOf } from '../layered/route.ts';
 import { normalize } from '../normalize.ts';
-import { arrange, GAP } from './arrange.ts';
-import { wrap, type Block, type Frame } from './block.ts';
+import { arrange, GAP, lay, unitsOf, type Kid } from './arrange.ts';
+import type { Frame } from './block.ts';
 
 /** Container padding on the sides without the label. */
 const PAD = 14;
@@ -56,27 +56,32 @@ export const tree: LayoutEngine = {
     };
     const containerOf = new Map(ir.nodes.map((n) => [n.id, n.parent]));
 
+    // Containers a node enters below `outer` (its parent's), innermost first.
+    const entering = (id: string, outer: string | undefined) => {
+      const skip = new Set(chain(outer));
+      return chain(containerOf.get(id)).filter((c) => !skip.has(c));
+    };
+
     // Roots in source order; a cycle has none, so its first member becomes one.
     const seen = new Set<string>();
-    const build = (id: string): Block => {
+    const build = (id: string): Kid['block'] => {
       seen.add(id);
-      const kids = (children.get(id) ?? []).filter((c) => !seen.has(c)).map((c) => ({ block: build(c), edge: parent.get(c)! }));
-      const up = parent.get(id);
-      const outer = new Set(chain(up === undefined ? undefined : containerOf.get(ir.edges[up]!.from)));
-      // Innermost first, so nested containers frame inside their parents.
-      return chain(containerOf.get(id))
-        .filter((c) => !outer.has(c))
-        .reduce((b, c) => wrap(b, frame(c)), arrange(id, dims(id), kids, stack.get(id)));
+      const kids: Kid[] = (children.get(id) ?? [])
+        .filter((c) => !seen.has(c))
+        .map((c) => ({ block: build(c), edge: parent.get(c)!, chain: entering(c, containerOf.get(id)) }));
+      return arrange(id, dims(id), kids, stack.get(id), frame);
     };
-    const roots: Block[] = [];
-    for (const n of ir.nodes) if (!parent.has(n.id) && !seen.has(n.id)) roots.push(build(n.id));
-    for (const n of ir.nodes) if (!seen.has(n.id)) roots.push(build(n.id));
-
+    const roots: Kid[] = [];
+    const grow = (id: string) => roots.push({ block: build(id), edge: -1, chain: entering(id, undefined) });
+    for (const n of ir.nodes) if (!parent.has(n.id)) grow(n.id);
+    for (const n of ir.nodes) if (!seen.has(n.id)) grow(n.id);
+    // Top-level units side by side; roots in one container share its box.
     let x = 0;
-    const placed = roots.flatMap((b) => {
+    const placed = unitsOf(roots).map((u) => {
+      const l = lay(u, 'row', frame);
       const at = x;
-      x += b.w + 2 * GAP.sibling;
-      return [{ b, at }];
+      x += l.w + 2 * GAP.sibling;
+      return { b: l.drawn, at };
     });
     const flip = (p: Point): Point => (lr ? { x: p.y, y: p.x } : p);
     const pos = new Map(placed.flatMap(({ b, at }) => b.nodes.map((n) => [n.id, flip({ x: n.x + at, y: n.y })] as const)));

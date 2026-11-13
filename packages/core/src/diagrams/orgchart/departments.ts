@@ -28,7 +28,11 @@ export function loopOf(name: string, parentOf: ReadonlyMap<string, string | unde
   return undefined;
 }
 
-/** Unknown or circular parents are errors; a department split across the chart is a warning, since its box covers the people between. */
+/**
+ * Unknown or circular parents and duplicate names are errors. A department needs no head: its people who
+ * report to the same person outside it are drawn together in its box. Only a department reporting into
+ * several places outside it is a warning, since one box then spans the people between.
+ */
 export function checkDepartments(m: OrgChart): Diagnostic[] {
   const list = m.departments ?? [];
   const named = new Set([...list.map((d) => d.name), ...m.people.flatMap((p) => (p.department === undefined ? [] : [p.department]))]);
@@ -49,13 +53,17 @@ export function checkDepartments(m: OrgChart): Diagnostic[] {
   };
   const byId = new Map(m.people.map((p) => [p.id, p]));
   for (const d of named) {
-    const entries = m.people.flatMap((p, i) => (within(p.department, d) && !within(byId.get(p.manager ?? '')?.department, d) ? [i] : []));
-    if (entries.length > 1)
+    // Where the department joins the rest of the chart: the managers outside it that its people report to.
+    const joins = new Map<string | undefined, number>();
+    m.people.forEach((p, i) => {
+      if (within(p.department, d) && !within(byId.get(p.manager ?? '')?.department, d) && !joins.has(p.manager)) joins.set(p.manager, i);
+    });
+    if (joins.size > 1)
       out.push(
         warning(
           'orgchart.department',
-          `'${d}' is in ${entries.length} separate parts of the chart; its box will also cover the people between them. Give it one head that the others report to, directly or not.`,
-          pointer('people', entries[1]!, 'department'),
+          `'${d}' reports into ${joins.size} different places outside it, so its one box also covers the people between. Its people need no head, but those outside it they report to should be one person.`,
+          pointer('people', [...joins.values()][1]!, 'department'),
         ),
       );
   }

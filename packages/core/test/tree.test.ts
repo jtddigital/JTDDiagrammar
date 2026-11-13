@@ -129,13 +129,18 @@ describe('tree layout containers (URS-LY-014, URS-TYP-012)', () => {
     const containers: { id: string; label: string; parent?: string }[] = [];
     const nodes: GraphIR['nodes'] = [];
     const edges: GraphIR['edges'] = [];
+    // Departments a manager's reports have started, so a later sibling can join one: a department with no head.
+    const started = new Map<number, string[]>();
     for (let i = 0; i < n; i++) {
       const up = i ? Math.floor(rnd() * i) : undefined;
       let parent = up === undefined ? undefined : nodes[up]!.parent;
-      if (rnd() < 0.25) {
+      const shared = started.get(up ?? -1) ?? [];
+      if (shared.length && rnd() < 0.3) parent = shared[Math.floor(rnd() * shared.length)]!;
+      else if (rnd() < 0.25) {
         const id = `c${containers.length}`;
         containers.push({ id, label: `Department ${id}`, ...(parent && { parent }) });
         parent = id;
+        started.set(up ?? -1, [...shared, id]);
       }
       nodes.push({ id: `p${i}`, shape: 'card', label: `p${i}`, ...(parent && { parent }), ...(rnd() < 0.4 && { stack: 1 + Math.floor(rnd() * 2) }) });
       if (up !== undefined) edges.push({ id: `e${i}`, from: `p${up}`, to: `p${i}` });
@@ -164,6 +169,12 @@ describe('tree layout containers (URS-LY-014, URS-TYP-012)', () => {
           for (const b of g0.containers)
             if (a.id < b.id && !ancestors(a.id).includes(b.id) && !ancestors(b.id).includes(a.id)) expect(overlaps(box.get(a.id)!, box.get(b.id)!), `${where} ${a.id}/${b.id}`).toBe(false);
         for (const c of g.containers) expect(c.depth).toBe(ancestors(c.id).length);
+        // Nobody outside a department sits in its box.
+        const memberOf = (id: string, c: string) => {
+          const n = g0.nodes.find((x) => x.id === id)!;
+          return n.parent === c || (n.parent !== undefined && ancestors(n.parent).includes(c));
+        };
+        for (const c of g.containers) for (const n of g.nodes) if (!memberOf(n.id, c.id)) expect(overlaps(n, c), `${where} ${n.id} in ${c.id}`).toBe(false);
         const strips = g.containers.map((c) => ({ x: c.x, y: c.y, w: c.w, h: c.head }));
         for (const e of g.edges) expect(e.points.slice(1).some((p, i) => strips.some((s) => hits([e.points[i]!, p], s))), `${where} ${e.id} crosses a label strip`).toBe(false);
       }
@@ -217,7 +228,26 @@ describe('org chart departments (URS-TYP-012)', () => {
     expect(g.containers).toEqual([{ id: 'dept0', label: 'Sales', src: '/people/1/department' }]);
   });
 
-  it('warns when a department is split across the chart, and rejects bad department lists', () => {
+  it('needs no head: people in one department under the same manager share one box, apart from the others', () => {
+    const d = chart([
+      { id: 'a', name: 'Avery', title: 'Director' },
+      { id: 'b', name: 'Blake', manager: 'a', department: 'Payroll' },
+      { id: 'x', name: 'Xan', manager: 'a' },
+      { id: 'c', name: 'Cass', manager: 'a', department: 'Payroll' },
+      { id: 'c1', name: 'Cody', manager: 'c', department: 'Payroll' },
+    ]);
+    expect(codes(d)).toEqual([]);
+    for (const stack of [false, true])
+      for (const direction of ['TB', 'LR']) {
+        const g = render({ ...d, direction, stack }, reg).geometry!;
+        const box = g.containers[0]!;
+        const node = (id: string) => g.nodes.find((n) => n.id === id)!;
+        for (const id of ['b', 'c', 'c1']) expect(inside(node(id), box), `${direction} ${stack} ${id}`).toBe(true);
+        for (const id of ['a', 'x']) expect(overlaps(node(id), box), `${direction} ${stack} ${id}`).toBe(false);
+      }
+  });
+
+  it('warns when a department reports into several places, and rejects bad department lists', () => {
     const split = chart([
       { id: 'a', name: 'A' },
       { id: 'b', name: 'B', manager: 'a', department: 'Sales' },
