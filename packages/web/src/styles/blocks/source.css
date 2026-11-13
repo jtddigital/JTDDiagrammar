@@ -1,0 +1,91 @@
+/* Block: source editor and diagnostics. */
+.editor {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: var(--step--1);
+}
+
+.editor .cm-editor {
+  height: 100%;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.editor .cm-gutters {
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.editor .cm-activeLine,
+.editor .cm-activeLineGutter {
+  background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
+}
+
+.editor .cm-content {
+  font-family: var(--font-mono);
+  caret-color: var(--color-text);
+}
+
+.editor .cm-cursor {
+  border-left-color: var(--color-text);
+}
+
+.editor .cm-selectionBackground,
+.editor .cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--color-select) 28%, transparent) !important;
+}
+
+.editor .cm-tooltip {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.diagnostics {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 30%;
+  overflow: auto;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--step--1);
+}
+
+.diagnostics:empty {
+  display: none;
+}
+
+.diagnostic {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  text-align: start;
+}
+
+.diagnostic:hover {
+  background: var(--color-surface-2);
+}
+
+.diagnostic::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.45em;
+  border-radius: 50%;
+  background: var(--color-danger);
+}
+
+.diagnostic[data-severity='warning']::before {
+  background: var(--color-warning);
+}
+
+.diagnostic code {
+  color: var(--color-text-muted);
+}

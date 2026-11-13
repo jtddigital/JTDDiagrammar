@@ -1,0 +1,152 @@
+/* Block: top toolbar. */
+.toolbar {
+  --cluster-gap: var(--space-2);
+  height: var(--toolbar-height);
+  padding-inline: var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: nowrap;
+}
+
+.toolbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--step-1);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-inline-end: var(--space-3);
+  white-space: nowrap;
+}
+
+.toolbar__logo {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  display: grid;
+  place-items: center;
+  font-size: var(--step--2);
+  font-weight: 700;
+}
+
+.toolbar__file {
+  color: var(--color-text-muted);
+  font-size: var(--step--1);
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar__divider {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
+  margin-inline: var(--space-1);
+}
+
+/* Shared button look for toolbars and panes. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 32px;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--step--1);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  border-color: var(--color-border-strong);
+}
+
+.btn[data-variant='ghost'] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn[data-variant='ghost']:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+.btn[data-variant='primary'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.btn[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.select {
+  height: 32px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--step--1);
+  max-width: 14rem;
+}
+
+/* Segmented control: pane toggles. */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.segmented .btn {
+  height: 28px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.segmented .btn[aria-pressed='true'] {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--step--1);
+  color: var(--color-success);
+  white-space: nowrap;
+}
+
+.status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status[data-state='error'] {
+  color: var(--color-danger);
+}
+
+.status[data-state='pending'] {
+  color: var(--color-text-muted);
+}

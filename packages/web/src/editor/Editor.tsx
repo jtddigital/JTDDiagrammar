@@ -5,6 +5,7 @@ import { basicSetup, EditorView } from 'codemirror';
 import { useEffect, useRef } from 'react';
 import { registry } from '../registry.ts';
 import { schemaCompletion } from './complete.ts';
+import { tokenHighlight } from './theme.ts';
 import { locate, type Range } from './locate.ts';
 
 interface Props {
@@ -15,20 +16,28 @@ interface Props {
   source: string;
   /** Select and scroll to this range; a new object re-reveals the same range (URS-WEB-009). */
   reveal?: Range;
+  /** Cursor offset, as it moves (URS-WEB-020). */
+  onCursor?(offset: number): void;
 }
 
 /** CodeMirror JSON editor with inline diagnostics (URS-WEB-001, URS-WEB-004) and schema completion (URS-WEB-005). */
-export function Editor({ value, onChange, diagnostics, source, reveal }: Props) {
+export function Editor({ value, onChange, diagnostics, source, reveal, onCursor }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const change = useRef(onChange);
   change.current = onChange;
+  const cursor = useRef(onCursor);
+  cursor.current = onCursor;
 
   useEffect(() => {
     const v = new EditorView({
       parent: host.current!,
       doc: value,
-      extensions: [basicSetup, json(), jsonLanguage.data.of({ autocomplete: schemaCompletion(registry) }), lintGutter(), EditorView.updateListener.of((u) => u.docChanged && change.current(u.state.doc.toString()))],
+      extensions: [basicSetup, tokenHighlight, json(), jsonLanguage.data.of({ autocomplete: schemaCompletion(registry) }), lintGutter(), EditorView.updateListener.of((u) => {
+          if (u.docChanged) change.current(u.state.doc.toString());
+          if (u.selectionSet) cursor.current?.(u.state.selection.main.head);
+        }),
+      ],
     });
     view.current = v;
     return () => v.destroy();

@@ -113,7 +113,8 @@ test('fits each new diagram until the user zooms (URS-WEB-006)', async ({ page }
     await page.getByLabel('Example').selectOption(String(i));
     await expect.poll(inside).toBe(true);
   }
-  await page.getByRole('button', { name: 'Generate with AI' }).click();
+  // Resizing the pane keeps the diagram fitted.
+  await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'AI' }).click();
   await expect.poll(inside).toBe(true);
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom in' }).click();
@@ -122,4 +123,42 @@ test('fits each new diagram until the user zooms (URS-WEB-006)', async ({ page }
   await expect.poll(inside).toBe(false);
   await page.getByRole('button', { name: 'Fit' }).click();
   await expect.poll(inside).toBe(true);
+});
+
+test('outlines the element the editor cursor is in (URS-WEB-020)', async ({ page }) => {
+  await open(page);
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  await page.getByText('"Quoted"').click();
+  await expect(preview(page).locator('#n-b')).toHaveClass(/is-selected/);
+  await page.getByText('"Start here"').click();
+  await expect(preview(page).locator('#n-a')).toHaveClass(/is-selected/);
+  await expect(preview(page).locator('#n-b')).not.toHaveClass(/is-selected/);
+});
+
+test("hovering a node highlights its connections (URS-WEB-020)", async ({ page }) => {
+  await open(page);
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  await preview(page).locator('#n-a').hover();
+  await expect(preview(page).locator('g[id^="e-"]').first()).toHaveClass(/is-related/);
+  await expect(preview(page)).toHaveClass(/is-hovering/);
+});
+
+test('double-clicking a label edits it in place and writes it to the source (URS-WEB-020)', async ({ page }) => {
+  await open(page);
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  await preview(page).locator('#n-a').dblclick();
+  const input = page.getByLabel('Label', { exact: true });
+  await expect(input).toHaveValue('Start here');
+  await input.fill('Begin');
+  await input.press('Enter');
+  await expect(page.locator('.cm-content')).toContainText('"label": "Begin"');
+  await expect(preview(page)).toContainText('Begin');
+  // Escape cancels.
+  await preview(page).getByText('next').dblclick();
+  await page.getByLabel('Label', { exact: true }).fill('nope');
+  await page.getByLabel('Label', { exact: true }).press('Escape');
+  await expect(page.locator('.cm-content')).not.toContainText('nope');
 });

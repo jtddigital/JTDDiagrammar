@@ -1,0 +1,99 @@
+/*
+ * Design tokens (URS-WEB-015). Every colour, size and duration in the app comes from here.
+ * Text colours meet WCAG 2.2 AA (4.5:1) on the backgrounds they are used on, in both themes.
+ * Spacing is a 4 px grid; type is a 1.125 (major second) scale from 14 px.
+ */
+:root {
+  color-scheme: light dark;
+
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-reading: ui-serif, Charter, 'Iowan Old Style', Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --step--2: 0.75rem;
+  --step--1: 0.8125rem;
+  --step-0: 0.875rem;
+  --step-1: 1rem;
+  --step-2: 1.125rem;
+  --step-3: 1.5rem;
+  --step-4: 1.875rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --duration: 160ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --toolbar-height: 52px;
+  --gutter: 1px;
+  --chat-width: 46rem;
+
+  /* Light theme */
+  --color-bg: #faf9f6;
+  --color-surface: #ffffff;
+  --color-surface-2: #f2efe8;
+  --color-surface-3: #e9e5db;
+  --color-border: #e3dfd5;
+  --color-border-strong: #cdc7ba;
+  --color-text: #1f1e1c;
+  --color-text-muted: #5f5b53;
+  --color-accent: #b4532a;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #f6e5dc;
+  --color-focus: #2563eb;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fdf3dc;
+  --color-success: #2b6a3a;
+  --color-select: #2563eb;
+  --color-code-key: #1d4f91;
+  --color-code-string: #1f6b3a;
+  --color-code-literal: #8a3ffc;
+  --shadow-sm: 0 1px 2px rgb(31 30 28 / 0.06);
+  --shadow-md: 0 4px 16px rgb(31 30 28 / 0.08), 0 1px 3px rgb(31 30 28 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #1d1c1a;
+    --color-surface: #262522;
+    --color-surface-2: #2c2b28;
+    --color-surface-3: #373532;
+    --color-border: #3a3935;
+    --color-border-strong: #4c4a45;
+    --color-text: #ecebe6;
+    --color-text-muted: #a8a49b;
+    --color-accent: #e08a64;
+    --color-on-accent: #1d1c1a;
+    --color-accent-soft: #3d2c24;
+    --color-focus: #7aa2ff;
+    --color-danger: #f2877c;
+    --color-danger-soft: #3b2220;
+    --color-warning: #e3b35b;
+    --color-warning-soft: #3a2f1a;
+    --color-success: #7cc58f;
+    --color-select: #7aa2ff;
+    --color-code-key: #8db4ff;
+    --color-code-string: #8fd19e;
+    --color-code-literal: #d4a5ff;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}

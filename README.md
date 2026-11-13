@@ -2045,16 +2045,17 @@ Configuration is through environment variables; see [`.env.example`](.env.exampl
 
 ### Web app
 
-![Web app: JSON editor with inline diagnostics, live SVG preview, export](docs/img/web-app.png)
+![Web app: AI conversation, JSON source and live diagram side by side](docs/img/web-app.png)
 
-Edit JSON on the left, and the preview updates as you type. Rendering happens in the browser with the same core library the API uses.
+Three panes: **AI**, **Source** and **Diagram**. Drag the lines between them to resize (or focus a line and use the arrow keys), and hide or show each from the toolbar. The layout is remembered. Light and dark themes follow your system. Rendering happens in the browser with the same core library the API uses.
 
-- **Autocomplete** (Ctrl+Space) offers the fields and allowed values of the document's `type`.
-- **Errors** are underlined in the editor and listed below it, with their JSON Pointer. The preview keeps the last valid diagram until they are fixed.
-- **Preview:** scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click a node, edge, lane or container to select its source. Hover a generated element to see the quote it came from.
-- **Export SVG** downloads exactly what the API would return for the same source. **Export PNG** rasterises it at 2× in the browser.
+- **AI:** a conversation. Ask for a change to the diagram in the editor, or switch to **New diagram** and paste notes or attach documents. Every change the AI makes has a **Step back** button that restores the diagram from before it; stepping back can itself be stepped back. See [AI generation](#ai-generation).
+- **Source:** JSON with autocomplete (Ctrl+Space) for the fields and values of the document's `type`. Problems are underlined and listed below; click one to jump to it. The diagram keeps the last valid version until they are fixed.
+- **Diagram:** scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click an element to find its source. The element your editor cursor is in is outlined, and hovering a node highlights its connections. Double-click a label to edit it in place. Hover a generated element to see the quote it came from. Layout is automatic, so nodes can't be dragged to a position.
+- **Open** (Ctrl+O) reads JSON, YAML or XML; YAML and XML are converted to JSON. **Save** (Ctrl+S) writes JSON back to the opened file in browsers that allow it (Chrome, Edge), and downloads it elsewhere. Shift-click or Ctrl+Shift+S saves as a new file.
+- **SVG** export downloads exactly what the API would return for the same source. **PNG** rasterises it at 2× in the browser.
 - **Share link** copies a URL that carries the source itself (compressed into the `#fragment`, never sent to the server). The editor also restores your last session.
-- The example picker loads every registered example.
+- **Examples** loads every registered example.
 
 ### Library
 
@@ -2101,7 +2102,7 @@ Rendering runs in worker threads, so one slow diagram can't stall the server. Re
 
 Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. Claude drafts the diagram source, and you review and edit it like anything else.
 
-![Generate panel: paste text or attach documents, pick a type or auto-detect](docs/img/web-generate.png)
+![AI pane: paste notes or attach documents to create a diagram](docs/img/web-generate.png)
 
 ```bash
 curl -X POST localhost:8080/v1/generate -F type=auto -F files=@procedure.pdf -F 'text=Focus on the approval steps'
@@ -2138,9 +2139,9 @@ curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data
 - The key is read only by the SDK on the server. The browser never sees it, and lint rules stop the web app from importing AI code.
 - Uploaded material is treated as data. It's wrapped and can't close its own wrapper, Claude gets no tools, and the server fixes the type and schema. Any text that ends up in the diagram is escaped when rendered.
 - Material and results are not logged or stored.
-- Closing the request (or **Cancel** in the web app) aborts the Claude call.
+- Closing the request (or **Stop** in the web app) aborts the Claude call.
 
-In the web app, the generate panel shows each stage as it happens, and its **Refine** box applies an instruction to whatever is in the editor.
+In the web app, the AI pane shows each stage as it happens and can stop a job. In **Edit diagram** mode a message refines whatever is in the editor; each change can be stepped back.
 
 **Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; its first run (2026-11-11, `claude-opus-5-5`) passed all three, each valid on the first attempt, with the cached prefix read on repeat calls. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
 

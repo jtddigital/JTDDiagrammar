@@ -1,0 +1,14 @@
+/*
+ * Styles follow CUBE CSS (Composition, Utility, Block, Exception) over design tokens:
+ * tokens → global element defaults → layout compositions → utilities → blocks.
+ * Exceptions are data attributes on blocks (data-variant, data-state, data-tone), never new classes.
+ */
+@import './tokens.css';
+@import './global.css';
+@import './compositions.css';
+@import './utilities.css';
+@import './blocks/toolbar.css';
+@import './blocks/panes.css';
+@import './blocks/source.css';
+@import './blocks/chat.css';
+@import './blocks/diagram.css';

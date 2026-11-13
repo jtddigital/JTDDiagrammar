@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateDiagram, refineDiagram, type Progress } from '../src/generate/api.ts';
-import { stageText } from '../src/generate/progress.ts';
+import { generateDiagram, refineDiagram, type Progress } from '../src/chat/api.ts';
+import { stageText } from '../src/chat/progress.ts';
 
 const result = { type: 'flowchart', source: { version: '1' }, valid: true, diagnostics: [], attempts: 1 };
 const sse = (chunks: string[]) =>
