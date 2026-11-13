@@ -10,12 +10,13 @@ import { openapi } from './openapi.ts';
 import { RenderPool } from './pool.ts';
 import { generateRoutes } from './routes/generate.ts';
 import { metaRoutes } from './routes/meta.ts';
+import { microsoftRoutes } from './routes/microsoft.ts';
 import { renderRoutes } from './routes/render.ts';
 import type { Route } from './routes/route.ts';
 import { validateRoutes } from './routes/validate.ts';
 
 /** REST API (URS-API-001) plus the built web app at `/` when available. */
-export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOptions['logger']; claude?: AiClient; copilot?: (token: string, timeZone?: string) => AiClient } = {}): Promise<FastifyInstance> {
+export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOptions['logger']; claude?: AiClient; copilot?: (token: string, timeZone?: string) => AiClient; signInFetch?: typeof fetch } = {}): Promise<FastifyInstance> {
   const reg = ((await import(cfg.registryModule)) as { createRegistry(): Registry }).createRegistry();
   const pool = new RenderPool(cfg.renderWorkers, cfg.renderTimeoutMs, { registryModule: cfg.registryModule, maxNodes: cfg.maxNodes, maxEdges: cfg.maxEdges });
   // Request bodies (diagram content) are never logged.
@@ -39,7 +40,7 @@ export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOption
   const cp = cfg.ai.copilot;
   const copilot = cp && (opts.copilot ?? ((token: string, timeZone?: string) => copilotClient({ token, baseUrl: cp.graphUrl, ...(timeZone && { timeZone }) })));
   const ctx = { reg, pool, ai: cfg.ai, ...(claude && { claude }), ...(copilot && { copilot }) };
-  const routes: Route[] = [...metaRoutes(ctx), ...validateRoutes(ctx), ...renderRoutes(ctx), ...generateRoutes(ctx)];
+  const routes: Route[] = [...metaRoutes(ctx), ...validateRoutes(ctx), ...renderRoutes(ctx), ...generateRoutes(ctx), ...microsoftRoutes(cfg.ai.copilot, opts.signInFetch)];
   let doc: object | undefined;
   routes.push({ method: 'GET', url: '/v1/openapi.json', summary: 'This document.', responses: { 200: 'OpenAPI 3.1' }, handler: async () => (doc ??= openapi(routes, reg)) });
   for (const r of routes) app.route({ method: r.method, url: r.url, handler: r.handler });

@@ -151,7 +151,7 @@ describe('rate limit (URS-AI-019)', () => {
 });
 
 describe('Microsoft 365 Copilot provider (URS-AI-023, URS-API-017)', () => {
-  const copilotCfg = { clientId: 'app-id', tenantId: 'contoso.com', graphUrl: 'https://graph.example/beta', scopes: ['https://graph.microsoft.com/Mail.Read'] };
+  const copilotCfg = { clientId: 'app-id', tenantId: 'contoso.com', graphUrl: 'https://graph.example/beta', scopes: ['https://graph.microsoft.com/Mail.Read'], signIn: 'browser' as const, loginUrl: 'https://login.example' };
   async function withCopilot(replies: ScriptedReply[], claude = false, logger?: { level: string; stream: { write(l: string): void } }) {
     const seen: { token: string; timeZone?: string }[] = [];
     const mock = new MockClaude(replies);
@@ -165,7 +165,7 @@ describe('Microsoft 365 Copilot provider (URS-AI-023, URS-API-017)', () => {
 
   it('lists the public sign-in settings, and enables AI with Copilot alone', async () => {
     const { app } = await withCopilot([]);
-    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: true, providers: [{ id: 'copilot', clientId: 'app-id', tenantId: 'contoso.com', scopes: copilotCfg.scopes }] });
+    expect((await app.inject('/v1/ai')).json()).toEqual({ enabled: true, providers: [{ id: 'copilot', clientId: 'app-id', tenantId: 'contoso.com', scopes: copilotCfg.scopes, signIn: 'browser' }] });
   });
 
   it('acts as the signed-in user: the Graph token from the request, per request', async () => {
@@ -217,6 +217,8 @@ describe('Microsoft 365 Copilot provider (URS-AI-023, URS-API-017)', () => {
       clientId: 'id',
       tenantId: 'organizations',
       graphUrl: 'https://graph.microsoft.com/beta',
+      signIn: 'browser',
+      loginUrl: 'https://login.microsoftonline.com',
       scopes: ['Sites.Read.All', 'Mail.Read', 'People.Read.All', 'OnlineMeetingTranscript.Read.All', 'Chat.Read', 'ChannelMessage.Read.All', 'ExternalItem.Read.All'].map((s) => `https://graph.microsoft.com/${s}`),
     });
     expect(fromEnv({ COPILOT_CLIENT_ID: 'id', COPILOT_TENANT_ID: 't', COPILOT_SCOPES: 'WorkIQAgent.Ask, api://x/y' }).ai.copilot).toMatchObject({ tenantId: 't', scopes: ['https://graph.microsoft.com/WorkIQAgent.Ask', 'api://x/y'] });

@@ -116,11 +116,11 @@ export const generateRoutes = ({ reg, pool, ai, claude, copilot }: Ctx): Route[]
       method: 'GET',
       url: '/v1/ai',
       summary: 'Whether AI generation is available on this server (URS-API-016).',
-      responses: { 200: '{ enabled, model?, providers: [{ id: "claude", model } | { id: "copilot", clientId, tenantId, scopes }] }. Copilot settings are public sign-in settings; there is no secret.' },
+      responses: { 200: '{ enabled, model?, providers: [{ id: "claude", model } | { id: "copilot", clientId, tenantId, scopes, signIn }] }. Copilot settings are public sign-in settings; there is no secret.' },
       handler: async () => ({
         enabled: Boolean(claude || copilot),
         ...(claude && { model: ai.model }),
-        providers: [...(claude ? [{ id: 'claude', model: ai.model }] : []), ...(copilot && ai.copilot ? [{ id: 'copilot', clientId: ai.copilot.clientId, tenantId: ai.copilot.tenantId, scopes: ai.copilot.scopes }] : [])],
+        providers: [...(claude ? [{ id: 'claude', model: ai.model }] : []), ...(copilot && ai.copilot ? [{ id: 'copilot', clientId: ai.copilot.clientId, tenantId: ai.copilot.tenantId, scopes: ai.copilot.scopes, signIn: ai.copilot.signIn }] : [])],
       }),
     },
     {

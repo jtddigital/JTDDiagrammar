@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.35 (draft) |
+| Version | 0.36 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -146,6 +146,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-API-015 | M | With no AI credentials configured, the AI endpoints return `503`; every other endpoint keeps working. | Integration test. | T | Verified |
 | URS-API-016 | S | `GET /v1/ai` reports whether AI generation is available and which providers are configured (with Copilot's public sign-in settings), so clients can hide or offer them. | Integration test. | T | Verified |
 | URS-API-017 | S | `/v1/generate` and `/v1/refine` take `provider` (`claude` or `copilot`; default Claude when configured). Copilot needs the user's Graph token in `X-Graph-Token`, else `401 ai.signin`; an unconfigured provider is `503`, an unknown one `400`. | Integration test. | T | Verified |
+| URS-API-018 | S | With device sign-in, `POST /v1/auth/microsoft/device` starts a sign-in and `POST /v1/auth/microsoft/token` finishes or refreshes it, relaying Microsoft's answer (pending, tokens, or its reason for refusing). Stateless: nothing is stored or logged. | Integration test. | T | Verified |
 
 ### 3.8 Web App (WEB)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -197,6 +198,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
 | URS-AI-022 | W | Bulk generation via the Message Batches API. | — | T | Proposed |
 | URS-AI-023 | S | Second provider: Microsoft 365 Copilot through the Microsoft Graph Copilot Chat API, acting as the signed-in user (delegated; Microsoft sign-in in the browser). Chosen per request and in the web app's AI pane, which remembers the choice. Generation and refine go through the same validation and repair loop, with the schema sent as instructions. Text input only. | Mock tests of the Graph calls, API and web; not yet run against a live tenant. | T | Implemented |
+| URS-AI-024 | S | Copilot sign-in without an app registration of one's own: a device code, as `Connect-MgGraph -UseDeviceCode` does, for any public client app the tenant allows (`COPILOT_SIGNIN=device`). The code shows in the conversation; the token is kept in the browser tab and refreshed when needed. | Unit, integration and E2E tests with a stand-in for Microsoft's login service. | T | Implemented |
 
 ### 3.10 Documentation (DOC)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -310,6 +312,7 @@ Updated with each change. `—` = not started.
 | AI-012 | no logging of bodies or material | api/test/api.test.ts (log capture) | Nothing is stored, so retention is moot. |
 | AI-020 | packages/ai/src/mock.ts | all AI tests | CI never calls the live API. |
 | AI-023, API-017 | ai/src/copilot.ts, ai/src/instructions.ts, api/src/routes/generate.ts (`clientFor`), api/src/config.ts (`COPILOT_*`), web/src/auth/*, web/auth-redirect.html, web/src/chat/{api,ProviderPicker,ChatPane}.* | ai/test/copilot.test.ts (Graph stand-in), api/test/generate.test.ts (provider, token, time zone, log scrub), web/e2e/chat.spec.ts (picker) | Each call starts a fresh Copilot conversation and sends the exchange as one message, with the prompt and schema as additional context. Request shape from Microsoft's Graph beta reference; not verified against a live tenant. |
+| AI-024, API-018 | api/src/routes/microsoft.ts, api/src/config.ts (`COPILOT_SIGNIN`, `COPILOT_LOGIN_URL`), web/src/auth/device.ts, web/src/chat/{ChatPane,MessageView}.tsx | api/test/microsoft.test.ts, web/test/device.test.ts, web/e2e/chat.spec.ts | Microsoft's token endpoint refuses browser requests for public clients, hence the relay. Not yet run against a live tenant. |
 | AI-013, API-013 | ai/src/generate.ts (refine), ai/src/prompt.ts (editPrompt), ai/src/anthropic.ts (`strict: false`), web/src/generate/GeneratePanel.tsx, api/src/routes/generate.ts | ai/test/refine.test.ts (schema and examples sent, any change incl. lifecycle role lanes and colours, repair, ai.unchanged, invalid sources), ai/test/anthropic.test.ts, core/test/ai-assets.test.ts (self-contained authoring schema), api/test/generate.test.ts | Replaces the toGenerated/merge round trip, which could only change what the generation schema expressed. |
 | AI-014 | quote fields → IR → geometry → SVG `<title>` | core/test/styles.test.ts | Generation schemas ask for short verbatim excerpts. |
 | AI-015, API-014 | generate/refine `onProgress`; SSE in api/src/routes/generate.ts | ai/test/refine.test.ts, api/test/generate.test.ts | Stages: ingest, select, generate, validate, repair. |
@@ -345,6 +348,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.36 | 2026-11-13 | Owner report: no permission to register an app. Added AI-024 (device-code sign-in for Copilot, as Connect-MgGraph does; implemented, not yet live-tested) and API-018. |
 | 0.35 | 2026-11-13 | At the owner's request: Microsoft 365 Copilot via Graph as a second AI provider, selectable in the AI pane. Added AI-023 (implemented, not yet live-tested) and API-017; AI-010, AI-020 and API-016 extended. |
 | 0.34 | 2026-11-13 | At the owner's request: web app redesign. Added WEB-015 (three-pane workspace, design tokens), WEB-016 (AI conversation), WEB-017 (step back), WEB-018 (click a problem to jump), WEB-019 (open and save files), WEB-020 (interactive diagram); WEB-011..013 restated for the conversation. All verified. |
 | 0.33 | 2026-11-12 | At the owner's request ("refine should be able to do anything I ask, with full context of the schemas and instructions"): refine edits the authoring source with the full authoring schema and examples; the toGenerated/merge round trip is removed (AI-013). |

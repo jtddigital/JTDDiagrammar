@@ -183,3 +183,26 @@ test('offers each configured AI, sends the choice, and remembers it (URS-AI-023)
   await expect(chat(page).getByLabel('AI', { exact: true })).toHaveValue('copilot');
   await expect(chat(page).locator('.pane__header')).toContainText('Microsoft 365 Copilot');
 });
+
+test('signs in to Microsoft with a device code, then sends the token with Copilot requests (URS-AI-024)', async ({ page }) => {
+  await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true, providers: [{ id: 'copilot', clientId: 'app', tenantId: 'contoso.com', scopes: [], signIn: 'device' }] } }));
+  await page.route('/v1/auth/microsoft/device', (r) => r.fulfill({ json: { userCode: 'ABCD-EFGH', verificationUri: 'https://microsoft.com/devicelogin', deviceCode: 'dc', interval: 1, expiresIn: 900 } }));
+  let polls = 0;
+  await page.route('/v1/auth/microsoft/token', (r) => r.fulfill({ json: ++polls < 2 ? { pending: true } : { accessToken: 'graph-token', refreshToken: 'rt', expiresIn: 3600, account: 'Matt M' } }));
+  let sent: { token?: string; provider?: string } = {};
+  await page.route('/v1/refine', (r) => {
+    sent = { token: r.request().headers()['x-graph-token'], provider: (r.request().postDataJSON() as { provider: string }).provider };
+    return r.fulfill({ json: { ...generated, attempts: 1 } });
+  });
+  await open(page);
+  await chat(page).getByRole('button', { name: 'Sign in with Microsoft' }).click();
+  await expect(log(page).locator('.msg__code')).toHaveText('ABCD-EFGH');
+  await expect(log(page).getByRole('link', { name: 'Open Microsoft sign-in' })).toHaveAttribute('href', 'https://microsoft.com/devicelogin');
+  await expect(log(page)).toContainText('Signed in to Microsoft as Matt M.');
+  await expect(log(page).locator('.msg__code')).toHaveCount(0);
+  await expect(chat(page).getByRole('button', { name: 'Matt' })).toBeVisible();
+
+  await ask(page, 'rename it');
+  await expect(log(page)).toContainText('Updated the flowchart diagram.');
+  expect(sent).toEqual({ token: 'graph-token', provider: 'copilot' });
+});
