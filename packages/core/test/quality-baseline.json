@@ -190,12 +190,30 @@
   },
   "orgchart-basic": {
     "crossings": 0,
-    "overlaps": 0,
+    "overlaps": 2,
     "edgeThroughNode": 0,
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 3
+    "bends": 8
+  },
+  "orgchart-stacked": {
+    "crossings": 0,
+    "overlaps": 13,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 15
+  },
+  "orgchart-multi": {
+    "crossings": 0,
+    "overlaps": 27,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 18
   },
   "lifecycle-change-control": {
     "crossings": 0,
