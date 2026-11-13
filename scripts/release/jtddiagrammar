@@ -37,6 +37,8 @@ case "$cmd" in
       esac
     done
     url="http://localhost:$PORT"
+    # Probe over IPv4, as the Windows launcher does; localhost may try ::1 first.
+    case "$HOST" in 127.0.0.1|0.0.0.0|localhost) probe="http://127.0.0.1:$PORT" ;; *) probe="$url" ;; esac
     browse() {
       [ "$open" = 1 ] || return 0
       if [ "$(uname)" = Darwin ]; then open "$url"
@@ -44,7 +46,7 @@ case "$cmd" in
       fi
     }
     installed="$(cat "$APP/VERSION")"
-    if health="$(curl -sf "$url/health" 2>/dev/null)"; then
+    if health="$(curl -sf "$probe/health" 2>/dev/null)"; then
       # Already running: reuse it, unless it is an older version or config.env changed since it started.
       running="$(printf '%s' "$health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
       started="$(printf '%s' "$health" | sed -n 's/.*"startedAt":\([0-9]*\).*/\1/p')"
@@ -58,14 +60,14 @@ case "$cmd" in
         exit 1
       fi
       echo "Restarting: $why"
-      for _ in $(seq 1 20); do curl -sf "$url/health" >/dev/null 2>&1 || break; sleep 0.5; done
+      for _ in $(seq 1 20); do curl -sf "$probe/health" >/dev/null 2>&1 || break; sleep 0.5; done
     fi
     node "$APP/packages/api/src/server.ts" &
     pid=$!
     echo "$pid" > "$pidfile"
     trap 'kill $pid 2>/dev/null || true; [ "$(cat "$pidfile" 2>/dev/null)" = "$pid" ] && rm -f "$pidfile"' INT TERM EXIT
     for _ in $(seq 1 60); do
-      curl -sf "$url/health" >/dev/null 2>&1 && break
+      curl -sf "$probe/health" >/dev/null 2>&1 && break
       kill -0 $pid 2>/dev/null || { echo "the server failed to start" >&2; exit 1; }
       sleep 0.5
     done

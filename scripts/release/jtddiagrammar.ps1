@@ -91,8 +91,10 @@ switch ($cmd) {
       }
     }
     $url = "http://localhost:$($env:PORT)"
+    # Probe over IPv4: on Windows, localhost tries ::1 first, and each refused attempt costs seconds.
+    $probe = if ($env:HOST -in @('127.0.0.1', '0.0.0.0', 'localhost')) { "http://127.0.0.1:$($env:PORT)" } else { $url }
     $installed = (Get-Content (Join-Path $App 'VERSION')).Trim()
-    $health = Get-Health $url
+    $health = Get-Health $probe
     if ($health) {
       # Already running: reuse it, unless it is an older version or config.env changed since it started.
       $changed = 0
@@ -106,13 +108,13 @@ switch ($cmd) {
         exit 1
       }
       "Restarting: $why"
-      for ($i = 0; $i -lt 20 -and (Test-Up $url); $i++) { Start-Sleep -Milliseconds 500 }
+      for ($i = 0; $i -lt 20 -and (Test-Up $probe); $i++) { Start-Sleep -Milliseconds 500 }
     }
     $server = Join-Path $App 'packages\api\src\server.ts'
     $node = Start-Process node -ArgumentList "`"$server`"" -NoNewWindow -PassThru
     Set-Content -Path $PidFile -Value $node.Id
     try {
-      for ($i = 0; $i -lt 60 -and -not (Test-Up $url); $i++) {
+      for ($i = 0; $i -lt 60 -and -not (Test-Up $probe); $i++) {
         if ($node.HasExited) { Write-Error 'the server failed to start'; exit 1 }
         Start-Sleep -Milliseconds 500
       }
