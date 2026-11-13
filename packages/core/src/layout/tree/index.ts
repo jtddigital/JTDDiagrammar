@@ -86,17 +86,13 @@ export const tree: LayoutEngine = {
     const flip = (p: Point): Point => (lr ? { x: p.y, y: p.x } : p);
     const pos = new Map(placed.flatMap(({ b, at }) => b.nodes.map((n) => [n.id, flip({ x: n.x + at, y: n.y })] as const)));
     const paths = new Map(placed.flatMap(({ b, at }) => b.paths.map((p) => [p.edge, p.points.map((q) => flip({ x: q.x + at, y: q.y }))] as const)));
-    // One box per container: the union of where its subtrees were framed.
-    const union = new Map<string, Box>();
-    for (const { b, at } of placed)
-      for (const { container, box } of b.boxes) {
-        const r = lr ? { x: box.y, y: box.x + at, w: box.h, h: box.w } : { ...box, x: box.x + at };
-        const u = union.get(container);
-        union.set(container, u ? { x: Math.min(u.x, r.x), y: Math.min(u.y, r.y), w: Math.max(u.x + u.w, r.x + r.w) - Math.min(u.x, r.x), h: Math.max(u.y + u.h, r.y + r.h) - Math.min(u.y, r.y) } : r);
-      }
+    // A box wherever a container's people were framed together; people of one container under different
+    // managers get a box each, so no box covers anyone between them. A box inside another of its own is dropped.
+    const framed = placed.flatMap(({ b, at }) => b.boxes.map(({ container, box }) => ({ container, box: lr ? { x: box.y, y: box.x + at, w: box.h, h: box.w } : { ...box, x: box.x + at } })));
+    const within = (a: Box, b: Box) => a !== b && a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
     const placedContainers: PlacedContainer[] = ir.containers.flatMap((c) => {
-      const box = union.get(c.id);
-      return box ? [{ id: c.id, lines: labels.get(c.id)!.lines, head: head(c.id), ...box, depth: chain(c.id).length - 1 }] : [];
+      const own = framed.filter((f) => f.container === c.id).map((f) => f.box);
+      return own.filter((box) => !own.some((o) => within(box, o))).map((box) => ({ id: c.id, lines: labels.get(c.id)!.lines, head: head(c.id), ...box, depth: chain(c.id).length - 1 }));
     });
 
     const nodes: PlacedNode[] = ir.nodes.map((n) => {

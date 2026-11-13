@@ -1991,7 +1991,7 @@ People and who they report to. For teams and organisations.
 |-------|------|----------|-------------|
 | `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
 | `styles` | styles by key |  | Default style per section (`people`, `lines`, `departments`); each item’s own `style` overrides it field by field. |
-| `departments` | list of objects |  | Optional: a style, or a parent department, for departments named on people. Each department is drawn as one box around its people. |
+| `departments` | list of objects |  | Optional: a style, or a parent department, for departments named on people. Each department is drawn as a box around its people. |
 | `departments[].name` | string | yes | As written in `people[].department`. |
 | `departments[].parent` | string |  | The department this one is drawn inside. |
 | `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
@@ -2006,7 +2006,7 @@ People and who they report to. For teams and organisations.
 | `people[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `people[].stack` | boolean |  | This person's team: stacked (true) or in a row (false). Default: the chart's `stack`. |
 | `people[].multi` | integer |  | This person's team stacked in this many columns (rows when left to right). |
-| `people[].department` | string |  | Department name. Everyone in a department is drawn inside one box labelled with it. |
+| `people[].department` | string |  | Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each. |
 
 ### `lifecycle`
 
