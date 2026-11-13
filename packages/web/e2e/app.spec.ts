@@ -111,3 +111,14 @@ test('edits, validates and exports a second diagram type with the same UI (URS-W
   expect(exported).toBe(await (await request.post('/v1/render', { data: doc })).text());
   expect(exported).toContain('class="jtd jtd-state"');
 });
+
+test('a colour swatch before each hex value opens a picker that rewrites it (URS-WEB-021)', async ({ page }) => {
+  await open(page);
+  await setSource(page, flow('A', { nodes: [{ id: 'a', label: 'A', style: { fill: '#f80' }, to: [{ node: 'b' }] }, { id: 'b' }] }));
+  const swatch = page.locator('.cm-color-swatch input[type=color]');
+  await expect(swatch).toHaveCount(1);
+  await expect(swatch).toHaveValue('#ff8800');
+  await swatch.fill('#00aa55');
+  await expect(page.locator('.cm-content')).toContainText('"fill": "#00aa55"');
+  await expect(preview(page).locator('[fill="#00aa55"]').first()).toBeVisible();
+});

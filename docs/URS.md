@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.44 (draft) |
+| Version | 0.45 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -175,6 +175,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-018 | S | Clicking a listed problem selects its location in the editor. | E2E test. | T | Verified |
 | URS-WEB-019 | S | Open JSON, YAML or XML files (YAML and XML are converted to JSON) and save as JSON: back to the opened file where the browser allows (File System Access API), else as a download. Ctrl+O and Ctrl+S; unsaved changes are marked. | Unit test; E2E test with stand-in file pickers. | T | Verified |
 | URS-WEB-020 | S | Interactive diagram: the element the editor cursor is in is outlined; hovering a node highlights its connections; double-clicking a label edits it in place and writes it to the source. All through IR source pointers, with no type-specific code. Free positioning of nodes is out of scope: layout is automatic. | Unit and E2E tests. | T | Verified |
+| URS-WEB-021 | C | Colour picker in the source editor: a swatch shows each hex colour value (`"#rgb"`, `"#rrggbb"`); clicking it opens the browser's colour picker, and the picked colour replaces the value in place (written `#rrggbb`) and updates the preview. | Swatches only on hex colours; picking rewrites the value, also while the picker stays open across redraws; end to end in Chromium. | T | Verified |
 
 ### 3.9 AI Generation (AI)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -336,6 +337,7 @@ Updated with each change. `—` = not started.
 | WEB-006, WEB-014, RN-004 | web/src/preview/{Preview.tsx,sanitize.ts} | web/e2e/preview.spec.ts, web/test/sanitize.test.ts | Inline SVG, sanitised against the RN-001 allowlist (scripts, handlers, links, `url()` refs dropped). Quotes show as native `<title>` tooltips. |
 | WEB-008 | web/src/persist.ts | web/test/persist.test.ts, web/e2e/preview.spec.ts | Share link is `#src=` + base64url(deflate-raw); nothing stored server-side. |
 | WEB-009 | core/src/render.ts (`ir` in result), web/src/pick.ts | web/test/pick.test.ts, web/e2e/preview.spec.ts | SVG id prefix + model id → IR `src` pointer → `locate()`. |
+| WEB-021 | web/src/editor/colors.ts (`colorPicker`), Editor.tsx, styles/blocks/source.css | web/test/colors.test.ts, web/e2e/app.spec.ts | Native `<input type=color>` laid invisibly over the swatch; it only gives `#rrggbb`, so a short `#rgb` is written out in full once picked. |
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
 | NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, reuse, restart on a config change, stop, restart, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
@@ -355,6 +357,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.45 | 2026-11-13 | Owner request: colour picker for hex values in the source editor. Added WEB-021. |
 | 0.44 | 2026-11-13 | Owner request: decorate people globally via tags, overridable locally, with a warning for unused tags. Added TYP-013. |
 | 0.43 | 2026-11-13 | Owner report: instructions unclear for department boxes. TYP-012: AI generation of org charts can set departments (generation schema, guide, example). |
 | 0.42 | 2026-11-13 | Owner request: departments need no head (a sub-department may have no true head). TYP-012 and LY-014 updated: members are grouped whoever they report to; a department under several managers gets a box under each; the split warning is removed. |
