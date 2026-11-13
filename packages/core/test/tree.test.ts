@@ -275,6 +275,14 @@ describe('org chart departments (URS-TYP-012)', () => {
     }
   });
 
+  it('lets AI generation set departments, which become boxes', () => {
+    const ai = reg.type('orgchart')!.ai!;
+    expect(ai.guide).toMatch(/department/i);
+    const example = ai.examples.find((e) => JSON.stringify(e.output).includes('department'))!;
+    const ir = compile(ai.fromGenerated(example.output), reg).ir!;
+    expect(ir.containers.map((c) => c.label)).toEqual(['Finance', 'Payroll']);
+  });
+
   it('rejects bad department lists', () => {
     // A department's members include those of departments inside it.
     expect(codes(chart([{ id: 'a', name: 'A', department: 'P' }, { id: 'b', name: 'B', manager: 'a', department: 'Q' }], { departments: [{ name: 'Q', parent: 'P' }] }))).toEqual([]);
