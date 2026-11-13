@@ -158,8 +158,10 @@ describe('tree layout containers (URS-LY-014, URS-TYP-012)', () => {
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let run = 0; run < 60; run++) {
       const g0 = random(rnd);
+      // Every fourth run each way of saving space, so tight spacing keeps the same guarantees (URS-TYP-014).
+      const compact = ([undefined, 'horizontal', 'vertical', 'both'] as const)[run % 4];
       for (const direction of ['TB', 'LR'] as const) {
-        const g = geo({ direction, ...g0 });
+        const g = geo({ direction, ...g0, ...(compact && { compact }) });
         // A container may be drawn in several places: once for each manager outside it its people report to.
         const parts = (c: string) => g.containers.filter((x) => x.id === c);
         if (direction === 'TB') split += g.containers.length - new Set(g.containers.map((c) => c.id)).size;

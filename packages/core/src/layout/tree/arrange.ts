@@ -4,6 +4,15 @@ import { corners, move, type Block, type Frame } from './block.ts';
 
 /** Spacing, in top-to-bottom terms: between siblings, between levels, indent and gap in a stack. */
 export const GAP = { sibling: 24, level: 40, indent: 20, stacked: 14 };
+export type Gaps = typeof GAP;
+/** The spacing on an axis where the diagram asks to save space (`compact`). */
+export const TIGHT: Gaps = { sibling: 10, level: 24, indent: 12, stacked: 6 };
+
+/** What a layout needs besides the subtrees: each container's frame, and the spacing. */
+export interface Ctx {
+  frame(c: string): Frame;
+  gap: Gaps;
+}
 /** How far outside a box a line runs to go round its label strip. */
 const GUTTER = 8;
 /** Room in a box between its label strip and its people, where the line to them runs. */
@@ -91,41 +100,42 @@ function kidLaid(k: Kid, mode: Mode): Laid {
 }
 
 /** Units side by side (row) or one under another (stack), from (x0, y0). */
-function sequence(ls: Laid[], mode: Mode, x0: number, y0: number) {
+function sequence(ls: Laid[], mode: Mode, x0: number, y0: number, g: Gaps) {
   let [x, y] = [x0, y0];
   const placed = ls.map((l) => {
     const p = at(l, mode, x, y);
-    if (mode === 'row') x += l.w + GAP.sibling;
-    else y += l.h + GAP.stacked;
+    if (mode === 'row') x += l.w + g.sibling;
+    else y += l.h + g.stacked;
     return p;
   });
-  const w = mode === 'row' ? x - GAP.sibling - x0 : max(ls.map((l) => l.w));
-  const h = mode === 'row' ? max(ls.map((l) => l.h)) : y - GAP.stacked - y0;
+  const w = mode === 'row' ? x - g.sibling - x0 : max(ls.map((l) => l.w));
+  const h = mode === 'row' ? max(ls.map((l) => l.h)) : y - g.stacked - y0;
   return { placed, w, h };
 }
 
 /** Lay out a unit; a container's members inside its box, the line to them going round its label strip. */
-export function lay(u: Unit, mode: Mode, frame: (c: string) => Frame): Laid {
+export function lay(u: Unit, mode: Mode, ctx: Ctx): Laid {
   if ('kid' in u) return kidLaid(u.kid, mode);
-  const f = frame(u.container);
-  const inner = u.units.map((v) => lay(v, mode, frame));
+  const { gap: g } = ctx;
+  const f = ctx.frame(u.container);
+  const inner = u.units.map((v) => lay(v, mode, ctx));
   const top = f.strip === 'top';
   // Rows: with the strip on top, a line comes in from the side below it and runs along INNER.
   // Stacks: with the strip on the left, a line comes in from above and runs down a trunk inside.
-  const [x0, y0] = mode === 'row' ? [f.left, f.top + (top ? INNER : 0)] : [f.left + (top ? 0 : GAP.indent), f.top];
-  const { placed, w: cw, h: ch } = sequence(inner, mode, x0, y0);
+  const [x0, y0] = mode === 'row' ? [f.left, f.top + (top ? INNER : 0)] : [f.left + (top ? 0 : g.indent), f.top];
+  const { placed, w: cw, h: ch } = sequence(inner, mode, x0, y0, g);
   const w = Math.max(x0 + cw + f.right, f.minW);
   const h = Math.max(y0 + ch + f.bottom, f.minH);
   const ends = placed.flatMap((p) => p.ends);
   const bus = f.top + INNER / 2;
-  const trunk = f.left + GAP.indent / 2;
+  const trunk = f.left + g.indent / 2;
   // One person to reach, strip on top: drop beside the box and come straight in from the side, below the strip.
   const single = ends.length === 1 && ends[0]!.side;
   const enter = (e: End): End => {
     if (mode === 'row' && top && single) return { ...e, path: (y: number) => [{ x: -GUTTER, y }, { x: -GUTTER, y: single.y }, single] };
     const { side: _, ...rest } = e;
     if (mode === 'row') return top ? { ...rest, path: (y: number) => [{ x: -GUTTER, y }, { x: -GUTTER, y: bus }, ...e.path(bus)] } : rest;
-    return top ? e : { ...rest, path: (x: number) => [{ x, y: -GAP.stacked / 2 }, { x: trunk, y: -GAP.stacked / 2 }, ...e.path(trunk)] };
+    return top ? e : { ...rest, path: (x: number) => [{ x, y: -g.stacked / 2 }, { x: trunk, y: -g.stacked / 2 }, ...e.path(trunk)] };
   };
   const drawn = placed.map((p) => p.drawn);
   return {
@@ -159,12 +169,12 @@ function close(id: string, n: Node, nodeX: number, items: { l: Laid; x: number; 
 }
 
 /** Children side by side under the node, joined by a bus line. */
-function row(id: string, n: Node, ls: Laid[]): Block {
-  const [y, bus] = [n.h + GAP.level, n.h + GAP.level / 2];
+function row(id: string, n: Node, ls: Laid[], g: Gaps): Block {
+  const [y, bus] = [n.h + g.level, n.h + g.level / 2];
   let x = 0;
   const items = ls.map((l) => {
     const item = { l, x, y, p: at(l, 'row', x, y) };
-    x += l.w + GAP.sibling;
+    x += l.w + g.sibling;
     return item;
   });
   const ends = items.flatMap((i) => i.p.ends);
@@ -174,24 +184,24 @@ function row(id: string, n: Node, ls: Laid[]): Block {
 }
 
 /** Children in `columns` stacks under the node, each hanging off a trunk line on its left (URS-LY-014). */
-function stacked(id: string, n: Node, ls: Laid[], columns: number): Block {
+function stacked(id: string, n: Node, ls: Laid[], columns: number, g: Gaps): Block {
   const per = Math.ceil(ls.length / Math.min(columns, ls.length));
   const cols: Laid[][] = [];
   for (let i = 0; i < ls.length; i += per) cols.push(ls.slice(i, i + per));
-  const top = n.h + GAP.level;
-  const bus = n.h + GAP.level / 2;
+  const top = n.h + g.level;
+  const bus = n.h + g.level / 2;
   let x = 0;
   const trunks = cols.map((c) => {
     const t = x;
-    x += GAP.indent + max(c.map((l) => l.w)) + GAP.sibling;
+    x += g.indent + max(c.map((l) => l.w)) + g.sibling;
     return t;
   });
   const cx = (trunks[0]! + trunks.at(-1)!) / 2;
   const items = cols.flatMap((c, ci) => {
     let y = top;
     return c.map((l) => {
-      const item = { l, x: trunks[ci]! + GAP.indent, y, p: at(l, 'stack', trunks[ci]! + GAP.indent, y), t: trunks[ci]! };
-      y += l.h + GAP.stacked;
+      const item = { l, x: trunks[ci]! + g.indent, y, p: at(l, 'stack', trunks[ci]! + g.indent, y), t: trunks[ci]! };
+      y += l.h + g.stacked;
       return item;
     });
   });
@@ -200,9 +210,9 @@ function stacked(id: string, n: Node, ls: Laid[], columns: number): Block {
 }
 
 /** Lay out one node and its subtree: children (already laid out as `kids`) in a row, or in `stack` stacks. */
-export function arrange(id: string, n: Node, kids: Kid[], stack: number | undefined, frame: (c: string) => Frame): Block {
+export function arrange(id: string, n: Node, kids: Kid[], stack: number | undefined, ctx: Ctx): Block {
   if (!kids.length) return leafOf(id, n);
   const mode: Mode = stack ? 'stack' : 'row';
-  const ls = unitsOf(kids).map((u) => lay(u, mode, frame));
-  return stack ? stacked(id, n, ls, stack) : row(id, n, ls);
+  const ls = unitsOf(kids).map((u) => lay(u, mode, ctx));
+  return stack ? stacked(id, n, ls, stack, ctx.gap) : row(id, n, ls, ctx.gap);
 }

@@ -7,7 +7,7 @@ import { placeLabels } from '../labels.ts';
 import { sized } from '../layered/build.ts';
 import { labelsOf } from '../layered/route.ts';
 import { normalize } from '../normalize.ts';
-import { arrange, GAP, lay, unitsOf, type Kid } from './arrange.ts';
+import { arrange, GAP, lay, TIGHT, unitsOf, type Ctx, type Kid } from './arrange.ts';
 import type { Frame } from './block.ts';
 
 /** Container padding on the sides without the label. */
@@ -55,6 +55,13 @@ export const tree: LayoutEngine = {
         : { container: c, top: strip, left: PAD, right: PAD, bottom: PAD, minW: need, minH: 0, strip: 'top' };
     };
     const containerOf = new Map(ir.nodes.map((n) => [n.id, n.parent]));
+    // Saving space (URS-LY-014): tighter gaps along the drawn axes asked for; left to right swaps them.
+    const tight = (axis: 'horizontal' | 'vertical') => ir.compact === 'both' || ir.compact === axis;
+    const [tx, ty] = lr ? [tight('vertical'), tight('horizontal')] : [tight('horizontal'), tight('vertical')];
+    const ctx: Ctx = {
+      frame,
+      gap: { sibling: tx ? TIGHT.sibling : GAP.sibling, indent: tx ? TIGHT.indent : GAP.indent, level: ty ? TIGHT.level : GAP.level, stacked: ty ? TIGHT.stacked : GAP.stacked },
+    };
 
     // Containers a node enters below `outer` (its parent's), innermost first.
     const entering = (id: string, outer: string | undefined) => {
@@ -69,7 +76,7 @@ export const tree: LayoutEngine = {
       const kids: Kid[] = (children.get(id) ?? [])
         .filter((c) => !seen.has(c))
         .map((c) => ({ block: build(c), edge: parent.get(c)!, chain: entering(c, containerOf.get(id)) }));
-      return arrange(id, dims(id), kids, stack.get(id), frame);
+      return arrange(id, dims(id), kids, stack.get(id), ctx);
     };
     const roots: Kid[] = [];
     const grow = (id: string) => roots.push({ block: build(id), edge: -1, chain: entering(id, undefined) });
@@ -78,9 +85,9 @@ export const tree: LayoutEngine = {
     // Top-level units side by side; roots in one container share its box.
     let x = 0;
     const placed = unitsOf(roots).map((u) => {
-      const l = lay(u, 'row', frame);
+      const l = lay(u, 'row', ctx);
       const at = x;
-      x += l.w + 2 * GAP.sibling;
+      x += l.w + 2 * ctx.gap.sibling;
       return { b: l.drawn, at };
     });
     const flip = (p: Point): Point => (lr ? { x: p.y, y: p.x } : p);
