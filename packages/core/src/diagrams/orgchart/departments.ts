@@ -1,4 +1,4 @@
-import { error, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
+import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { Department, OrgChart } from './model.ts';
 
 /** A department to box (URS-TYP-012): listed ones first, then those only named on people, in order. */
@@ -28,7 +28,10 @@ export function loopOf(name: string, parentOf: ReadonlyMap<string, string | unde
   return undefined;
 }
 
-/** Unknown or circular parents are errors; a department split across the chart is a warning, since its box covers the people between. */
+/**
+ * Unknown or circular parents and duplicate names are errors. Nothing else is asked of a department: its
+ * people are boxed wherever they sit, with or without a head, a box for each manager outside it they report to.
+ */
 export function checkDepartments(m: OrgChart): Diagnostic[] {
   const list = m.departments ?? [];
   const named = new Set([...list.map((d) => d.name), ...m.people.flatMap((p) => (p.department === undefined ? [] : [p.department]))]);
@@ -41,23 +44,5 @@ export function checkDepartments(m: OrgChart): Diagnostic[] {
     const loop = loopOf(d.name, parentOf);
     if (loop) out.push(error('orgchart.department', `department '${d.name}' sits inside itself (${loop.join(' → ')})`, pointer('departments', i, 'parent')));
   });
-  if (out.length) return out;
-  // Members of a department include those of departments inside it.
-  const within = (dept: string | undefined, d: string) => {
-    for (let x = dept; x !== undefined; x = parentOf.get(x)) if (x === d) return true;
-    return false;
-  };
-  const byId = new Map(m.people.map((p) => [p.id, p]));
-  for (const d of named) {
-    const entries = m.people.flatMap((p, i) => (within(p.department, d) && !within(byId.get(p.manager ?? '')?.department, d) ? [i] : []));
-    if (entries.length > 1)
-      out.push(
-        warning(
-          'orgchart.department',
-          `'${d}' is in ${entries.length} separate parts of the chart; its box will also cover the people between them. Give it one head that the others report to, directly or not.`,
-          pointer('people', entries[1]!, 'department'),
-        ),
-      );
-  }
   return out;
 }

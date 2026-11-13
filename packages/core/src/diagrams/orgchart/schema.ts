@@ -12,7 +12,7 @@ export const orgchartSchema = {
     styles: sectionStyles(['people', 'lines', 'departments']),
     departments: {
       type: 'array',
-      description: 'Optional: a style, or a parent department, for departments named on people. Each department is drawn as one box around its people.',
+      description: 'Optional: a style, or a parent department, for departments named on people. Each department is drawn as a box around its people.',
       items: {
         type: 'object',
         additionalProperties: false,
@@ -42,7 +42,7 @@ export const orgchartSchema = {
           style,
           stack: { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." },
           multi: { type: 'integer', minimum: 1, maximum: 12, description: "This person's team stacked in this many columns (rows when left to right)." },
-          department: { type: 'string', minLength: 1, description: 'Department name. Everyone in a department is drawn inside one box labelled with it.' },
+          department: { type: 'string', minLength: 1, description: 'Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each.' },
         },
       },
     },
