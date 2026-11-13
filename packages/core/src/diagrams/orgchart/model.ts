@@ -12,6 +12,15 @@ export interface Person {
   stack?: boolean;
   /** This person's team stacked in this many columns (rows when the chart runs left to right). */
   multi?: number;
+  /** Department name: everyone in one department is drawn inside one box (URS-TYP-012). */
+  department?: string;
+}
+
+/** A department's box: its style, and the department it sits inside. */
+export interface Department {
+  name: string;
+  parent?: string;
+  style?: Style;
 }
 
 export interface OrgChart {
@@ -21,7 +30,9 @@ export interface OrgChart {
   theme?: Theme;
   direction?: Direction;
   /** Default style for people and for reporting lines (URS-DM-015). */
-  styles?: Partial<Record<'people' | 'lines', Style>>;
+  styles?: Partial<Record<'people' | 'lines' | 'departments', Style>>;
+  /** Optional: styles and nesting for departments named on people (URS-TYP-012). */
+  departments?: Department[];
   /** Stack each team under its manager instead of spreading it in a row (URS-TYP-011). */
   stack?: boolean;
   /** Split each stacked team into this many columns (rows when left to right). Implies `stack`. */

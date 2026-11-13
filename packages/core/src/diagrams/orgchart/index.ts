@@ -2,13 +2,14 @@ import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
 import { styled } from '../section-styles.ts';
+import { checkDepartments, departmentsOf, loopOf } from './departments.ts';
 import { stacksOf, type OrgChart, type Person } from './model.ts';
 import { orgchartSchema } from './schema.ts';
 
 /** Reporting lines must form a tree: nobody manages themselves, directly or through others. */
 function validate(m: OrgChart): Diagnostic[] {
   const manager = new Map(m.people.map((p) => [p.id, p.manager]));
-  return m.people.flatMap((p, i) => {
+  const cycles = m.people.flatMap((p, i) => {
     const seen = new Set([p.id]);
     for (let x = p.manager; x !== undefined; x = manager.get(x)) {
       if (seen.has(x)) return [error('orgchart.cycle', `'${p.id}' reports to themselves through '${x}'`, pointer('people', i, 'manager'))];
@@ -16,9 +17,16 @@ function validate(m: OrgChart): Diagnostic[] {
     }
     return [];
   });
+  return [...cycles, ...(cycles.length ? [] : checkDepartments(m))];
 }
 
-const toIR = (m: OrgChart): GraphIR => ({
+const toIR = (m: OrgChart): GraphIR => {
+  const depts = departmentsOf(m);
+  const idOf = new Map(depts.map((d) => [d.name, d.id]));
+  // A circular parent is reported by the rules; the boxes simply aren't nested.
+  const parentOf = new Map(depts.map((d) => [d.name, d.entry?.parent]));
+  const nestIn = (d: (typeof depts)[number]) => (d.entry?.parent !== undefined && idOf.has(d.entry.parent) && !loopOf(d.name, parentOf) ? idOf.get(d.entry.parent) : undefined);
+  return {
   ...(m.title !== undefined && { title: m.title }),
   ...(m.theme && { theme: m.theme }),
   direction: m.direction ?? 'TB',
@@ -31,12 +39,21 @@ const toIR = (m: OrgChart): GraphIR => ({
       ...styled(m.styles, 'people', p.style),
       ...(p.quote !== undefined && { quote: p.quote }),
       ...(stack !== undefined && { stack }),
+      ...(p.department !== undefined && { parent: idOf.get(p.department)! }),
       src: pointer('people', i),
     };
   }),
   edges: m.people.flatMap((p, i) => (p.manager === undefined ? [] : [{ id: `edge:${i}`, from: p.manager, to: p.id, marker: 'none' as const, ...styled(m.styles, 'lines', undefined), src: pointer('people', i, 'manager') }])),
-  containers: [],
-});
+  // One box per department (URS-TYP-012).
+  containers: depts.map((d) => ({
+    id: d.id,
+    label: d.name,
+    ...(nestIn(d) !== undefined && { parent: nestIn(d)! }),
+    ...styled(m.styles, 'departments', d.entry?.style),
+    src: d.src,
+  })),
+  };
+};
 
 const examples: [Example, ...Example[]] = [
   {
@@ -80,6 +97,33 @@ const examples: [Example, ...Example[]] = [
         { id: 'o2', name: 'Alex Moore', title: 'SRE', manager: 'ops' },
         { id: 'o3', name: 'Sky Rivera', title: 'Security engineer', manager: 'ops' },
         { id: 'o4', name: 'Robin Hale', title: 'DBA', manager: 'ops' },
+      ],
+    },
+  },
+  {
+    name: 'departments',
+    title: 'Org chart, departments',
+    description: '`department` on each person boxes everyone in it; `departments` styles the boxes and nests Product Design inside Product.',
+    source: {
+      version: '1',
+      type: 'orgchart',
+      title: 'Acme',
+      stack: true,
+      styles: { departments: { fill: '#f8fafc' } },
+      departments: [
+        { name: 'Engineering', style: { fill: '#eff6ff', stroke: '#93c5fd' } },
+        { name: 'Product', style: { fill: '#f0fdf4', stroke: '#86efac' } },
+        { name: 'Product Design', parent: 'Product' },
+      ],
+      people: [
+        { id: 'ceo', name: 'Avery Chen', title: 'CEO', stack: false },
+        { id: 'cto', name: 'Sam Patel', title: 'CTO', manager: 'ceo', department: 'Engineering' },
+        { id: 'e1', name: 'Riley Kim', title: 'Engineer', manager: 'cto', department: 'Engineering' },
+        { id: 'e2', name: 'Morgan Diaz', title: 'Engineer', manager: 'cto', department: 'Engineering' },
+        { id: 'cpo', name: 'Jordan Lee', title: 'Head of Product', manager: 'ceo', department: 'Product', stack: false },
+        { id: 'pm', name: 'Casey Ford', title: 'Product Manager', manager: 'cpo', department: 'Product' },
+        { id: 'dl', name: 'Quinn Ross', title: 'Design lead', manager: 'cpo', department: 'Product Design' },
+        { id: 'd1', name: 'Drew Park', title: 'Designer', manager: 'dl', department: 'Product Design' },
       ],
     },
   },

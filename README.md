@@ -671,6 +671,108 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Org chart, departments
+
+`type: orgchart` · `department` on each person boxes everyone in it; `departments` styles the boxes and nests Product Design inside Product.
+
+![Org chart, departments](docs/img/orgchart-departments.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "orgchart",
+  "title": "Acme",
+  "stack": true,
+  "styles": {
+    "departments": {
+      "fill": "#f8fafc"
+    }
+  },
+  "departments": [
+    {
+      "name": "Engineering",
+      "style": {
+        "fill": "#eff6ff",
+        "stroke": "#93c5fd"
+      }
+    },
+    {
+      "name": "Product",
+      "style": {
+        "fill": "#f0fdf4",
+        "stroke": "#86efac"
+      }
+    },
+    {
+      "name": "Product Design",
+      "parent": "Product"
+    }
+  ],
+  "people": [
+    {
+      "id": "ceo",
+      "name": "Avery Chen",
+      "title": "CEO",
+      "stack": false
+    },
+    {
+      "id": "cto",
+      "name": "Sam Patel",
+      "title": "CTO",
+      "manager": "ceo",
+      "department": "Engineering"
+    },
+    {
+      "id": "e1",
+      "name": "Riley Kim",
+      "title": "Engineer",
+      "manager": "cto",
+      "department": "Engineering"
+    },
+    {
+      "id": "e2",
+      "name": "Morgan Diaz",
+      "title": "Engineer",
+      "manager": "cto",
+      "department": "Engineering"
+    },
+    {
+      "id": "cpo",
+      "name": "Jordan Lee",
+      "title": "Head of Product",
+      "manager": "ceo",
+      "department": "Product",
+      "stack": false
+    },
+    {
+      "id": "pm",
+      "name": "Casey Ford",
+      "title": "Product Manager",
+      "manager": "cpo",
+      "department": "Product"
+    },
+    {
+      "id": "dl",
+      "name": "Quinn Ross",
+      "title": "Design lead",
+      "manager": "cpo",
+      "department": "Product Design"
+    },
+    {
+      "id": "d1",
+      "name": "Drew Park",
+      "title": "Designer",
+      "manager": "dl",
+      "department": "Product Design"
+    }
+  ]
+}
+```
+
+</details>
+
 ### Org chart, a team in two columns
 
 `type: orgchart` · `multi: 2` on a manager: their team is stacked in two columns.
@@ -1888,7 +1990,11 @@ People and who they report to. For teams and organisations.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `direction` | `TB` \| `LR` |  | Top to bottom (default) or left to right. |
-| `styles` | styles by key |  | Default style per section (`people`, `lines`); each item’s own `style` overrides it field by field. |
+| `styles` | styles by key |  | Default style per section (`people`, `lines`, `departments`); each item’s own `style` overrides it field by field. |
+| `departments` | list of objects |  | Optional: a style, or a parent department, for departments named on people. Each department is drawn as one box around its people. |
+| `departments[].name` | string | yes | As written in `people[].department`. |
+| `departments[].parent` | string |  | The department this one is drawn inside. |
+| `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
 | `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |
 | `people` | list of objects | yes | Everyone in the chart. |
@@ -1900,6 +2006,7 @@ People and who they report to. For teams and organisations.
 | `people[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `people[].stack` | boolean |  | This person's team: stacked (true) or in a row (false). Default: the chart's `stack`. |
 | `people[].multi` | integer |  | This person's team stacked in this many columns (rows when left to right). |
+| `people[].department` | string |  | Department name. Everyone in a department is drawn inside one box labelled with it. |
 
 ### `lifecycle`
 
