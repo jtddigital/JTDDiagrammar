@@ -2154,6 +2154,16 @@ Copilot works on behalf of the person using the app: they sign in with their Mic
 3. Set `COPILOT_CLIENT_ID` (the application id) and `COPILOT_TENANT_ID` (your tenant id or domain) where the server runs. `COPILOT_GRAPH_URL` and `COPILOT_SCOPES` override the endpoint and permissions if Microsoft changes them.
 4. Each user needs a Microsoft 365 Copilot licence.
 
+**Without registering an app.** If you can't register one, sign in with a device code instead, the way `Connect-MgGraph -UseDeviceCode` does. Set `COPILOT_SIGNIN=device` and point `COPILOT_CLIENT_ID` at a public client app your tenant already allows. Microsoft Graph PowerShell's own app, *Microsoft Graph Command Line Tools*, is the one `Connect-MgGraph` uses:
+
+```
+COPILOT_SIGNIN=device
+COPILOT_CLIENT_ID=14d82eec-204b-4c2f-b7e8-296a70dab67e
+COPILOT_TENANT_ID=<your tenant id or domain>
+```
+
+Sign-ins then show in your tenant's logs as that app, and your organisation's policies for it apply: the Copilot permissions still need consent (yours, or an admin's where the tenant requires it). **Sign in with Microsoft** shows a code in the conversation; enter it at the Microsoft page it links to. The token stays in that browser tab and is refreshed as needed; the server only relays the sign-in requests (Microsoft refuses them from a browser for this kind of app) and keeps nothing.
+
 In the web app, pick **Microsoft 365 Copilot** in the AI pane and **Sign in with Microsoft**. The choice is remembered. Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
 
 Copilot has no structured outputs, so the schema is sent as instructions and every reply is checked and repaired like Claude's. It takes text only, so PDFs and images need Claude, and it does not report token usage or cost.

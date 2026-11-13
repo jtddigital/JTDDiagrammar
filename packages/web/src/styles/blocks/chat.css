@@ -119,6 +119,19 @@
   color: var(--color-text-muted);
 }
 
+.msg__code {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+  font-size: var(--step-2);
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+
+.msg__meta a.btn {
+  text-decoration: none;
+}
+
 .msg__notes {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);

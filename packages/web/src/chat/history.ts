@@ -21,6 +21,8 @@ export interface AssistantMessage {
   notes?: string[];
   /** Source before this change; present when the message changed the source. */
   before?: string;
+  /** A Microsoft sign-in code to enter at `href` (URS-AI-024). */
+  signIn?: { code: string; href: string };
 }
 
 export type Message = UserMessage | AssistantMessage;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { pretty } from '../registry.ts';
 import { Plus, Sparkle } from '../ui/icons.tsx';
+import { deviceAccount, deviceSignOut, deviceToken, finishSignIn, startSignIn } from '../auth/device.ts';
 import { graphToken, signedIn, signIn, signOut, type MicrosoftSettings } from '../auth/microsoft.ts';
 import { aiInfo, generateDiagram, refineDiagram, type AiInfo, type Generated, type Progress, type Provider, type Via } from './api.ts';
 import { Composer, type Mode } from './Composer.tsx';
@@ -52,9 +53,15 @@ export function ChatPane({ text, value, onSource }: Props) {
     void aiInfo().then(setInfo);
     return () => abort.current?.abort();
   }, []);
+  // Device-code sign-in needs no app registration of the user's own (URS-AI-024).
+  const device = microsoft && (provider as { signIn?: string }).signIn === 'device';
+  const signingIn = useRef<AbortController | null>(null);
+  useEffect(() => () => signingIn.current?.abort(), []);
   useEffect(() => {
-    if (microsoft) void signedIn(microsoft).then(setAccount, () => setAccount(undefined));
-  }, [microsoft]);
+    if (!microsoft) return;
+    if (device) setAccount(deviceAccount());
+    else void signedIn(microsoft).then(setAccount, () => setAccount(undefined));
+  }, [microsoft, device]);
 
   const choose = (id: Provider['id']) => {
     setChosen(id);
@@ -64,9 +71,28 @@ export function ChatPane({ text, value, onSource }: Props) {
   /** Who to ask; for Copilot, with a Graph token (signing in if needed). */
   const via = async (): Promise<Via> => {
     if (!microsoft) return provider ? { provider: provider.id } : {};
-    const graph = await graphToken(microsoft);
-    setAccount(await signedIn(microsoft));
+    const graph = device ? await deviceToken() : await graphToken(microsoft);
+    setAccount(device ? deviceAccount() : await signedIn(microsoft));
     return { provider: 'copilot', graphToken: graph };
+  };
+
+  /** Show the code in the conversation and wait for the user to enter it on Microsoft's page. */
+  const deviceSignIn = async () => {
+    const id = newId();
+    const ac = (signingIn.current = new AbortController());
+    try {
+      const code = await startSignIn();
+      setMessages((ms) => [
+        ...ms,
+        { id, role: 'assistant', tone: 'working', text: `To sign in to Microsoft, open ${code.verificationUri} and enter this code. Waiting for you…`, signIn: { code: code.userCode, href: code.verificationUri } },
+      ]);
+      const name = await finishSignIn(code, ac.signal);
+      setAccount(name);
+      setMessages((ms) => ms.map((m) => (m.id === id ? { id, role: 'assistant', tone: 'done', text: `Signed in to Microsoft as ${name}.` } : m)));
+    } catch (e) {
+      if (ac.signal.aborted) return;
+      setMessages((ms) => [...ms.filter((m) => m.id !== id), { id, role: 'assistant', tone: 'error', text: e instanceof Error ? e.message : String(e) }]);
+    }
   };
   useEffect(() => saveChat(messages), [messages]);
   useEffect(() => {
@@ -167,8 +193,8 @@ export function ChatPane({ text, value, onSource }: Props) {
               value={provider.id}
               onChange={choose}
               {...(account && { account })}
-              onSignIn={() => void signIn(microsoft!).then(setAccount, fail)}
-              onSignOut={() => void signOut(microsoft!).then(() => setAccount(undefined), fail)}
+              onSignIn={() => void (device ? deviceSignIn() : signIn(microsoft!).then(setAccount, fail))}
+              onSignOut={() => (device ? (deviceSignOut(), setAccount(undefined)) : void signOut(microsoft!).then(() => setAccount(undefined), fail))}
               disabled={busy}
             />
           ) : undefined

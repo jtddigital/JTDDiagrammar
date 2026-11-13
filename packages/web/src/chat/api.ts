@@ -15,7 +15,7 @@ export interface Progress {
 }
 
 /** An AI provider the server offers (URS-AI-023). Copilot carries the public Microsoft sign-in settings. */
-export type Provider = { id: 'claude'; model: string } | { id: 'copilot'; clientId: string; tenantId: string; scopes: string[] };
+export type Provider = { id: 'claude'; model: string } | { id: 'copilot'; clientId: string; tenantId: string; scopes: string[]; signIn?: 'browser' | 'device' };
 
 export interface AiInfo {
   enabled: boolean;

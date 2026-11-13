@@ -39,6 +39,17 @@ export function MessageView({ message: m, onStepBack, busy }: Props) {
             ))}
           </ul>
         ) : null}
+        {m.signIn && (
+          <div className="msg__meta cluster">
+            <code className="msg__code">{m.signIn.code}</code>
+            <button type="button" className="btn" data-variant="ghost" onClick={() => void navigator.clipboard?.writeText(m.signIn!.code)}>
+              Copy code
+            </button>
+            <a className="btn" href={m.signIn.href} target="_blank" rel="noreferrer noopener">
+              Open Microsoft sign-in
+            </a>
+          </div>
+        )}
         {m.before !== undefined && (
           <div className="msg__meta cluster">
             <button type="button" className="btn" data-variant="ghost" disabled={busy} onClick={() => onStepBack(m.before!)}>

@@ -46,6 +46,13 @@ export interface CopilotConfig {
   graphUrl: string;
   /** Delegated Graph permissions the Copilot Chat API needs. */
   scopes: string[];
+  /**
+   * `browser`: Microsoft sign-in popup, for a single-page app registration. `device`: a device code,
+   * as `Connect-MgGraph -UseDeviceCode` does, for a public client app (URS-AI-024).
+   */
+  signIn: 'browser' | 'device';
+  /** Microsoft identity platform host. */
+  loginUrl: string;
 }
 
 /** Delegated permissions the Microsoft 365 Copilot Chat API requires, all together. Override with COPILOT_SCOPES. */
@@ -113,6 +120,8 @@ export const fromEnv = (env: NodeJS.ProcessEnv = process.env): Config => {
           clientId: env.COPILOT_CLIENT_ID,
           tenantId: env.COPILOT_TENANT_ID || 'organizations',
           graphUrl: env.COPILOT_GRAPH_URL || 'https://graph.microsoft.com/beta',
+          signIn: env.COPILOT_SIGNIN === 'device' ? ('device' as const) : ('browser' as const),
+          loginUrl: (env.COPILOT_LOGIN_URL || 'https://login.microsoftonline.com').replace(/\/$/, ''),
           scopes: (env.COPILOT_SCOPES ? env.COPILOT_SCOPES.split(/[\s,]+/).filter(Boolean) : COPILOT_SCOPES).map((s) => (s.includes('://') ? s : `https://graph.microsoft.com/${s}`)),
         },
       }),
