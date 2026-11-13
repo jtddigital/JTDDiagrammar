@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { registry } from '../registry.ts';
 import { ArrowUp, Close, Paperclip, Stop } from '../ui/icons.tsx';
 
@@ -22,8 +22,6 @@ interface Props {
   disabled: boolean;
   onSend(): void;
   onStop(): void;
-  /** Extra controls in the bar, e.g. the AI provider. */
-  extra?: ReactNode;
 }
 
 /** Message box with attachments, mode and type (URS-WEB-016). Enter sends; Shift+Enter starts a new line. */
@@ -152,7 +150,6 @@ export function Composer(p: Props) {
             )}
           </div>
           <div className="composer__actions cluster">
-            {p.extra}
             {p.busy ? (
               <button
                 type="button"

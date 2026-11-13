@@ -2,6 +2,8 @@
 # JTDDiagrammar launcher (URS-NF-011).
 #   jtddiagrammar [start] [--port N] [--no-open]   start the app and open it in the browser
 #   jtddiagrammar update [vX.Y.Z]                  install the latest (or a given) release
+#   jtddiagrammar restart [--port N] [--no-open]   stop the running app and start it again
+#   jtddiagrammar stop                              stop the running app
 #   jtddiagrammar version
 set -euo pipefail
 
@@ -12,9 +14,17 @@ export JTD_HOME
 cmd=start
 if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then cmd="$1"; shift; fi
 
+# The server this launcher started, so a later run can stop or restart it.
+pidfile="$JTD_HOME/server.pid"
+stop_server() {
+  [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null && rm -f "$pidfile"
+}
+
 case "$cmd" in
   version) cat "$APP/VERSION" ;;
   update) exec bash "$APP/bin/install.sh" "$@" ;;
+  stop) if stop_server; then echo "JTDDiagrammar stopped"; else echo "JTDDiagrammar is not running"; fi ;;
+  restart) stop_server || true; sleep 1; exec "$0" start "$@" ;;
   start)
     if [ -f "$JTD_HOME/config.env" ]; then set -a; . "$JTD_HOME/config.env"; set +a; fi
     export PORT="${PORT:-8080}" HOST="${HOST:-127.0.0.1}" NODE_ENV=production
@@ -33,18 +43,35 @@ case "$cmd" in
       elif command -v xdg-open >/dev/null; then xdg-open "$url" >/dev/null 2>&1 &
       fi
     }
-    if curl -sf "$url/health" >/dev/null 2>&1; then echo "already running at $url"; browse; exit 0; fi
+    installed="$(cat "$APP/VERSION")"
+    if health="$(curl -sf "$url/health" 2>/dev/null)"; then
+      # Already running: reuse it, unless it is an older version or config.env changed since it started.
+      running="$(printf '%s' "$health" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+      started="$(printf '%s' "$health" | sed -n 's/.*"startedAt":\([0-9]*\).*/\1/p')"
+      changed=0
+      if [ -f "$JTD_HOME/config.env" ]; then changed="$(date -r "$JTD_HOME/config.env" +%s)000"; fi
+      if [ "$running" = "$installed" ] && [ "${started:-0}" -ge "$changed" ]; then echo "already running at $url"; browse; exit 0; fi
+      why="settings in config.env changed"; [ "$running" = "$installed" ] || why="${running:-an older version} is running, $installed is installed"
+      if ! stop_server; then
+        echo "JTDDiagrammar is already running at $url, but $why." >&2
+        echo "Close the window it runs in (or press Ctrl+C there), then run jtddiagrammar again." >&2
+        exit 1
+      fi
+      echo "Restarting: $why"
+      for _ in $(seq 1 20); do curl -sf "$url/health" >/dev/null 2>&1 || break; sleep 0.5; done
+    fi
     node "$APP/packages/api/src/server.ts" &
     pid=$!
-    trap 'kill $pid 2>/dev/null || true' INT TERM EXIT
+    echo "$pid" > "$pidfile"
+    trap 'kill $pid 2>/dev/null || true; [ "$(cat "$pidfile" 2>/dev/null)" = "$pid" ] && rm -f "$pidfile"' INT TERM EXIT
     for _ in $(seq 1 60); do
       curl -sf "$url/health" >/dev/null 2>&1 && break
       kill -0 $pid 2>/dev/null || { echo "the server failed to start" >&2; exit 1; }
       sleep 0.5
     done
-    echo "JTDDiagrammar $(cat "$APP/VERSION") at $url (Ctrl+C to stop)"
+    echo "JTDDiagrammar $installed at $url (Ctrl+C to stop)"
     browse
     wait $pid
     ;;
-  *) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

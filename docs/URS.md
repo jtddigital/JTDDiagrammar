@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.36 (draft) |
+| Version | 0.37 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -197,7 +197,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-AI-020 | M | AI providers sit behind one client interface with a deterministic mock. CI never calls a live AI service. | CI has no key; tests pass. | T | Verified |
 | URS-AI-021 | C | Image input (whiteboard photos, screenshots of existing diagrams). | — | T | Verified |
 | URS-AI-022 | W | Bulk generation via the Message Batches API. | — | T | Proposed |
-| URS-AI-023 | S | Second provider: Microsoft 365 Copilot through the Microsoft Graph Copilot Chat API, acting as the signed-in user (delegated; Microsoft sign-in in the browser). Chosen per request and in the web app's AI pane, which remembers the choice. Generation and refine go through the same validation and repair loop, with the schema sent as instructions. Text input only. | Mock tests of the Graph calls, API and web; not yet run against a live tenant. | T | Implemented |
+| URS-AI-023 | S | Second provider: Microsoft 365 Copilot through the Microsoft Graph Copilot Chat API, acting as the signed-in user (delegated; Microsoft sign-in in the browser). Chosen per request and in the web app's AI pane header, which always lists both AIs (one not set up is disabled, with how to set it up) and remembers the choice. Generation and refine go through the same validation and repair loop, with the schema sent as instructions. Text input only. | Mock tests of the Graph calls, API and web; not yet run against a live tenant. | T | Implemented |
 | URS-AI-024 | S | Copilot sign-in without an app registration of one's own: a device code, as `Connect-MgGraph -UseDeviceCode` does, for any public client app the tenant allows (`COPILOT_SIGNIN=device`). The code shows in the conversation; the token is kept in the browser tab and refreshed when needed. | Unit, integration and E2E tests with a stand-in for Microsoft's login service. | T | Implemented |
 
 ### 3.10 Documentation (DOC)
@@ -223,7 +223,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-NF-008 | M | Secrets come from environment variables only. No secrets in the repo; `.env.example` documents each variable. | Secret scan in CI. | T | Verified |
 | URS-NF-009 | M | AI code lives in a separate `ai` package (Node only). `core` never depends on the Anthropic SDK. | Lint rule. | T | Verified |
 | URS-NF-010 | M | One-command installer for Linux, macOS and Windows that installs the latest GitHub release (or a named one), verifies its SHA-256, works with a private repo given a token, keeps user config across updates, and can update in place. | CI installs a packed release from a stand-in GitHub API on Windows (PowerShell 5.1 and 7) and Linux. macOS shares the Linux script. | T | Implemented |
-| URS-NF-011 | M | One command (`jtddiagrammar`), plus a Start Menu or desktop entry, starts the app on localhost, waits until it is healthy, and opens the browser. Bound to 127.0.0.1 by default. | CI launches the installed app and checks health, web app and render. | T | Implemented |
+| URS-NF-011 | M | One command (`jtddiagrammar`), plus a Start Menu or desktop entry, starts the app on localhost, waits until it is healthy, and opens the browser. Bound to 127.0.0.1 by default. A running app is reused unless it is an older version or `config.env` changed since it started; then it is restarted. `restart` and `stop` commands. `/health` reports the version and start time. | CI launches the installed app and checks health, web app and render. | T | Implemented |
 | URS-NF-014 | S | Hands-off release: every push to `main` (a merged PR) publishes the next patch version with generated release notes and the release files. It is skipped when the commit already has a version tag or its message contains `[skip release]`. Releases run one at a time. | Version chosen numerically from existing `vX.Y.Z` tags; skip rules; the release job is the NF-012 path. | I | Implemented |
 | URS-NF-013 | M | Windows is the primary install target: the installer works in Windows PowerShell 5.1 and PowerShell 7, needs no admin rights, installs Node.js LTS with winget when it is missing, and adds Start Menu and desktop shortcuts and a PATH entry. `jtddiagrammar uninstall` removes all of them. | CI on Windows with both PowerShells: install, launch, update, uninstall. | T | Implemented |
 | URS-NF-012 | S | Pushing a `v*` tag runs the checks and publishes a GitHub release with the app bundle, its checksum and both installers. | Workflow inspection; bundle built by the same script CI tests. | I | Implemented |
@@ -331,7 +331,7 @@ Updated with each change. `—` = not started.
 | WEB-009 | core/src/render.ts (`ir` in result), web/src/pick.ts | web/test/pick.test.ts, web/e2e/preview.spec.ts | SVG id prefix + model id → IR `src` pointer → `locate()`. |
 | RN-007 | web/src/download.ts (canvas) | web/e2e/preview.spec.ts | Client-side; the API stays SVG-only. |
 | DOC-001, DOC-005 | README.md, web/e2e/screens.spec.ts | `pnpm docs:check` | |
-| NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
+| NF-010, NF-011, NF-013 | scripts/release/{install.sh,install.ps1,jtddiagrammar,jtddiagrammar.ps1} | scripts/release/e2e.ts (`pnpm release:e2e`; CI `install` job: Windows × {PowerShell 5.1, 7}, Linux bash, Linux PowerShell 7 in 5.1 argument mode), scripts/release/scripts.test.ts | Stand-in GitHub API demands a token; checks install, version, launch, web app, render, update, reuse, restart on a config change, stop, restart, refused token, and uninstall (PowerShell). Dependencies come from the lockfile at install time, so one archive serves every OS. Locally: bash and PowerShell 7 (on Linux) pass. winget, shortcuts and PATH run only on Windows. |
 | NF-014 | .github/workflows/release.yml (`version` job), CLAUDE.md (PR flow) | Version picking checked locally on sample tags (numeric order, already tagged, skip, no tags). Verified on the first merge after 0.30. | Claude opens and merges its own PRs once CI is green, under the owner's standing approval. |
 | NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Attaches to an existing release (made on the releases page) or creates one; `workflow_dispatch` re-attaches for an existing tag, or creates a missing tag on the selected branch's commit (tag format checked first). Verified on the first tagged release. |
 
@@ -348,6 +348,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.37 | 2026-11-13 | Owner report: could not switch to Copilot. The AI choice moves to the AI pane header and always lists both AIs (AI-023); the launcher restarts a running app that is outdated or predates a config.env change, and gains `restart` and `stop` (NF-011). |
 | 0.36 | 2026-11-13 | Owner report: no permission to register an app. Added AI-024 (device-code sign-in for Copilot, as Connect-MgGraph does; implemented, not yet live-tested) and API-018. |
 | 0.35 | 2026-11-13 | At the owner's request: Microsoft 365 Copilot via Graph as a second AI provider, selectable in the AI pane. Added AI-023 (implemented, not yet live-tested) and API-017; AI-010, AI-020 and API-016 extended. |
 | 0.34 | 2026-11-13 | At the owner's request: web app redesign. Added WEB-015 (three-pane workspace, design tokens), WEB-016 (AI conversation), WEB-017 (step back), WEB-018 (click a problem to jump), WEB-019 (open and save files), WEB-020 (interactive diagram); WEB-011..013 restated for the conversation. All verified. |

@@ -181,7 +181,15 @@ test('offers each configured AI, sends the choice, and remembers it (URS-AI-023)
   await expect(chat(page).getByRole('button', { name: 'Sign in with Microsoft' })).toBeVisible();
   await page.reload();
   await expect(chat(page).getByLabel('AI', { exact: true })).toHaveValue('copilot');
-  await expect(chat(page).locator('.pane__header')).toContainText('Microsoft 365 Copilot');
+});
+
+test('shows an AI the server is not set up for, disabled, with how to set it up (URS-AI-023)', async ({ page }) => {
+  await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true, model: 'claude-opus-5-5', providers: [{ id: 'claude', model: 'claude-opus-5-5' }] } }));
+  await open(page);
+  const pick = chat(page).getByLabel('AI', { exact: true });
+  await expect(pick.locator('option')).toHaveText(['Claude', 'Microsoft 365 Copilot (not set up)']);
+  await expect(pick.locator('option[value="copilot"]')).toBeDisabled();
+  await expect(pick).toHaveAttribute('title', /COPILOT_CLIENT_ID.*config\.env, then restart/);
 });
 
 test('signs in to Microsoft with a device code, then sends the token with Copilot requests (URS-AI-024)', async ({ page }) => {

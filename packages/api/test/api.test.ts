@@ -135,7 +135,7 @@ describe('other endpoints', () => {
   });
 
   it('GET /health (URS-API-009)', async () => {
-    expect((await app.inject('/health')).json()).toEqual({ status: 'ok' });
+    expect((await app.inject('/health')).json()).toEqual({ status: 'ok', startedAt: expect.any(Number) });
   });
 
   it('GET /v1/openapi.json documents every route (URS-API-008)', async () => {
