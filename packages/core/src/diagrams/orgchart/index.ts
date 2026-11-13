@@ -166,6 +166,7 @@ const ai: AiAssets<OrgChart> = {
             name: { type: 'string' },
             title: { type: 'string' },
             manager: { type: 'string', description: 'Id of their manager; omit at the top.' },
+            department: { type: 'string', description: 'Department name, spelt the same for everyone in it. People with the same department are drawn in one labelled box.' },
             quote: { type: 'string', description: 'Short verbatim excerpt naming this person or role.' },
           },
         },
@@ -174,17 +175,30 @@ const ai: AiAssets<OrgChart> = {
   },
   fromGenerated: (g) => {
     const { title, people } = g as { title: string; people: Person[] };
-    return { version: '1', type: 'orgchart', title, people };
+    // An empty department means none.
+    return { version: '1', type: 'orgchart', title, people: people.map(({ department, ...p }) => (department ? { ...p, department } : p)) };
   },
   guide: `Diagram type: orgchart.
 - One entry per person or role named in the material; "name" is the person (or the role if no name is given), "title" their role.
 - "manager" is the id of who they report to. Exactly the people at the top have no manager.
 - Do not invent people or reporting lines that the material does not state.
+- Department boxes: give each person "department" with their department's name, spelt exactly the same for everyone in it; everyone with that name is boxed together under that label. A department needs no head: its manager may be in another department, or its people may report to different managers. Leave "department" out where the material gives none; never move people or invent a head to fill a department.
 - Where the material names a person or role directly, set "quote" to a short verbatim excerpt (at most 20 words).`,
   examples: [
     {
       input: 'Dana leads the clinic. Two nurses, Eli and Fay, report to Dana.',
       output: { title: 'Clinic', people: [{ id: 'dana', name: 'Dana', title: 'Clinic lead' }, { id: 'eli', name: 'Eli', title: 'Nurse', manager: 'dana' }, { id: 'fay', name: 'Fay', title: 'Nurse', manager: 'dana' }] },
+    },
+    {
+      input: 'Gale, the finance director, runs Finance. Hal and Ivy work in Payroll and report to Gale.',
+      output: {
+        title: 'Finance',
+        people: [
+          { id: 'gale', name: 'Gale', title: 'Finance director', department: 'Finance' },
+          { id: 'hal', name: 'Hal', manager: 'gale', department: 'Payroll' },
+          { id: 'ivy', name: 'Ivy', manager: 'gale', department: 'Payroll' },
+        ],
+      },
     },
   ],
 };
