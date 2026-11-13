@@ -2000,10 +2000,12 @@ Then run `jtddiagrammar` to start the app and open your browser; Ctrl+C stops it
 | `jtddiagrammar` | Start the app and open the browser |
 | `jtddiagrammar --port 9000 --no-open` | Another port; don't open the browser |
 | `jtddiagrammar update` | Install the latest release (or `update v1.2.3`) |
+| `jtddiagrammar restart` | Stop the running app and start it again, e.g. after changing `config.env` |
+| `jtddiagrammar stop` | Stop the running app |
 | `jtddiagrammar version` | Show the installed version |
 | `jtddiagrammar uninstall` | Windows: remove the app, its shortcuts and PATH entry (`--keep-config` keeps your settings) |
 
-**Settings**, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder. Updates keep it. Installing also needs access to the npm registry, because dependencies are installed from the release's lockfile.
+**Settings**, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder. Updates keep it. If the app is already running, `jtddiagrammar` reuses it, unless it is an older version or `config.env` has changed since it started: then it restarts it. A server started by a release before v1.0.13 can't be restarted this way; close its window (or press Ctrl+C there) and run `jtddiagrammar` again. Installing also needs access to the npm registry, because dependencies are installed from the release's lockfile.
 
 **Publishing a release:** every merge to `main` publishes the next patch version automatically (v1.0.5 → v1.0.6), with release notes from the merged PRs, so `jtddiagrammar update` picks it up. Put `[skip release]` in the PR title to merge without releasing. For a minor or major version, push a tag such as `v1.1.0`, or create the release on the releases page. Either way the `Release` workflow runs the checks, then attaches the bundle, its checksum and both installers. You can also open **Actions → Release → Run workflow** and enter a version such as `v1.2.3`. If the tag doesn't exist yet, it is created on the branch you run from (normally `main`); if it does, its files are rebuilt and re-attached. GitHub's own "Source code" archives are not the app bundle. On every push, CI installs, launches, updates and uninstalls a packed release on Windows (Windows PowerShell 5.1 and PowerShell 7) and Linux (`pnpm release:e2e`).
 
@@ -2164,7 +2166,7 @@ COPILOT_TENANT_ID=<your tenant id or domain>
 
 Sign-ins then show in your tenant's logs as that app, and your organisation's policies for it apply: the Copilot permissions still need consent (yours, or an admin's where the tenant requires it). **Sign in with Microsoft** shows a code in the conversation; enter it at the Microsoft page it links to. The token stays in that browser tab and is refreshed as needed; the server only relays the sign-in requests (Microsoft refuses them from a browser for this kind of app) and keeps nothing.
 
-In the web app, pick **Microsoft 365 Copilot** in the AI pane and **Sign in with Microsoft**. The choice is remembered. Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
+In the web app, pick **Microsoft 365 Copilot** in the list at the top of the AI pane, then **Sign in**. If it shows *(not set up)*, the running server hasn't read `COPILOT_CLIENT_ID`: check `config.env` and run `jtddiagrammar restart`. The choice is remembered. Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
 
 Copilot has no structured outputs, so the schema is sent as instructions and every reply is checked and repaired like Claude's. It takes text only, so PDFs and images need Claude, and it does not report token usage or cost.
 
