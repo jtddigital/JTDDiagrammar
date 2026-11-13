@@ -2076,6 +2076,7 @@ People and who they report to. For teams and organisations.
 | `departments[].parent` | string |  | The department this one is drawn inside. |
 | `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `tags` | object |  | A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person's own `style` overrides it field by field. A tag styled here that no one has is a warning. |
+| `legend` | boolean |  | Draw a legend under the chart: a sample card in each styled tag's style, with the tag's name. Only tags someone has are shown. |
 | `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
 | `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |
 | `people` | list of objects | yes | Everyone in the chart. |

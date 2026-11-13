@@ -4,7 +4,7 @@ import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type
 import { merged, styled } from '../section-styles.ts';
 import { checkDepartments, departmentsOf, loopOf } from './departments.ts';
 import { stacksOf, type OrgChart, type Person } from './model.ts';
-import { checkTags, tagStyle } from './tags.ts';
+import { checkTags, tagLegend, tagStyle } from './tags.ts';
 import { orgchartSchema } from './schema.ts';
 
 /** Reporting lines must form a tree: nobody manages themselves, directly or through others. */
@@ -23,6 +23,7 @@ function validate(m: OrgChart): Diagnostic[] {
 
 const toIR = (m: OrgChart): GraphIR => {
   const depts = departmentsOf(m);
+  const legend = tagLegend(m);
   const idOf = new Map(depts.map((d) => [d.name, d.id]));
   // A circular parent is reported by the rules; the boxes simply aren't nested.
   const parentOf = new Map(depts.map((d) => [d.name, d.entry?.parent]));
@@ -54,6 +55,7 @@ const toIR = (m: OrgChart): GraphIR => {
     ...styled(m.styles, 'departments', d.entry?.style),
     src: d.src,
   })),
+  ...(legend.length && { legend }),
   };
 };
 

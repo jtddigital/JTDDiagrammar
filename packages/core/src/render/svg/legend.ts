@@ -6,7 +6,7 @@ import { LEGEND_FONT } from '../../style.ts';
 import { LEGEND_TITLE } from '../../layout/legend.ts';
 import { icon } from './icons.ts';
 import { lines } from './text.ts';
-import { dash, METRICS as M, type Palette } from './theme.ts';
+import { dash, METRICS as M, opacity, type Palette } from './theme.ts';
 
 /** The legend box (URS-DM-026): each entry's shape, icon or line sample, then its text. */
 export function legend(l: PlacedLegend | undefined, P: Palette): string {
@@ -24,7 +24,7 @@ export function legend(l: PlacedLegend | undefined, P: Palette): string {
       const sh = shape(it.shape);
       const line = s?.stroke ?? P.nodeStroke;
       sample =
-        `<g transform="translate(${num(x)} ${num(y)})"><path d="${sh.outline(w, h)}" fill="${s?.fill ?? (sh.paint ? P[sh.paint] : P.nodeFill)}" stroke="${line}" stroke-width="${num(s?.lineWidth ?? M.stroke)}"${dash(s?.dash)}/>` +
+        `<g transform="translate(${num(x)} ${num(y)})"${opacity(s?.opacity)}><path d="${sh.outline(w, h)}" fill="${s?.fill ?? (sh.paint ? P[sh.paint] : P.nodeFill)}" stroke="${line}" stroke-width="${num(s?.lineWidth ?? M.stroke)}"${dash(s?.dash)}/>` +
         (sh.solid ? `<path d="${sh.solid(w, h)}" fill="${line}"/>` : '') +
         '</g>';
     }

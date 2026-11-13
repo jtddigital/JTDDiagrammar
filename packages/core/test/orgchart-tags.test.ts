@@ -36,6 +36,29 @@ describe('org chart tags (URS-TYP-013)', () => {
     expect(codes(chart({ people: [{ id: 'a', name: 'A', tags: [''] }] })).map((c) => c[1])).toContain('schema.minLength');
   });
 
+  it('draws a legend of the styled tags in use, in the order styled, unless switched off (URS-DM-026)', () => {
+    const d = chart({
+      styles: { people: { bold: true } },
+      tags: { open: { opacity: 0.5 }, contractor: { dash: 'dashed' }, spare: { fill: '#ff0000' } },
+      people: [
+        { id: 'a', name: 'A', tags: ['contractor', 'unstyled'] },
+        { id: 'b', name: 'B', manager: 'a', tags: ['open'] },
+      ],
+    });
+    expect(compile(d, reg).ir!.legend).toEqual([
+      { label: 'open', shape: 'card', style: { bold: true, opacity: 0.5 } },
+      { label: 'contractor', shape: 'card', style: { bold: true, dash: 'dashed' } },
+    ]);
+    const svg = render(d, reg).svg!;
+    const legend = svg.slice(svg.indexOf('class="jtd-legend"'));
+    expect(legend).toContain('>open<');
+    expect(legend).toContain('>contractor<');
+    // A faded tag's sample is faded too.
+    expect(legend).toMatch(/<g transform="[^"]*" opacity="0.5">/);
+    expect(compile({ ...d, legend: false }, reg).ir!.legend).toBeUndefined();
+    expect(compile(chart({}), reg).ir!.legend).toBeUndefined();
+  });
+
   it('reads tags from XML, and round-trips the example', () => {
     const xml = `<diagram version="1" type="orgchart"><tags><vip fill="#ffeeaa"/></tags><people><person id="a" name="A"><tags><tag>vip</tag></tags></person></people></diagram>`;
     expect(styleOf(parseXml(xml, reg).value, 'a')).toEqual({ fill: '#ffeeaa' });
