@@ -1,0 +1,104 @@
+/* Block: diagram preview (URS-WEB-006, URS-WEB-020). */
+.preview {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  /* Dot grid canvas: diagrams keep their own white background. */
+  background-color: var(--color-surface-2);
+  background-image: radial-gradient(var(--color-border-strong) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.preview:active {
+  cursor: grabbing;
+}
+
+.stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.stage svg {
+  display: block;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+
+.stage g[id] {
+  cursor: pointer;
+}
+
+.stage g.is-selected {
+  filter: drop-shadow(0 0 2px var(--color-select)) drop-shadow(0 0 2px var(--color-select));
+}
+
+.stage g.is-related {
+  filter: drop-shadow(0 0 1.5px var(--color-accent));
+}
+
+.stage.is-hovering g[id^='e-']:not(.is-related) {
+  opacity: 0.35;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.preview__tools {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.preview__tools .btn {
+  height: 28px;
+  min-width: 28px;
+  padding-inline: var(--space-2);
+  justify-content: center;
+}
+
+.preview__note {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--step--1);
+  box-shadow: var(--shadow-sm);
+}
+
+.empty {
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* In-place label editor over a node or edge. */
+.label-edit {
+  position: absolute;
+  z-index: 2;
+  min-width: 8rem;
+  padding: var(--space-1) var(--space-2);
+  border: 2px solid var(--color-select);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--step-0);
+  cursor: text;
+  user-select: text;
+}

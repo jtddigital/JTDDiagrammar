@@ -1,0 +1,37 @@
+/* CUBE CSS: compositions. Layout primitives that know nothing about what they hold. */
+
+/* Horizontal run of items with a consistent gap. */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cluster-gap, var(--space-2));
+}
+
+/* Vertical flow with a consistent gap. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap, var(--space-3));
+}
+
+/* Header, scrolling body, footer: the body takes the rest. */
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.frame > .frame__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Centred column of a readable width. */
+.measure {
+  width: 100%;
+  max-width: var(--measure, var(--chat-width));
+  margin-inline: auto;
+}

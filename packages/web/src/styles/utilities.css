@@ -1,0 +1,21 @@
+/* CUBE CSS: utilities. Single-purpose classes that apply one token. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-small {
+  font-size: var(--step--1);
+}
+
+.push-right {
+  margin-inline-start: auto;
+}
