@@ -2207,6 +2207,7 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/U
 | `pnpm check` | lint + typecheck + tests + docs check (what CI runs) |
 | `pnpm test` | Vitest (unit, layout invariants, golden SVGs) |
 | `pnpm test -u` | Accept changed golden SVGs. Review the diff first. |
+| `pnpm test:budget` | Timing budgets (URS-LY-010), alone and without coverage; `pnpm test` runs it first |
 | `pnpm e2e` | Playwright tests: built web app against the real API, and every generated SVG opened in Chromium and Firefox (`playwright install firefox` once) |
 | `pnpm licences` | Production dependency licences against the permissive allowlist |
 | `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
