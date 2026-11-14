@@ -8,7 +8,7 @@ import { sized } from '../layered/build.ts';
 import { labelsOf } from '../layered/route.ts';
 import { normalize } from '../normalize.ts';
 import { arrange, GAP, lay, TIGHT, unitsOf, type Ctx, type Kid } from './arrange.ts';
-import type { Frame } from './block.ts';
+import type { Block, Frame } from './block.ts';
 
 /** Container padding on the sides without the label. */
 const PAD = 14;
@@ -58,7 +58,19 @@ export const tree: LayoutEngine = {
     // Saving space (URS-LY-014): tighter gaps along the drawn axes asked for; left to right swaps them.
     const tight = (axis: 'horizontal' | 'vertical') => ir.compact === 'both' || ir.compact === axis;
     const [tx, ty] = lr ? [tight('vertical'), tight('horizontal')] : [tight('horizontal'), tight('vertical')];
+    // Lower is better: the area, with a penalty for the wrong shape. Saving width wants nothing wider than
+    // tall, and never wider than one row; saving height the same the other way; both, the smallest area,
+    // leaning to square. In drawn axes.
+    const drawnSize = (b: Block) => (lr ? [b.h, b.w] : [b.w, b.h]) as [number, number];
+    const fit = (b: Block, row: Block) => {
+      const [[w, h], [rw, rh]] = [drawnSize(b), drawnSize(row)];
+      if ((ir.compact === 'horizontal' && w > rw + 0.5) || (ir.compact === 'vertical' && h > rh + 0.5)) return Infinity;
+      const r = w / h;
+      const shape = ir.compact === 'horizontal' ? Math.max(1, r) ** 2 : ir.compact === 'vertical' ? Math.max(1, 1 / r) ** 2 : Math.sqrt(Math.max(r, 1 / r));
+      return w * h * shape;
+    };
     const ctx: Ctx = {
+      ...(ir.compact && { fit }),
       frame,
       gap: { sibling: tx ? TIGHT.sibling : GAP.sibling, indent: tx ? TIGHT.indent : GAP.indent, level: ty ? TIGHT.level : GAP.level, stacked: ty ? TIGHT.stacked : GAP.stacked },
     };

@@ -8,10 +8,12 @@ export type Gaps = typeof GAP;
 /** The spacing on an axis where the diagram asks to save space (`compact`). */
 export const TIGHT: Gaps = { sibling: 10, level: 24, indent: 12, stacked: 6 };
 
-/** What a layout needs besides the subtrees: each container's frame, and the spacing. */
+/** What a layout needs besides the subtrees: each container's frame, the spacing, and how to score a fit. */
 export interface Ctx {
   frame(c: string): Frame;
   gap: Gaps;
+  /** When saving space: a block's cost (lower fits better) beside the one-row arrangement, to choose how a node's children are arranged. */
+  fit?(b: Block, row: Block): number;
 }
 /** How far outside a box a line runs to go round its label strip. */
 const GUTTER = 8;
@@ -183,11 +185,38 @@ function row(id: string, n: Node, ls: Laid[], g: Gaps): Block {
   return close(id, n, cx - n.w / 2, items, ends.map((e) => ({ edge: e.edge, points: [{ x: cx, y: n.h }, { x: cx, y: bus }, ...e.path(bus)] })));
 }
 
-/** Children in `columns` stacks under the node, each hanging off a trunk line on its left (URS-LY-014). */
+/** `ls` in order, cut into at most `k` runs whose heights (with gaps) are as even as possible. */
+export function balance<T extends { h: number }>(ls: T[], k: number, gap: number): T[][] {
+  const n = ls.length;
+  k = Math.min(k, n);
+  const pre = [0];
+  for (const l of ls) pre.push(pre.at(-1)! + l.h + gap);
+  const run = (i: number, j: number) => pre[j]! - pre[i]! - gap;
+  // best[c][j]: the tallest run when the first j go into c runs; cut[c][j]: where the last run starts.
+  const best = [Array.from({ length: n + 1 }, (_, j) => (j ? Infinity : 0))];
+  const cut: number[][] = [[]];
+  for (let c = 1; c <= k; c++) {
+    best.push(Array<number>(n + 1).fill(Infinity));
+    cut.push(Array<number>(n + 1).fill(0));
+    for (let j = 1; j <= n; j++)
+      for (let i = c - 1; i < j; i++) {
+        const v = Math.max(best[c - 1]![i]!, run(i, j));
+        // On a tie the later cut wins, so earlier runs are the fuller ones.
+        if (v <= best[c]![j]!) [best[c]![j], cut[c]![j]] = [v, i];
+      }
+  }
+  const out: T[][] = [];
+  for (let c = k, j = n; c > 0 && j > 0; c--) {
+    const i = cut[c]![j]!;
+    out.unshift(ls.slice(i, j));
+    j = i;
+  }
+  return out;
+}
+
+/** Children in `columns` stacks under the node, each hanging off a trunk line on its left, columns as even in height as order allows (URS-LY-014). */
 function stacked(id: string, n: Node, ls: Laid[], columns: number, g: Gaps): Block {
-  const per = Math.ceil(ls.length / Math.min(columns, ls.length));
-  const cols: Laid[][] = [];
-  for (let i = 0; i < ls.length; i += per) cols.push(ls.slice(i, i + per));
+  const cols = balance(ls, columns, g.stacked);
   const top = n.h + g.level;
   const bus = n.h + g.level / 2;
   let x = 0;
@@ -212,7 +241,20 @@ function stacked(id: string, n: Node, ls: Laid[], columns: number, g: Gaps): Blo
 /** Lay out one node and its subtree: children (already laid out as `kids`) in a row, or in `stack` stacks. */
 export function arrange(id: string, n: Node, kids: Kid[], stack: number | undefined, ctx: Ctx): Block {
   if (!kids.length) return leafOf(id, n);
-  const mode: Mode = stack ? 'stack' : 'row';
-  const ls = unitsOf(kids).map((u) => lay(u, mode, ctx));
-  return stack ? stacked(id, n, ls, stack, ctx.gap) : row(id, n, ls, ctx.gap);
+  const units = unitsOf(kids);
+  const build = (s: number) => (s ? stacked(id, n, units.map((u) => lay(u, 'stack', ctx)), s, ctx.gap) : row(id, n, units.map((u) => lay(u, 'row', ctx)), ctx.gap));
+  if (stack !== undefined || !ctx.fit) return build(stack ?? 0);
+  // Saving space: try one row, then 1, 2, 3… columns, and keep the best fit; a row unless clearly beaten.
+  const one = build(0);
+  let [best, score] = [one, ctx.fit(one, one) * FIT_MARGIN];
+  for (let k = 1; k <= Math.min(units.length, MAX_COLUMNS); k++) {
+    const b = build(k);
+    const s = ctx.fit(b, one);
+    if (s < score) [best, score] = [b, s];
+  }
+  return best;
 }
+
+/** How much better another arrangement must fit before it replaces a row, and the most columns tried. */
+const FIT_MARGIN = 0.97;
+const MAX_COLUMNS = 8;

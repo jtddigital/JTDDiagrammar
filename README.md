@@ -917,7 +917,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Org chart, saving space
 
-`type: orgchart` · `compact: "both"`: teams whose members manage no one become balanced grids, with tighter spacing. `horizontal` or `vertical` saves one way only.
+`type: orgchart` · `compact: "both"`: department boxes and teams are rearranged into balanced columns to make the chart small; `horizontal` keeps it narrow, `vertical` short.
 
 ![Org chart, saving space](docs/img/orgchart-compact.svg)
 
@@ -929,6 +929,11 @@ The examples and images below are generated from the registered types (`pnpm doc
   "type": "orgchart",
   "title": "Operations",
   "compact": "both",
+  "styles": {
+    "departments": {
+      "fill": "#f8fafc"
+    }
+  },
   "people": [
     {
       "id": "coo",
@@ -936,76 +941,116 @@ The examples and images below are generated from the registered types (`pnpm doc
       "title": "COO"
     },
     {
-      "id": "sup",
+      "id": "lead0",
       "name": "Sam Patel",
       "title": "Support lead",
-      "manager": "coo"
+      "manager": "coo",
+      "department": "Support"
     },
     {
-      "id": "s0",
+      "id": "p00",
       "name": "Riley Kim",
-      "title": "Agent",
-      "manager": "sup"
+      "title": "Specialist",
+      "manager": "lead0",
+      "department": "Support"
     },
     {
-      "id": "s1",
+      "id": "p01",
       "name": "Morgan Diaz",
-      "title": "Agent",
-      "manager": "sup"
+      "title": "Specialist",
+      "manager": "lead0",
+      "department": "Support"
     },
     {
-      "id": "s2",
+      "id": "p02",
       "name": "Casey Ford",
-      "title": "Agent",
-      "manager": "sup"
+      "title": "Specialist",
+      "manager": "lead0",
+      "department": "Support"
     },
     {
-      "id": "s3",
+      "id": "p03",
       "name": "Quinn Ross",
-      "title": "Agent",
-      "manager": "sup"
+      "title": "Specialist",
+      "manager": "lead0",
+      "department": "Support"
     },
     {
-      "id": "s4",
-      "name": "Drew Park",
-      "title": "Agent",
-      "manager": "sup"
-    },
-    {
-      "id": "s5",
-      "name": "Jordan Lee",
-      "title": "Agent",
-      "manager": "sup"
-    },
-    {
-      "id": "log",
+      "id": "lead1",
       "name": "Blake Ross",
       "title": "Logistics lead",
-      "manager": "coo"
+      "manager": "coo",
+      "department": "Logistics"
     },
     {
-      "id": "l0",
+      "id": "p10",
       "name": "Cass Lee",
-      "title": "Coordinator",
-      "manager": "log"
+      "title": "Specialist",
+      "manager": "lead1",
+      "department": "Logistics"
     },
     {
-      "id": "l1",
+      "id": "p11",
       "name": "Dana Moe",
-      "title": "Coordinator",
-      "manager": "log"
+      "title": "Specialist",
+      "manager": "lead1",
+      "department": "Logistics"
     },
     {
-      "id": "l2",
+      "id": "p12",
       "name": "Eli Shaw",
-      "title": "Coordinator",
-      "manager": "log"
+      "title": "Specialist",
+      "manager": "lead1",
+      "department": "Logistics"
     },
     {
-      "id": "l3",
+      "id": "lead2",
+      "name": "Jordan Lee",
+      "title": "Facilities lead",
+      "manager": "coo",
+      "department": "Facilities"
+    },
+    {
+      "id": "p20",
       "name": "Fay Wu",
-      "title": "Coordinator",
-      "manager": "log"
+      "title": "Specialist",
+      "manager": "lead2",
+      "department": "Facilities"
+    },
+    {
+      "id": "p21",
+      "name": "Gus Hart",
+      "title": "Specialist",
+      "manager": "lead2",
+      "department": "Facilities"
+    },
+    {
+      "id": "lead3",
+      "name": "Drew Park",
+      "title": "Procurement lead",
+      "manager": "coo",
+      "department": "Procurement"
+    },
+    {
+      "id": "p30",
+      "name": "Hana Ito",
+      "title": "Specialist",
+      "manager": "lead3",
+      "department": "Procurement"
+    },
+    {
+      "id": "p31",
+      "name": "Ivan Roe",
+      "title": "Specialist",
+      "manager": "lead3",
+      "department": "Procurement"
+    },
+    {
+      "id": "p32",
+      "name": "Jo Kemp",
+      "title": "Specialist",
+      "manager": "lead3",
+      "department": "Procurement"
     }
   ]
 }
@@ -2174,7 +2219,7 @@ People and who they report to. For teams and organisations.
 | `departments[].parent` | string |  | The department this one is drawn inside. |
 | `departments[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `tags` | object |  | A style per tag name, e.g. `{ "contractor": { "dash": "dashed" } }`. It decorates everyone whose `tags` include that name, over `styles.people`; a person's own `style` overrides it field by field. A tag styled here that no one has is a warning. |
-| `compact` | `horizontal` \| `vertical` \| `both` |  | Save space: `horizontal` makes the chart narrower, `vertical` shorter, `both` both. Spacing gets tighter that way, and teams whose members manage no one are stacked (to save width when top to bottom, height when left to right); stacked teams spread into balanced columns to save the other way. A person's own `stack` or `multi`, and the chart's `multi`, still win. |
+| `compact` | `horizontal` \| `vertical` \| `both` |  | Save space by moving department boxes and teams: each team is laid out in a row or in balanced columns, whichever fits best. `horizontal` keeps the chart no wider than it is tall, `vertical` no taller than it is wide (neither ever longer that way than one row), `both` makes it as small as it can. Spacing is tighter that way too. Overrides the chart's `stack` and `multi`; a person's own `stack` or `multi` still wins. |
 | `legend` | boolean |  | Draw a legend under the chart: a sample card in each styled tag's style, with the tag's name. Only tags someone has are shown. |
 | `stack` | boolean |  | Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right. |
 | `multi` | integer |  | Split each stacked team into this many columns (rows when left to right). Implies `stack`. |
