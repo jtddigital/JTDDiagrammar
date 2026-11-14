@@ -45,7 +45,10 @@ export interface IRNode extends Sourced {
   order?: number;
   lane?: string;
   phase?: string;
-  /** Tree layout: put this node's children in this many stacks (columns, or rows across the flow) instead of one row (URS-LY-014). */
+  /**
+   * Tree layout: put this node's children in this many stacks (columns, or rows across the flow); 0 keeps
+   * them in one row. Unset: one row, or with `compact`, whichever arrangement fits best (URS-LY-014).
+   */
   stack?: number;
 }
 
@@ -129,7 +132,7 @@ export interface GraphIR {
   legend?: LegendItem[];
   /** Title block: key–value pairs under the title (URS-DM-027). */
   meta?: [string, string][];
-  /** Save space along these drawn axes: engines use tighter spacing there (URS-LY-014). */
+  /** Save space along these drawn axes: tighter spacing there, and subtrees rearranged to fit (URS-LY-014). */
   compact?: Compact;
 }
 
