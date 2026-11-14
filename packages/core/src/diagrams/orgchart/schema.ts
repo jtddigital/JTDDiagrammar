@@ -33,7 +33,7 @@ export const orgchartSchema = {
     compact: {
       type: 'string',
       enum: ['horizontal', 'vertical', 'both'],
-      description: 'Save space: `horizontal` makes the chart narrower, `vertical` shorter, `both` both. Spacing gets tighter that way, and teams whose members manage no one are stacked (to save width when top to bottom, height when left to right); stacked teams spread into balanced columns to save the other way. A person\'s own `stack` or `multi`, and the chart\'s `multi`, still win.',
+      description: 'Save space by moving department boxes and teams: each team is laid out in a row or in balanced columns, whichever fits best. `horizontal` keeps the chart no wider than it is tall, `vertical` no taller than it is wide (neither ever longer that way than one row), `both` makes it as small as it can. Spacing is tighter that way too. Overrides the chart\'s `stack` and `multi`; a person\'s own `stack` or `multi` still wins.',
     },
     legend: { type: 'boolean', default: true, description: 'Draw a legend under the chart: a sample card in each styled tag\'s style, with the tag\'s name. Only tags someone has are shown.' },
     stack: { type: 'boolean', default: false, description: 'Stack each team under its manager instead of spreading it in a row: a column when top to bottom, a row when left to right.' },

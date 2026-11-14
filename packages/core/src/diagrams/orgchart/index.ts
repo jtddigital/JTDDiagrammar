@@ -178,18 +178,26 @@ const examples: [Example, ...Example[]] = [
   {
     name: 'compact',
     title: 'Org chart, saving space',
-    description: '`compact: "both"`: teams whose members manage no one become balanced grids, with tighter spacing. `horizontal` or `vertical` saves one way only.',
+    description: '`compact: "both"`: department boxes and teams are rearranged into balanced columns to make the chart small; `horizontal` keeps it narrow, `vertical` short.',
     source: {
       version: '1',
       type: 'orgchart',
       title: 'Operations',
       compact: 'both',
+      styles: { departments: { fill: '#f8fafc' } },
       people: [
         { id: 'coo', name: 'Avery Chen', title: 'COO' },
-        { id: 'sup', name: 'Sam Patel', title: 'Support lead', manager: 'coo' },
-        ...['Riley Kim', 'Morgan Diaz', 'Casey Ford', 'Quinn Ross', 'Drew Park', 'Jordan Lee'].map((name, i) => ({ id: `s${i}`, name, title: 'Agent', manager: 'sup' })),
-        { id: 'log', name: 'Blake Ross', title: 'Logistics lead', manager: 'coo' },
-        ...['Cass Lee', 'Dana Moe', 'Eli Shaw', 'Fay Wu'].map((name, i) => ({ id: `l${i}`, name, title: 'Coordinator', manager: 'log' })),
+        ...(
+          [
+            ['Support', 'Sam Patel', ['Riley Kim', 'Morgan Diaz', 'Casey Ford', 'Quinn Ross']],
+            ['Logistics', 'Blake Ross', ['Cass Lee', 'Dana Moe', 'Eli Shaw']],
+            ['Facilities', 'Jordan Lee', ['Fay Wu', 'Gus Hart']],
+            ['Procurement', 'Drew Park', ['Hana Ito', 'Ivan Roe', 'Jo Kemp']],
+          ] as const
+        ).flatMap(([department, lead, team], d) => [
+          { id: `lead${d}`, name: lead, title: `${department} lead`, manager: 'coo', department },
+          ...team.map((name, i) => ({ id: `p${d}${i}`, name, title: 'Specialist', manager: `lead${d}`, department })),
+        ]),
       ],
     },
   },
