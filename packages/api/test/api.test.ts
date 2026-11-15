@@ -124,14 +124,14 @@ describe('other endpoints', () => {
 
   it('GET /v1/types lists registered types (URS-API-011)', async () => {
     const types = (await app.inject('/v1/types')).json();
-    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'state', 'orgchart', 'lifecycle', 'checklist']);
+    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'state', 'orgchart', 'lifecycle', 'gantt', 'checklist']);
     expect(types[0]).toMatchObject({ schema: '/v1/schema/flowchart', examples: [{ name: 'basic' }, { name: 'cross-functional' }, { name: 'styled-callouts' }] });
   });
 
   it('GET /v1/schema[/{type}] (URS-API-004)', async () => {
     expect((await app.inject('/v1/schema')).json()).toEqual(JSON.parse(JSON.stringify(combinedSchema(createRegistry().registerType((await import('../../core/test/fixture-type.ts')).checklist)))));
     expect((await app.inject('/v1/schema/flowchart')).json()).toMatchObject({ $id: 'urn:jtd:schema:v1:flowchart' });
-    expect((await app.inject('/v1/schema/gantt')).statusCode).toBe(404);
+    expect((await app.inject('/v1/schema/kanban')).statusCode).toBe(404);
   });
 
   it('GET /health (URS-API-009)', async () => {

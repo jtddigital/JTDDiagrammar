@@ -7,6 +7,7 @@ import { innerOf } from '../../shapes/shape.ts';
 import { bands } from './bands.ts';
 import { containers } from './containers.ts';
 import { esc } from './escape.ts';
+import { grid } from './grid.ts';
 import { icon } from './icons.ts';
 import { legend } from './legend.ts';
 import { fontAttrs, lines, stack } from './text.ts';
@@ -155,6 +156,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     (meta ? lines(meta.lines, W / 2, M.margin + (title ? title.height + 4 : 0), META_FONT, ` font-size="${META_FONT.size}" class="jtd-meta"`) : '') +
     `<g transform="translate(${num(M.margin + (innerW - g.width) / 2)} ${num(M.margin + titleH)})">` +
     bands(g.bands, P, g.corner, g.fillers) +
+    grid(g.cells, g.rules, P) +
     containers(g.containers, P) +
     g.edges.map((e) => edge(e, P)).join('') +
     g.nodes.map((n) => node(n, P)).join('') +

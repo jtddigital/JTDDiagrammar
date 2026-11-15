@@ -80,7 +80,7 @@ describe('refine (URS-AI-013)', () => {
   it('refuses empty instructions and unknown types', async () => {
     const client = new MockClaude([]);
     expect(await code(refine({ source: current, instruction: '  ' }, opts(client)))).toBe('ai.input');
-    expect(await code(refine({ source: { version: '1', type: 'gantt' }, instruction: 'x' }, opts(client)))).toBe('ai.input');
+    expect(await code(refine({ source: { version: '1', type: 'kanban' }, instruction: 'x' }, opts(client)))).toBe('ai.input');
   });
 
   it('accepts invalid sources, since fixing them can be the instruction', async () => {

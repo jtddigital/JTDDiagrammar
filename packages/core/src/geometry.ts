@@ -73,6 +73,27 @@ export interface PlacedContainer extends Box {
   depth: number;
 }
 
+/** A table or header cell, or a shaded period (URS-LY-015). */
+export interface PlacedCell extends Box {
+  text?: string;
+  align?: 'left' | 'center' | 'right';
+  /** Space before left-aligned text, e.g. an outline level. */
+  indent?: number;
+  bold?: boolean;
+  fill?: 'header' | 'shade';
+  /** Draw its outline. */
+  border?: boolean;
+}
+
+/** A straight line: a grid line, or a marker such as a deadline with its label. */
+export interface PlacedRule {
+  from: Point;
+  to: Point;
+  kind: 'grid' | 'marker';
+  label?: string;
+  style?: Style;
+}
+
 export interface Geometry {
   theme?: Theme;
   width: number;
@@ -85,6 +106,9 @@ export interface Geometry {
   containers: PlacedContainer[];
   nodes: PlacedNode[];
   edges: RoutedEdge[];
+  /** Drawn behind everything else: tables, time axes and shading (URS-LY-015). */
+  cells?: PlacedCell[];
+  rules?: PlacedRule[];
   legend?: PlacedLegend;
 }
 

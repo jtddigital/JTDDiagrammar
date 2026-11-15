@@ -11,6 +11,8 @@ export const fontOf = (base: Font, s: Style | undefined): Font => ({
 /** Typography shared by layout (measuring) and render (drawing); they must agree. */
 export const NODE_FONT: Font = { size: 14 };
 export const LABEL_FONT: Font = { size: 12 };
+/** Table and time-axis text (URS-LY-015). */
+export const TABLE_FONT: Font = { size: 12 };
 export const TITLE_FONT: Font = { size: 18, bold: true };
 export const NODE_TEXT_MAX = 180;
 /** Secondary node text under a divider, e.g. an owner (URS-DM-021): two px smaller than the label. */
