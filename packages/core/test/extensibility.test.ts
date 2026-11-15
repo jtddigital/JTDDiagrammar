@@ -15,7 +15,7 @@ describe('plugin seams (URS-EXT-002, URS-EXT-006)', () => {
   it('combined schema dispatches on type', () => {
     const validate = new Ajv2020({ discriminator: true, strict: true }).compile(combinedSchema(reg));
     for (const t of reg.types()) for (const ex of t.examples) expect(validate(ex.source), `${t.id}/${ex.name}`).toBe(true);
-    expect(validate({ version: '1', type: 'gantt' })).toBe(false);
+    expect(validate({ version: '1', type: 'kanban' })).toBe(false);
     expect(validate({ version: '1', type: 'checklist', nodes: [] })).toBe(false);
   });
 });

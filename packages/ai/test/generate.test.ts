@@ -87,7 +87,7 @@ describe('generate (URS-AI-003..008)', () => {
   });
 
   it('rejects unknown types', async () => {
-    expect(await code(setup([]).run('gantt'))).toBe('ai.input');
+    expect(await code(setup([]).run('kanban'))).toBe('ai.input');
   });
 
   it("auto-selects among registered types and reports why (URS-AI-007, URS-EXT-009)", async () => {

@@ -1,5 +1,6 @@
 import { num as n } from '../num.ts';
-import { boxPort, boxSize, circlePort, midPort, PAD_X, PAD_Y, type Shape } from './shape.ts';
+import type { Point } from '../geometry.ts';
+import { boxPort, boxSize, circlePort, midPort, PAD_X, PAD_Y, type Shape, type Side } from './shape.ts';
 
 const rect = (w: number, h: number) => `M0 0H${n(w)}V${n(h)}H0Z`;
 
@@ -164,12 +165,72 @@ const hexagon: Shape = {
 /** Bar: a parallel split or join (URS-DM-028). Thin and tall across the flow; edges spread along its long sides. */
 const bar: Shape = { id: 'bar', unlabelled: true, across: true, size: () => ({ w: 8, h: 56 }), outline: rect, solid: rect, port: boxPort() };
 
+/** Timeline shapes (URS-LY-015): bars take their width from the dates; moments are fixed. Edges meet the ends. */
+const ends =
+  (y: (h: number) => number) =>
+  (side: Side, w: number, h: number): Point =>
+    side === 'E' ? { x: w, y: y(h) } : side === 'W' ? { x: 0, y: y(h) } : { x: w / 2, y: side === 'N' ? 0 : h };
+const mid = ends((h) => h / 2);
+const roundBar = (w: number, h: number) => {
+  const r = Math.min(3, w / 2);
+  return `M${n(r)} 0H${n(w - r)}Q${n(w)} 0 ${n(w)} ${n(r)}V${n(h - r)}Q${n(w)} ${n(h)} ${n(w - r)} ${n(h)}H${n(r)}Q0 ${n(h)} 0 ${n(h - r)}V${n(r)}Q0 0 ${n(r)} 0Z`;
+};
+/** Task: a rounded bar. */
+const task: Shape = { id: 'task', unlabelled: true, paint: 'barFill', size: () => ({ w: 34, h: 14 }), outline: roundBar, port: mid };
+/** Summary: a solid bracket over its items, with pointed caps. */
+const SUMMARY_BAR = 7;
+const summaryOutline = (w: number, h: number) => {
+  const cap = Math.min(6, w / 2);
+  return `M0 0H${n(w)}V${n(h)}L${n(w - cap)} ${n(SUMMARY_BAR)}H${n(cap)}L0 ${n(h)}Z`;
+};
+const summary: Shape = { id: 'summary', unlabelled: true, size: () => ({ w: 34, h: 12 }), outline: summaryOutline, solid: summaryOutline, port: mid };
+/** Milestone: a solid diamond. */
+const diamond = (w: number, h: number) => `M${n(w / 2)} 0L${n(w)} ${n(h / 2)}L${n(w / 2)} ${n(h)}L0 ${n(h / 2)}Z`;
+const milestone: Shape = { id: 'milestone', unlabelled: true, size: () => ({ w: 16, h: 16 }), outline: diamond, solid: diamond, port: mid };
+/** Deliverable: a page with a folded corner. */
+const PAGE_FOLD = 5;
+const deliverable: Shape = {
+  id: 'deliverable',
+  unlabelled: true,
+  paint: 'barFill',
+  size: () => ({ w: 14, h: 18 }),
+  outline: (w, h) => `M0 0H${n(w - PAGE_FOLD)}L${n(w)} ${n(PAGE_FOLD)}V${n(h)}H0Z`,
+  detail: (w) => `M${n(w - PAGE_FOLD)} 0V${n(PAGE_FOLD)}H${n(w)}`,
+  port: mid,
+};
+/** Gate: a hexagon, an approval that holds back what follows. */
+const gate: Shape = {
+  id: 'gate',
+  unlabelled: true,
+  size: () => ({ w: 20, h: 16 }),
+  outline: (w, h) => `M${n(h / 4)} 0H${n(w - h / 4)}L${n(w)} ${n(h / 2)}L${n(w - h / 4)} ${n(h)}H${n(h / 4)}L0 ${n(h / 2)}Z`,
+  solid: (w, h) => `M${n(w / 2 - 2)} ${n(h / 4)}H${n(w / 2 + 2)}V${n((3 * h) / 4)}H${n(w / 2 - 2)}Z`,
+  port: mid,
+};
+/** Buffer: a hatched bar, time held in reserve. */
+const HATCH = 6;
+const buffer: Shape = {
+  id: 'buffer',
+  unlabelled: true,
+  size: () => ({ w: 34, h: 14 }),
+  outline: rect,
+  detail: (w, h) => {
+    const d: string[] = [];
+    for (let k = -h; k < w; k += HATCH) {
+      const [x0, x1] = [Math.max(k, 0), Math.min(k + h, w)];
+      if (x0 < x1) d.push(`M${n(x0)} ${n(h - (x0 - k))}L${n(x1)} ${n(h - (x1 - k))}`);
+    }
+    return d.join('');
+  },
+  port: mid,
+};
+
 /** Card: rounded rectangle for people and entities. */
 const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

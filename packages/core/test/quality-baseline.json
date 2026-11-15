@@ -278,6 +278,33 @@
     "edgeThroughLabel": 0,
     "bends": 2
   },
+  "gantt-basic": {
+    "crossings": 0,
+    "overlaps": 5,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 36
+  },
+  "gantt-links": {
+    "crossings": 2,
+    "overlaps": 9,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 30
+  },
+  "gantt-styled": {
+    "crossings": 0,
+    "overlaps": 1,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 38
+  },
   "random-30": {
     "crossings": 34,
     "overlaps": 0,

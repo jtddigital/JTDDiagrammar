@@ -25,6 +25,7 @@ export function legend(l: PlacedLegend | undefined, P: Palette): string {
       const line = s?.stroke ?? P.nodeStroke;
       sample =
         `<g transform="translate(${num(x)} ${num(y)})"${opacity(s?.opacity)}><path d="${sh.outline(w, h)}" fill="${s?.fill ?? (sh.paint ? P[sh.paint] : P.nodeFill)}" stroke="${line}" stroke-width="${num(s?.lineWidth ?? M.stroke)}"${dash(s?.dash)}/>` +
+        (sh.detail ? `<path d="${sh.detail(w, h)}" fill="none" stroke="${line}" stroke-width="${num(s?.lineWidth ?? M.stroke)}"/>` : '') +
         (sh.solid ? `<path d="${sh.solid(w, h)}" fill="${line}"/>` : '') +
         '</g>';
     }

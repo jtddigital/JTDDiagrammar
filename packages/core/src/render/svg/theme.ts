@@ -15,6 +15,8 @@ export interface Palette {
   phaseHeaderFill: string;
   containerFill: string;
   noteFill: string;
+  /** Timeline task bars (URS-LY-015). */
+  barFill: string;
 }
 
 export const PALETTES: Record<Theme, Palette> = {
@@ -31,6 +33,7 @@ export const PALETTES: Record<Theme, Palette> = {
     phaseHeaderFill: '#e2e8f0',
     containerFill: '#f8fafc',
     noteFill: '#fef9c3',
+    barFill: '#bfdbfe',
   },
   dark: {
     background: '#0f172a',
@@ -45,6 +48,7 @@ export const PALETTES: Record<Theme, Palette> = {
     phaseHeaderFill: '#334155',
     containerFill: '#162033',
     noteFill: '#3b3520',
+    barFill: '#1e3a8a',
   },
 };
 

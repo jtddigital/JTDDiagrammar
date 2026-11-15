@@ -27,7 +27,7 @@ export interface Shape {
   /** Edges attach only at the four side midpoints (diamonds); the router allocates them jointly. */
   tips?: boolean;
   /** Default fill from the theme palette instead of the node fill (e.g. notes). */
-  paint?: 'noteFill';
+  paint?: 'noteFill' | 'barFill';
   /** Text area inside a w × h box, for fixed-size nodes (URS-DM-017). Default: the box less padding. */
   inner?(w: number, h: number): { w: number; h: number };
   /** Vertical offset of the label centre from the box centre. */

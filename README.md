@@ -2093,6 +2093,372 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Gantt chart
+
+`type: gantt` · Phases with tasks inside (summaries roll up), finish-to-start links, an approval gate and a launch milestone. Weekends are shaded and skipped.
+
+![Gantt chart](docs/img/gantt-basic.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "gantt",
+  "title": "Website relaunch",
+  "start": "2027-01-04",
+  "tasks": [
+    {
+      "id": "discovery",
+      "name": "Discovery",
+      "tasks": [
+        {
+          "id": "research",
+          "name": "User research",
+          "duration": 5,
+          "owner": "UX"
+        },
+        {
+          "id": "reqs",
+          "name": "Requirements",
+          "duration": 3,
+          "owner": "Product",
+          "after": [
+            "research"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "design",
+      "name": "Design",
+      "tasks": [
+        {
+          "id": "wire",
+          "name": "Wireframes",
+          "duration": 5,
+          "owner": "UX",
+          "after": [
+            "reqs"
+          ]
+        },
+        {
+          "id": "visual",
+          "name": "Visual design",
+          "duration": 8,
+          "owner": "UX",
+          "after": [
+            "wire"
+          ]
+        },
+        {
+          "id": "signoff",
+          "name": "Design sign-off",
+          "type": "gate",
+          "after": [
+            "visual"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "name": "Build",
+      "tasks": [
+        {
+          "id": "front",
+          "name": "Front end",
+          "duration": 10,
+          "owner": "Dev",
+          "after": [
+            "signoff"
+          ]
+        },
+        {
+          "id": "back",
+          "name": "Back end",
+          "duration": 12,
+          "owner": "Dev",
+          "after": [
+            "reqs"
+          ]
+        },
+        {
+          "id": "test",
+          "name": "Integration test",
+          "duration": 4,
+          "owner": "QA",
+          "after": [
+            "front",
+            "back"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "launch",
+      "name": "Launch",
+      "type": "milestone",
+      "after": [
+        "test"
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### Gantt chart, link types
+
+`type: gantt` · All four links: finish-to-start (with a buffer), start-to-start with a lag, finish-to-finish, and start-to-finish; a deliverable at the end.
+
+![Gantt chart, link types](docs/img/gantt-links.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "gantt",
+  "title": "Small build: link types",
+  "start": "2027-04-05",
+  "tasks": [
+    {
+      "id": "pour",
+      "name": "Pour foundation",
+      "duration": 4
+    },
+    {
+      "id": "cure",
+      "name": "Cure",
+      "type": "buffer",
+      "duration": 5,
+      "after": [
+        "pour"
+      ]
+    },
+    {
+      "id": "frame",
+      "name": "Frame",
+      "duration": 6,
+      "after": [
+        "cure"
+      ]
+    },
+    {
+      "id": "materials",
+      "name": "Deliver materials (SF)",
+      "duration": 3,
+      "after": [
+        "frame SF"
+      ]
+    },
+    {
+      "id": "inspect",
+      "name": "Inspect framing (SS+3)",
+      "duration": 2,
+      "after": [
+        "frame SS+3"
+      ]
+    },
+    {
+      "id": "wiring",
+      "name": "Wiring (FF+2)",
+      "duration": 4,
+      "after": [
+        "frame FF+2"
+      ]
+    },
+    {
+      "id": "drawings",
+      "name": "As-built drawings",
+      "type": "deliverable",
+      "after": [
+        "wiring",
+        "inspect"
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### Gantt chart, styled
+
+`type: gantt` · Styles by owner and type, a tag, three levels of items, external work (dashed), a buffer, a gate and a deliverable; a holiday and a deadline. The legend lists what is used.
+
+![Gantt chart, styled](docs/img/gantt-styled.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "gantt",
+  "title": "Clinical study start-up",
+  "start": "2027-03-01",
+  "deadline": "2027-06-30",
+  "calendar": {
+    "holidays": [
+      "2027-05-31"
+    ]
+  },
+  "styleBy": {
+    "type": {
+      "gate": {
+        "stroke": "#7c3aed"
+      },
+      "milestone": {
+        "stroke": "#0f172a"
+      }
+    },
+    "owner": {
+      "Clinical": {
+        "fill": "#dbeafe",
+        "stroke": "#2563eb"
+      },
+      "Regulatory": {
+        "fill": "#ede9fe",
+        "stroke": "#7c3aed"
+      },
+      "Vendor": {
+        "fill": "#fef3c7",
+        "stroke": "#d97706"
+      }
+    }
+  },
+  "tags": {
+    "critical": {
+      "stroke": "#dc2626",
+      "lineWidth": 2.5
+    }
+  },
+  "tasks": [
+    {
+      "id": "protocol",
+      "name": "Protocol",
+      "tasks": [
+        {
+          "id": "draft",
+          "name": "Draft protocol",
+          "duration": 10,
+          "owner": "Clinical",
+          "tags": [
+            "critical"
+          ]
+        },
+        {
+          "id": "review",
+          "name": "Medical review",
+          "duration": 5,
+          "owner": "Clinical",
+          "after": [
+            "draft"
+          ]
+        },
+        {
+          "id": "final",
+          "name": "Final protocol",
+          "type": "deliverable",
+          "after": [
+            "review"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reg",
+      "name": "Regulatory",
+      "tasks": [
+        {
+          "id": "prep",
+          "name": "Submission prep",
+          "duration": 8,
+          "owner": "Regulatory",
+          "after": [
+            "final"
+          ],
+          "tags": [
+            "critical"
+          ]
+        },
+        {
+          "id": "irb",
+          "name": "Ethics review",
+          "tasks": [
+            {
+              "id": "irbreview",
+              "name": "IRB review",
+              "type": "external",
+              "duration": 15,
+              "owner": "Vendor",
+              "after": [
+                "prep"
+              ]
+            },
+            {
+              "id": "approval",
+              "name": "IRB approval",
+              "type": "gate",
+              "after": [
+                "irbreview"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sites",
+      "name": "Site start-up",
+      "tasks": [
+        {
+          "id": "select",
+          "name": "Site selection",
+          "duration": 10,
+          "owner": "Clinical",
+          "after": [
+            "draft SS+5"
+          ]
+        },
+        {
+          "id": "contracts",
+          "name": "Site contracts",
+          "type": "external",
+          "duration": 12,
+          "owner": "Vendor",
+          "after": [
+            "select"
+          ]
+        },
+        {
+          "id": "reserve",
+          "name": "Contract reserve",
+          "type": "buffer",
+          "duration": 5,
+          "after": [
+            "contracts"
+          ]
+        },
+        {
+          "id": "siv",
+          "name": "First site initiated",
+          "type": "milestone",
+          "after": [
+            "approval",
+            "reserve"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -2125,7 +2491,7 @@ Fields every diagram has:
 |-------|------|----------|-------------|
 | `$schema` | string |  | Optional schema URL for editor tooling. |
 | `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
-| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` | yes | Diagram type. |
+| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` \| `gantt` | yes | Diagram type. |
 | `title` | string |  | Title shown above the diagram. |
 | `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
@@ -2345,6 +2711,38 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].steps[].to[].id` | string |  | Optional; generated when absent. |
 | `workflows[].steps[].to[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].to[].style` | style |  | Overrides `edgeStyle` field by field. |
+
+### `gantt`
+
+Tasks, milestones and their dependencies over time. For project plans.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `start` | string | yes | Project start: items without fixed dates start no earlier. `YYYY-MM-DD`. |
+| `deadline` | string |  | Finishing after this date is a warning; drawn as a red line. `YYYY-MM-DD`. |
+| `calendar` | object |  | Working days. Durations and lags count working days only. |
+| `calendar.workdays` | list of `sun` \| `mon` \| `tue` \| `wed` \| `thu` \| `fri` \| `sat` |  | Days of the week that are worked (default Monday to Friday). List all seven to count calendar days. |
+| `calendar.holidays` | list of string |  | Days off, shaded and skipped. |
+| `columns` | list of `wbs` \| `name` \| `owner` \| `start` \| `end` \| `duration` |  | Table columns, in order (default: wbs, name, owner, start, end, duration). An empty list draws no table. |
+| `styles` | styles by key |  | Default style per section (`tasks`, `links`); each item’s own `style` overrides it field by field. |
+| `styleBy` | object |  | Styles by item type (and `summary` for items with items inside) and by owner. Precedence: `styles.tasks`, then type, then owner, then tags, then the item's own `style`. |
+| `styleBy.type` | styles by key |  | Style for every item with this `type`, by value: `task`, `milestone`, `deliverable`, `gate`, `buffer`, `external`, `summary`. |
+| `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
+| `tags` | object |  | A style per tag name, for every item with that tag. A tag styled here that no item has is a warning. |
+| `legend` | boolean |  | Draw a legend of the item types, styled owners and styled tags used. |
+| `tasks` | list of objects | yes | Top-level items; each may hold items of its own, to any depth. |
+| `tasks[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `tasks[].name` | string | yes | Shown in the table. |
+| `tasks[].type` | `task` \| `milestone` \| `deliverable` \| `gate` \| `buffer` \| `external` |  | `task` (a bar), `milestone` (a diamond), `deliverable` (a page), `gate` (a hexagon: an approval), `buffer` (a hatched bar: reserve time) or `external` (a dashed bar: work outside your control). Milestones, deliverables and gates take no time. An item with items inside is a summary. |
+| `tasks[].start` | string |  | Fixed start. The item keeps it even if a link says otherwise (that is a warning). `YYYY-MM-DD`. |
+| `tasks[].end` | string |  | Fixed finish. The item keeps it even if a link says otherwise (that is a warning). `YYYY-MM-DD`. |
+| `tasks[].duration` | integer |  | Working days. Without it, and without both dates, 1 day is assumed (a warning). |
+| `tasks[].after` | list of string |  | Items this one depends on: `"id"` (finish-to-start), or with a link type and a lag or lead in working days: `"id SS"`, `"id FS+2"`, `"id FF-1"`, `"id SF"`. Links may point at summaries. |
+| `tasks[].owner` | string |  | Who does it; shown in the table and matched by `styleBy.owner`. |
+| `tasks[].tags` | list of string |  | Tag names; each tag styled in `tags` decorates the item, later tags winning. |
+| `tasks[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `tasks[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `tasks[].tasks` | list of objects |  | Items inside this one, which makes it a summary spanning them. Same fields as `tasks[]`. |
 
 <!-- END GENERATED: reference -->
 

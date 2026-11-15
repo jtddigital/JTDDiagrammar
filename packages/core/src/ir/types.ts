@@ -50,6 +50,11 @@ export interface IRNode extends Sourced {
    * them in one row. Unset: one row, or with `compact`, whichever arrangement fits best (URS-LY-014).
    */
   stack?: number;
+  /** Timeline (URS-LY-015): the days it spans, [from, to), equal for a moment; its row's table cells by column id; indent and bold for its row. */
+  span?: [number, number];
+  cells?: Record<string, string>;
+  depth?: number;
+  strong?: boolean;
 }
 
 /** Small pictograms for badges, edge labels and legends (URS-DM-025). */
@@ -132,8 +137,20 @@ export interface GraphIR {
   legend?: LegendItem[];
   /** Title block: key–value pairs under the title (URS-DM-027). */
   meta?: [string, string][];
+  /** A time axis with a table beside it, drawn by the `timeline` engine; each node is one row, in order (URS-LY-015). */
+  timeline?: Timeline;
   /** Save space along these drawn axes: tighter spacing there, and subtrees rearranged to fit (URS-LY-014). */
   compact?: Compact;
 }
 
 export type Compact = 'horizontal' | 'vertical' | 'both';
+
+/** Days are counted from 1970-01-01, so a timeline needs no calendar of its own (URS-LY-015). */
+export interface Timeline {
+  /** Table columns left of the time axis, in order. */
+  columns: { id: string; label: string; align?: 'left' | 'center' | 'right' }[];
+  /** Days to shade, e.g. weekends and holidays. */
+  shade?: number[];
+  /** Lines down the chart at the start of a day, e.g. a deadline. */
+  markers?: { day: number; label: string; style?: Style }[];
+}
