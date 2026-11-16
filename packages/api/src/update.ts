@@ -21,8 +21,9 @@ const TAG = /^v\d+\.\d+\.\d+([-+][\w.-]+)?$/;
 export function installation(env: NodeJS.ProcessEnv, root: string, version: string | undefined): Installation | { reason: string } {
   if (env.UPDATES === 'off') return { reason: 'Updates are turned off (UPDATES=off in config.env).' };
   const home = env.JTD_HOME;
+  // The native call gives each path's canonical form; on Windows the launcher may pass a short (8.3) name.
   const inside = (dir: string, path: string) => {
-    const rel = relative(realpathSync(dir), realpathSync(path));
+    const rel = relative(realpathSync.native(dir), realpathSync.native(path));
     return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
   };
   if (!version || !home || !existsSync(join(home, 'versions')) || !inside(join(home, 'versions'), root))
