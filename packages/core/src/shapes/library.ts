@@ -226,7 +226,7 @@ const buffer: Shape = {
 };
 
 /**
- * Record: a record with another behind it and a plus, for creating a child (related) record (URS-TYP-009).
+ * Record: a record with another behind it and a plus, for a child (related) record made in a state (URS-TYP-018).
  * The front sheet holds the label; the back one shows above and to the right.
  */
 const SHEET = 6;
@@ -247,12 +247,26 @@ const record: Shape = {
   port: boxPort(),
 };
 
+/** Checkpoint: a box between two solid posts, a gate every way into a state passes (URS-TYP-018). */
+const POST = 5;
+const checkpoint: Shape = {
+  id: 'checkpoint',
+  size: (tw, th) => {
+    const { w, h } = boxSize()(tw, th);
+    return { w: w + 2 * POST, h };
+  },
+  inner: (w, h) => ({ w: w - 2 * POST - 2 * PAD_X, h: h - 2 * PAD_Y }),
+  outline: rect,
+  solid: (w, h) => `M0 0H${n(POST)}V${n(h)}H0ZM${n(w - POST)} 0H${n(w)}V${n(h)}H${n(w - POST)}Z`,
+  port: boxPort(),
+};
+
 /** Card: rounded rectangle for people and entities. */
 const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar, record, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

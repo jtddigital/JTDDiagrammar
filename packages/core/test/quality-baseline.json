@@ -249,7 +249,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 6
+    "bends": 7
   },
   "lifecycle-roles": {
     "crossings": 0,
@@ -258,7 +258,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 12
+    "bends": 13
   },
   "lifecycle-summary": {
     "crossings": 0,
@@ -267,7 +267,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 0
+    "bends": 3
   },
   "lifecycle-states-as-rows": {
     "crossings": 0,

@@ -1060,7 +1060,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Object lifecycle
 
-`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a child record created on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
+`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates with required fields and criteria; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
 
 ![Object lifecycle](docs/img/lifecycle-change-control.svg)
 
@@ -1127,9 +1127,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "id": "in_review",
       "label": "In Review",
-      "entryCriteria": [
-        "Impact assessed"
-      ],
+      "gate": {
+        "fields": [
+          "Description",
+          "Impact assessment"
+        ]
+      },
       "security": {
         "Owner": "Read",
         "QA Reviewer": "Edit"
@@ -1141,6 +1144,14 @@ The examples and images below are generated from the registered types (`pnpm doc
       "entryActions": [
         "Set approval date"
       ],
+      "records": [
+        {
+          "record": "Change Action",
+          "fields": [
+            "Owner = Change Owner"
+          ]
+        }
+      ],
       "to": [
         {
           "state": "in_progress",
@@ -1151,7 +1162,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     },
     {
       "id": "in_progress",
-      "label": "In Progress"
+      "label": "In Progress",
+      "gate": {
+        "criteria": [
+          "Change actions assigned"
+        ]
+      }
     },
     {
       "id": "closed",
@@ -1239,22 +1255,6 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "r_approve",
           "kind": "stateChange",
           "target": "approved",
-          "to": [
-            {
-              "step": "r_actions",
-              "main": true
-            }
-          ]
-        },
-        {
-          "id": "r_actions",
-          "kind": "createRecord",
-          "label": "Create change actions",
-          "record": "Change Action",
-          "fields": [
-            "Owner = Change Owner"
-          ],
-          "state": "approved",
           "to": [
             {
               "step": "r_notify",
@@ -1452,9 +1452,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "id": "in_review",
       "label": "In Review",
-      "entryCriteria": [
-        "Impact assessed"
-      ],
+      "gate": {
+        "fields": [
+          "Description",
+          "Impact assessment"
+        ]
+      },
       "security": {
         "Owner": "Read",
         "QA Reviewer": "Edit"
@@ -1466,6 +1469,14 @@ The examples and images below are generated from the registered types (`pnpm doc
       "entryActions": [
         "Set approval date"
       ],
+      "records": [
+        {
+          "record": "Change Action",
+          "fields": [
+            "Owner = Change Owner"
+          ]
+        }
+      ],
       "to": [
         {
           "state": "in_progress",
@@ -1476,7 +1487,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     },
     {
       "id": "in_progress",
-      "label": "In Progress"
+      "label": "In Progress",
+      "gate": {
+        "criteria": [
+          "Change actions assigned"
+        ]
+      }
     },
     {
       "id": "closed",
@@ -1564,22 +1580,6 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "r_approve",
           "kind": "stateChange",
           "target": "approved",
-          "to": [
-            {
-              "step": "r_actions",
-              "main": true
-            }
-          ]
-        },
-        {
-          "id": "r_actions",
-          "kind": "createRecord",
-          "label": "Create change actions",
-          "record": "Change Action",
-          "fields": [
-            "Owner = Change Owner"
-          ],
-          "state": "approved",
           "to": [
             {
               "step": "r_notify",
@@ -1778,9 +1778,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "id": "in_review",
       "label": "In Review",
-      "entryCriteria": [
-        "Impact assessed"
-      ],
+      "gate": {
+        "fields": [
+          "Description",
+          "Impact assessment"
+        ]
+      },
       "security": {
         "Owner": "Read",
         "QA Reviewer": "Edit"
@@ -1792,6 +1795,14 @@ The examples and images below are generated from the registered types (`pnpm doc
       "entryActions": [
         "Set approval date"
       ],
+      "records": [
+        {
+          "record": "Change Action",
+          "fields": [
+            "Owner = Change Owner"
+          ]
+        }
+      ],
       "to": [
         {
           "state": "in_progress",
@@ -1802,7 +1813,12 @@ The examples and images below are generated from the registered types (`pnpm doc
     },
     {
       "id": "in_progress",
-      "label": "In Progress"
+      "label": "In Progress",
+      "gate": {
+        "criteria": [
+          "Change actions assigned"
+        ]
+      }
     },
     {
       "id": "closed",
@@ -1890,22 +1906,6 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "r_approve",
           "kind": "stateChange",
           "target": "approved",
-          "to": [
-            {
-              "step": "r_actions",
-              "main": true
-            }
-          ]
-        },
-        {
-          "id": "r_actions",
-          "kind": "createRecord",
-          "label": "Create change actions",
-          "record": "Change Action",
-          "fields": [
-            "Owner = Change Owner"
-          ],
-          "state": "approved",
           "to": [
             {
               "step": "r_notify",
@@ -2666,7 +2666,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `styles` | styles by key |  | Default style per section (`stages`, `states`, `workflows`, `steps`); each item’s own `style` overrides it field by field. |
 | `edgeStyle` | style |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
 | `styleBy` | object |  | Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`. |
-| `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `createRecord`, `stateChange`, `parallel`, `join`, `end`. |
+| `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `parallel`, `join`, `end`. |
 | `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
 | `styleBy.stateType` | styles by key |  | Style for every item with this `stateType`, by value: `initial`, `steady`, `final`, `cancelled`. |
 | `stages` | list of objects |  | Lifecycle stage groups: a header over adjacent states. |
@@ -2678,9 +2678,21 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `states[].label` | string |  | Defaults to the id. |
 | `states[].stateType` | `initial` \| `steady` \| `final` \| `cancelled` |  | Exactly one state is `initial`. `final` and `cancelled` end the lifecycle. Initial, final and cancelled states are tinted. |
-| `states[].entryCriteria` | list of string |  | Shown under the state header. |
+| `states[].entryCriteria` | list of string |  | Shown under the state header. To draw them in front of the state, use `gate`. |
 | `states[].entryActions` | list of string |  | Shown under the state header. |
 | `states[].security` | object |  | Access per role in this state, e.g. `{ "Owner": "Edit", "Viewer": "Read" }`; shown under the header. |
+| `states[].gate` | object |  | What must hold to enter the state: a gate (a box between two posts) in front of its pill in the actions band; every user action, shared action and transition into the state passes it. |
+| `states[].gate.label` | string |  | Defaults to "Gate". |
+| `states[].gate.fields` | list of string |  | Fields that must be complete; shown as "Required: …". |
+| `states[].gate.criteria` | list of string |  | Entry criteria, one per line. |
+| `states[].gate.quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `states[].gate.style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].records` | list of objects |  | Child (related) records made in this state: drawn in the actions band next to the state, joined to it by a dotted line, not as workflow steps. |
+| `states[].records[].record` | string | yes | Object of the child record, e.g. "Change Action". |
+| `states[].records[].label` | string |  | Defaults to the object. |
+| `states[].records[].fields` | list of string |  | Values it is created with, e.g. "Owner = Change Owner"; shown under the label. |
+| `states[].records[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `states[].records[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
@@ -2720,13 +2732,12 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].start.by` | `user` \| `entry` \| `job` |  | `user` action, `entry` into the state, or a scheduled `job`. |
 | `workflows[].steps` | list of objects | yes |  |
 | `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
-| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `createRecord` \| `stateChange` \| `parallel` \| `join` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `createRecord` (creates a child record: `record` names its object), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`. |
+| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `parallel` \| `join` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`. |
 | `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, the target state’s name. |
 | `workflows[].steps[].owner` | string |  | Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`. |
 | `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
 | `workflows[].steps[].target` | string |  | For a state change: the state it moves the record to. |
-| `workflows[].steps[].record` | string |  | For `createRecord`: the object of the child record created, e.g. "Change Action". The label defaults to "Create <record>". |
-| `workflows[].steps[].fields` | list of string |  | Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Child record: values it is created with. Shown under the label. |
+| `workflows[].steps[].fields` | list of string |  | Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label. |
 | `workflows[].steps[].verdicts` | list of objects |  | Task outcomes, each leading to a next step; no decision diamond needed. |
 | `workflows[].steps[].verdicts[].name` | string | yes | Verdict, e.g. "Approve"; the connection’s label. |
 | `workflows[].steps[].verdicts[].signature` | boolean |  | Needs an eSignature (icon on the label). |

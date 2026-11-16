@@ -10,7 +10,6 @@ export const SHAPE: Record<StepKind, string> = {
   decision: 'decision',
   notification: 'document',
   system: 'hexagon',
-  createRecord: 'record',
   stateChange: 'chevron',
   parallel: 'bar',
   join: 'bar',
@@ -52,7 +51,7 @@ export function stepNode(m: Lifecycle, s: LcStep, src: string, stateLabel: (id: 
   const kind = s.kind ?? 'task';
   const label =
     s.label ??
-    (kind === 'stateChange' ? stateLabel(s.target) : kind === 'createRecord' ? `Create ${s.record ?? 'record'}` : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
+    (kind === 'stateChange' ? stateLabel(s.target) : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
   const sub = subOf(s, kind);
   const badges = badgesOf(s);
   return {

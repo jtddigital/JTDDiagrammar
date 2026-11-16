@@ -52,16 +52,37 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(nodes.get('c_split')).toMatchObject({ shape: 'bar', label: '' });
     expect(nodes.get('r_notify')!.shape).toBe('document');
     expect(nodes.get('c_end')).toMatchObject({ shape: 'terminator', label: 'End' });
-    // Creating a child record: the record shape, its starting values under the divider.
-    expect(nodes.get('r_actions')).toMatchObject({ shape: 'record', label: 'Create change actions', sub: 'Owner = Change Owner', phase: 'approved' });
   });
 
-  it('labels a child record step after the record it creates, unless labelled (URS-TYP-009)', () => {
-    const step = (s: object) => ({ ...tiny, workflows: [{ ...tiny.workflows[0]!, steps: [{ id: 'k', kind: 'createRecord', state: tiny.states[0]!.id, ...s }, ...tiny.workflows[0]!.steps] }] });
-    const node = (s: object) => ir(step(s)).nodes.find((n) => n.id === 'k')!;
-    expect(node({ record: 'CAPA' })).toMatchObject({ shape: 'record', label: 'Create CAPA' });
-    expect(node({}).label).toBe('Create record');
-    expect(node({ record: 'CAPA', label: 'Open a CAPA' }).label).toBe('Open a CAPA');
+  it('hangs child records off their state, outside the workflows (URS-TYP-018)', () => {
+    const r = ir(ex);
+    expect(r.nodes.find((n) => n.id === 'state:approved:record:0')).toMatchObject({ shape: 'record', label: 'Change Action', sub: 'Owner = Change Owner', phase: 'approved', lane: 'lifecycle:actions', src: '/states/2/records/0' });
+    expect(r.edges.find((e) => e.id === 'state:approved:record:0:link')).toMatchObject({ from: 'state:approved', to: 'state:approved:record:0', marker: 'none', style: { dash: 'dotted' } });
+    // No workflow step makes records any more.
+    expect(codes({ ...tiny, workflows: [{ id: 'w', label: 'W', steps: [{ id: 's', kind: 'createRecord', state: 'a' }] }] })).toEqual([['schema.enum', '/workflows/0/steps/0/kind']]);
+    const one = (rec: object) => ir({ ...tiny, states: [{ id: 'a', stateType: 'initial', records: [rec] }, { id: 'b' }] }).nodes.find((n) => n.shape === 'record')!;
+    expect(one({ record: 'CAPA' })).toMatchObject({ label: 'CAPA' });
+    expect(one({ record: 'CAPA', label: 'Open a CAPA' }).label).toBe('Open a CAPA');
+    // A record alone brings in the actions band.
+    expect(one({ record: 'CAPA' }).lane).toBe('lifecycle:actions');
+  });
+
+  it('puts a gate in front of a state that every way in passes (URS-TYP-018)', () => {
+    const r = ir(ex);
+    expect(r.nodes.find((n) => n.id === 'state:in_review:gate')).toMatchObject({ shape: 'checkpoint', label: 'Gate', sub: 'Required: Description, Impact assessment', phase: 'in_review', src: '/states/1/gate' });
+    expect(r.nodes.find((n) => n.id === 'state:in_progress:gate')!.sub).toBe('Change actions assigned');
+    expect(r.edges.find((e) => e.id === 'state:in_progress:gate:link')).toMatchObject({ from: 'state:in_progress:gate', to: 'state:in_progress', style: { lineWidth: 2.5 } });
+    // User actions end at the gate, not the pill.
+    expect(r.edges.find((e) => e.id === 'action:approved:0')!.to).toBe('state:in_progress:gate');
+    const gated = (gate: object) => ({ ...tiny, states: [{ id: 'a', stateType: 'initial', gate, to: [{ state: 'b' }] }, { id: 'b', gate: { label: 'QA check', fields: ['X'], criteria: ['Y', 'Z'] } }], sharedActions: [{ state: 'b', from: ['a'] }] });
+    const g = ir(gated({ criteria: ['Owner set'] }));
+    expect(g.nodes.find((n) => n.id === 'state:b:gate')).toMatchObject({ label: 'QA check', sub: 'Required: X\nY\nZ' });
+    expect(g.edges.filter((e) => e.to === 'state:b:gate').map((e) => e.id)).toEqual(['action:a:0', 'shared:0']);
+    expect(g.edges.find((e) => e.id === 'state:start:link')!.to).toBe('state:a:gate');
+    // Summary transitions end at the gate too.
+    const s = ir({ ...ex, view: 'summary' });
+    expect(s.edges.find((e) => e.id === 'flow:review:draft:in_review')!.to).toBe('state:in_review:gate');
+    expect(s.nodes.some((n) => n.shape === 'checkpoint')).toBe(true);
   });
 
   it('styles steps by section, then kind, then owner, then their own style (URS-DM-023)', () => {
@@ -87,7 +108,8 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(exec.y + exec.h).toBeCloseTo(band('phase', 'approved').header.y);
     const ungrouped = render(doc({ stages: [{ id: 'closure', label: 'Closure', states: ['closed'] }] }), reg).geometry!;
     expect(ungrouped.fillers!.map((f) => f.x)).toContainEqual(ungrouped.bands.find((b) => b.kind === 'phase' && b.id === 'cancelled')!.x);
-    expect(band('phase', 'in_review').detail).toEqual(['Entry criteria: Impact', 'assessed', 'Security: Owner Read · QA', 'Reviewer Edit']);
+    expect(band('phase', 'in_review').detail).toEqual(['Security: Owner Read · QA', 'Reviewer Edit']);
+    expect(render({ ...tiny, states: [{ id: 'a', stateType: 'initial', entryCriteria: ['Impact assessed'] }, { id: 'b' }] }, reg).geometry!.bands.find((b) => b.id === 'a')!.detail).toEqual(['Entry criteria: Impact', 'assessed']);
     const svg = render(ex, reg).svg!;
     expect(svg).toContain('<g id="pg-execution" class="jtd-phaseGroup">');
     expect(svg).toMatch(/class="jtd-detail"[^>]*>Entry actions: Lock record</);
@@ -96,8 +118,20 @@ describe('lifecycle type (URS-TYP-008)', () => {
   it('shows the lifecycle actions band with state pills, the initial marker and user actions; it can be toggled', () => {
     const r = ir(ex);
     expect(r.partitions!.lanes[0]).toMatchObject({ id: 'lifecycle:actions', label: 'Lifecycle actions' });
-    expect(r.nodes.filter((n) => n.lane === 'lifecycle:actions').map((n) => n.id)).toEqual(['state:start', 'state:draft', 'state:in_review', 'state:approved', 'state:in_progress', 'state:closed', 'state:cancelled', 'shared:0:from']);
-    expect(r.edges.find((e) => e.id === 'action:approved:0')).toMatchObject({ from: 'state:approved', to: 'state:in_progress', labels: [{ text: 'Start work' }], src: '/states/2/to/0' });
+    expect(r.nodes.filter((n) => n.lane === 'lifecycle:actions').map((n) => n.id)).toEqual([
+      'state:start',
+      'state:draft',
+      'state:in_review:gate',
+      'state:in_review',
+      'state:approved',
+      'state:approved:record:0',
+      'state:in_progress:gate',
+      'state:in_progress',
+      'state:closed',
+      'state:cancelled',
+      'shared:0:from',
+    ]);
+    expect(r.edges.find((e) => e.id === 'action:approved:0')).toMatchObject({ from: 'state:approved', to: 'state:in_progress:gate', labels: [{ text: 'Start work' }], src: '/states/2/to/0' });
     expect(ir(doc({ actionsLane: false })).partitions!.lanes.map((l) => l.id)).toEqual(['review', 'closure']);
     expect(ir({ ...tiny, actionsLane: true }).nodes.some((n) => n.id === 'state:b')).toBe(true);
     expect(ir(tiny).nodes.some((n) => n.id.startsWith('state:'))).toBe(false);

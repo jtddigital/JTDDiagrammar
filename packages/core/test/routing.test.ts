@@ -51,9 +51,10 @@ describe('routing (URS-LY-013)', () => {
 
   it('lines nodes up so lifecycle examples run (nearly) straight', () => {
     const bends = (name: string) => quality(geo(reg.type('lifecycle')!.examples.find((e) => e.name === name)!.source)).bends;
-    expect(bends('summary')).toBe(0);
-    // Only the parallel split and join turn.
-    expect(bends('change-control')).toBeLessThanOrEqual(6);
+    // Only the way back past In Review's gate and the step down to In Progress's gate turn (URS-TYP-018).
+    expect(bends('summary')).toBeLessThanOrEqual(3);
+    // And in the detailed view, the parallel split and join.
+    expect(bends('change-control')).toBeLessThanOrEqual(7);
   });
 
   it('keeps side hints when shortening routes', () => {

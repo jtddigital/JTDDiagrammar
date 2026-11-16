@@ -11,7 +11,6 @@ const KIND: Record<StepKind, string> = {
   decision: 'Decision',
   notification: 'Notification',
   system: 'System action',
-  createRecord: 'Creates a child record',
   stateChange: 'State change',
   parallel: 'Parallel split / join',
   join: 'Parallel split / join',
@@ -52,6 +51,8 @@ export function lifecycleLegend(m: Lifecycle, nodes: readonly IRNode[], edges: r
       const style = stateStyle(m, s);
       if (style?.fill) add({ label: TYPE[s.stateType ?? 'steady'], shape: 'state', style });
     }
+  if (nodes.some((n) => n.shape === 'checkpoint')) add({ label: 'Entry gate', shape: 'checkpoint' });
+  if (nodes.some((n) => n.shape === 'record')) add({ label: 'Child record made in the state', shape: 'record' });
   if (nodes.some((n) => n.style?.dash === 'dashed' && n.shape === 'state')) add({ label: 'Action available in several states', shape: 'state', style: { dash: 'dashed' } });
 
   const icons = new Set<Icon>([...nodes.flatMap((n) => (n.badges ?? []).flatMap((b) => (b.icon ? [b.icon] : []))), ...edges.flatMap((e) => (e.labels ?? []).flatMap((l) => (l.icon ? [l.icon] : [])))]);
