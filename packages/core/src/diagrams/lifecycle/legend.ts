@@ -11,6 +11,7 @@ const KIND: Record<StepKind, string> = {
   decision: 'Decision',
   notification: 'Notification',
   system: 'System action',
+  createRecord: 'Creates a child record',
   stateChange: 'State change',
   parallel: 'Parallel split / join',
   join: 'Parallel split / join',
