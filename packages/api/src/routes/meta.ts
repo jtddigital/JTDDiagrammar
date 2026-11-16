@@ -1,12 +1,9 @@
 import { combinedSchema, error } from '@jtd/core';
-import { existsSync, readFileSync } from 'node:fs';
+import { VERSION as version } from '../version.ts';
 import type { Ctx, Route } from './route.ts';
 
 const DIALECT = 'https://json-schema.org/draft/2020-12/schema';
 
-/** The installed release (its VERSION file), so the launcher can tell an outdated server from a current one (URS-NF-011). */
-const versionFile = new URL('../../../../VERSION', import.meta.url);
-const version = existsSync(versionFile) ? readFileSync(versionFile, 'utf8').trim() : undefined;
 /** When this server started: the launcher restarts it if config.env changed since (URS-NF-011). */
 const startedAt = Date.now();
 

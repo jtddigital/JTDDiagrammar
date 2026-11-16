@@ -150,3 +150,47 @@
 .status[data-state='pending'] {
   color: var(--color-text-muted);
 }
+
+/* Running version, and updating in place (URS-WEB-022, URS-NF-015). */
+.version {
+  --cluster-gap: var(--space-2);
+  flex-wrap: nowrap;
+  margin-inline-end: var(--space-2);
+}
+
+.version__current {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--step--2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.version__update {
+  height: 26px;
+  padding-inline: var(--space-2);
+  font-size: var(--step--2);
+  white-space: nowrap;
+}
+
+.version__note {
+  color: var(--color-text-muted);
+  font-size: var(--step--2);
+  white-space: nowrap;
+}
+
+.version__note[data-state='error'] {
+  color: var(--color-danger);
+}
+
+/* With the update button showing, the examples list gives way before the file name does. */
+.toolbar > .select {
+  flex: 0 1 14rem;
+  min-width: 7rem;
+}
+
+.toolbar__file {
+  min-width: 4.5rem;
+}
