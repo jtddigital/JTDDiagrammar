@@ -10,6 +10,7 @@ export const SHAPE: Record<StepKind, string> = {
   decision: 'decision',
   notification: 'document',
   system: 'hexagon',
+  createRecord: 'record',
   stateChange: 'chevron',
   parallel: 'bar',
   join: 'bar',
@@ -49,7 +50,9 @@ const verdictNote = (v: LcVerdict) =>
 /** A step's node: shape by kind, label and owner, badges, style by section, kind, owner and its own. */
 export function stepNode(m: Lifecycle, s: LcStep, src: string, stateLabel: (id: string | undefined) => string, place: object): IRNode {
   const kind = s.kind ?? 'task';
-  const label = s.label ?? (kind === 'stateChange' ? stateLabel(s.target) : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
+  const label =
+    s.label ??
+    (kind === 'stateChange' ? stateLabel(s.target) : kind === 'createRecord' ? `Create ${s.record ?? 'record'}` : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
   const sub = subOf(s, kind);
   const badges = badgesOf(s);
   return {

@@ -52,6 +52,16 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(nodes.get('c_split')).toMatchObject({ shape: 'bar', label: '' });
     expect(nodes.get('r_notify')!.shape).toBe('document');
     expect(nodes.get('c_end')).toMatchObject({ shape: 'terminator', label: 'End' });
+    // Creating a child record: the record shape, its starting values under the divider.
+    expect(nodes.get('r_actions')).toMatchObject({ shape: 'record', label: 'Create change actions', sub: 'Owner = Change Owner', phase: 'approved' });
+  });
+
+  it('labels a child record step after the record it creates, unless labelled (URS-TYP-009)', () => {
+    const step = (s: object) => ({ ...tiny, workflows: [{ ...tiny.workflows[0]!, steps: [{ id: 'k', kind: 'createRecord', state: tiny.states[0]!.id, ...s }, ...tiny.workflows[0]!.steps] }] });
+    const node = (s: object) => ir(step(s)).nodes.find((n) => n.id === 'k')!;
+    expect(node({ record: 'CAPA' })).toMatchObject({ shape: 'record', label: 'Create CAPA' });
+    expect(node({}).label).toBe('Create record');
+    expect(node({ record: 'CAPA', label: 'Open a CAPA' }).label).toBe('Open a CAPA');
   });
 
   it('styles steps by section, then kind, then owner, then their own style (URS-DM-023)', () => {

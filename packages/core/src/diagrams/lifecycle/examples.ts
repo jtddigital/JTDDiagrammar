@@ -43,7 +43,8 @@ const changeControl = {
             { name: 'Reject', step: 'r_return', reasons: ['Incomplete', 'Out of scope'], comment: true },
           ],
         },
-        { id: 'r_approve', kind: 'stateChange', target: 'approved', to: [{ step: 'r_notify', main: true }] },
+        { id: 'r_approve', kind: 'stateChange', target: 'approved', to: [{ step: 'r_actions', main: true }] },
+        { id: 'r_actions', kind: 'createRecord', label: 'Create change actions', record: 'Change Action', fields: ['Owner = Change Owner'], state: 'approved', to: [{ step: 'r_notify', main: true }] },
         { id: 'r_notify', kind: 'notification', label: 'Notify owner', owner: 'Change Owner', state: 'approved' },
         { id: 'r_return', kind: 'stateChange', target: 'draft' },
       ],
@@ -71,7 +72,7 @@ export const examples: [Example, ...Example[]] = [
     name: 'change-control',
     title: 'Object lifecycle',
     description:
-      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
+      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a child record created on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
     source: changeControl,
   },
   {

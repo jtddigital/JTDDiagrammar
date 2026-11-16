@@ -2,7 +2,7 @@ import { pointer } from '../../diagnostics.ts';
 import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
 import type { StyleBy } from '../section-styles.ts';
 
-export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'parallel', 'join', 'end'] as const;
+export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'createRecord', 'stateChange', 'parallel', 'join', 'end'] as const;
 export type StepKind = (typeof STEP_KINDS)[number];
 export const STATE_TYPES = ['initial', 'steady', 'final', 'cancelled'] as const;
 export type StateType = (typeof STATE_TYPES)[number];
@@ -94,7 +94,9 @@ export interface LcStep {
   state?: string;
   /** For `stateChange`: the state it moves the record to. */
   target?: string;
-  /** Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". */
+  /** For `createRecord`: the object of the child record it creates, e.g. "Change Action" (URS-TYP-009). */
+  record?: string;
+  /** Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Child record: values it is created with. */
   fields?: string[];
   /** Task: outcomes, each leading on. */
   verdicts?: LcVerdict[];

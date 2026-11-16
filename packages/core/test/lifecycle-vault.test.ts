@@ -183,6 +183,7 @@ describe('legend (URS-DM-026)', () => {
       'Start / end',
       'State change',
       'Task',
+      'Creates a child record',
       'Notification',
       'Parallel split / join',
       'System action',
