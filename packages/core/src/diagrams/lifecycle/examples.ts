@@ -15,9 +15,15 @@ const changeControl = {
   ],
   states: [
     { id: 'draft', label: 'Draft', stateType: 'initial', security: { Owner: 'Edit', Viewer: 'Read' } },
-    { id: 'in_review', label: 'In Review', entryCriteria: ['Impact assessed'], security: { Owner: 'Read', 'QA Reviewer': 'Edit' } },
-    { id: 'approved', label: 'Approved', entryActions: ['Set approval date'], to: [{ state: 'in_progress', label: 'Start work', main: true }] },
-    { id: 'in_progress', label: 'In Progress' },
+    { id: 'in_review', label: 'In Review', gate: { fields: ['Description', 'Impact assessment'] }, security: { Owner: 'Read', 'QA Reviewer': 'Edit' } },
+    {
+      id: 'approved',
+      label: 'Approved',
+      entryActions: ['Set approval date'],
+      records: [{ record: 'Change Action', fields: ['Owner = Change Owner'] }],
+      to: [{ state: 'in_progress', label: 'Start work', main: true }],
+    },
+    { id: 'in_progress', label: 'In Progress', gate: { criteria: ['Change actions assigned'] } },
     { id: 'closed', label: 'Closed', stateType: 'final', entryActions: ['Lock record'] },
     { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled' },
   ],
@@ -43,8 +49,7 @@ const changeControl = {
             { name: 'Reject', step: 'r_return', reasons: ['Incomplete', 'Out of scope'], comment: true },
           ],
         },
-        { id: 'r_approve', kind: 'stateChange', target: 'approved', to: [{ step: 'r_actions', main: true }] },
-        { id: 'r_actions', kind: 'createRecord', label: 'Create change actions', record: 'Change Action', fields: ['Owner = Change Owner'], state: 'approved', to: [{ step: 'r_notify', main: true }] },
+        { id: 'r_approve', kind: 'stateChange', target: 'approved', to: [{ step: 'r_notify', main: true }] },
         { id: 'r_notify', kind: 'notification', label: 'Notify owner', owner: 'Change Owner', state: 'approved' },
         { id: 'r_return', kind: 'stateChange', target: 'draft' },
       ],
@@ -72,7 +77,7 @@ export const examples: [Example, ...Example[]] = [
     name: 'change-control',
     title: 'Object lifecycle',
     description:
-      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; a child record created on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
+      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates with required fields and criteria; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
     source: changeControl,
   },
   {

@@ -2,7 +2,7 @@ import { pointer } from '../../diagnostics.ts';
 import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
 import type { StyleBy } from '../section-styles.ts';
 
-export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'createRecord', 'stateChange', 'parallel', 'join', 'end'] as const;
+export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'parallel', 'join', 'end'] as const;
 export type StepKind = (typeof STEP_KINDS)[number];
 export const STATE_TYPES = ['initial', 'steady', 'final', 'cancelled'] as const;
 export type StateType = (typeof STATE_TYPES)[number];
@@ -35,6 +35,29 @@ export interface LcSharedAction extends LcAction {
   except?: string[];
 }
 
+/** What must hold to enter a state: drawn as a gate in front of it, which every way in passes (URS-TYP-018). */
+export interface LcGate {
+  label?: string;
+  /** Fields that must be complete. */
+  fields?: string[];
+  /** Entry criteria, e.g. "All change actions closed". */
+  criteria?: string[];
+  quote?: string;
+  style?: Style;
+}
+
+/** A child (related) record made in a state: drawn next to the state, not in a workflow (URS-TYP-018). */
+export interface LcRecord {
+  /** Object of the child record, e.g. "Change Action". */
+  record: string;
+  /** Defaults to the object. */
+  label?: string;
+  /** Values it is created with, e.g. "Owner = Change Owner". */
+  fields?: string[];
+  quote?: string;
+  style?: Style;
+}
+
 /** An object lifecycle state: one column (or row) of the chart. */
 export interface LcState {
   id: string;
@@ -45,6 +68,9 @@ export interface LcState {
   entryActions?: string[];
   /** Access per role in this state, e.g. `{ "Owner": "Edit" }`; shown under the header. */
   security?: Record<string, string>;
+  gate?: LcGate;
+  /** Child records made in this state. */
+  records?: LcRecord[];
   quote?: string;
   style?: Style;
   /** User actions leaving this state. */
@@ -94,9 +120,7 @@ export interface LcStep {
   state?: string;
   /** For `stateChange`: the state it moves the record to. */
   target?: string;
-  /** For `createRecord`: the object of the child record it creates, e.g. "Change Action" (URS-TYP-009). */
-  record?: string;
-  /** Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Child record: values it is created with. */
+  /** Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". */
   fields?: string[];
   /** Task: outcomes, each leading on. */
   verdicts?: LcVerdict[];
@@ -157,6 +181,9 @@ export interface Lifecycle {
 
 export const ACTIONS_BAND = 'lifecycle:actions';
 export const pill = (state: string) => `state:${state}`;
+export const gateOf = (state: string) => `${pill(state)}:gate`;
+/** Where arrows into a state end: its gate, if it has one, else its pill (URS-TYP-018). */
+export const entryOf = (m: Pick<Lifecycle, 'states'>, state: string) => (m.states.find((s) => s.id === state)?.gate ? gateOf(state) : pill(state));
 
 /** Every step with its workflow and JSON Pointer. */
 export const stepsOf = (m: Pick<Lifecycle, 'workflows'>) =>
@@ -169,7 +196,7 @@ export const stateOf = (s: LcStep) => s.state ?? (s.kind === 'stateChange' ? s.t
 export const statesArePhases = (m: Pick<Lifecycle, 'direction' | 'statesAs'>) => ((m.statesAs ?? 'columns') === 'columns') === ((m.direction ?? 'LR') === 'LR');
 
 export const showActions = (m: Pick<Lifecycle, 'actionsLane' | 'states' | 'sharedActions' | 'workflows' | 'view'>) =>
-  m.view === 'summary' || (m.actionsLane ?? (m.states.some((s) => (s.to?.length ?? 0) > 0) || !!m.sharedActions?.length || !!m.workflows?.some((w) => w.start)));
+  m.view === 'summary' || (m.actionsLane ?? (m.states.some((s) => (s.to?.length ?? 0) > 0 || !!s.gate || !!s.records?.length) || !!m.sharedActions?.length || !!m.workflows?.some((w) => w.start)));
 
 /** Where a step leads: plain connections, then verdicts. */
 export const nextOf = (s: LcStep): string[] => [...(s.to ?? []).map((l) => l.step), ...(s.verdicts ?? []).map((v) => v.step)];

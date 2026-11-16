@@ -42,7 +42,16 @@ const schema = obj({
   states: {
     type: 'array',
     description: 'Object states in lifecycle order.',
-    items: obj({ id: str, label: str, stateType: { type: 'string', enum: STATE_TYPES }, entryCriteria: strs, entryActions: strs, quote }),
+    items: obj({
+      id: str,
+      label: str,
+      stateType: { type: 'string', enum: STATE_TYPES },
+      gateFields: { ...strs, description: 'Fields that must be complete to enter the state; empty if none.' },
+      gateCriteria: { ...strs, description: 'Entry criteria that must hold to enter the state; empty if none.' },
+      entryActions: strs,
+      records: { type: 'array', description: 'Child records made in this state.', items: obj({ record: desc('Object of the child record.'), fields: { ...strs, description: 'Starting values as "Field = value".' }, quote }) },
+      quote,
+    }),
   },
   workflows: {
     type: 'array',
@@ -89,7 +98,16 @@ interface G {
   title: string;
   display: Display;
   stages: LcStage[];
-  states: { id: string; label: string; stateType: LcState['stateType']; entryCriteria?: string[]; entryActions?: string[]; quote?: string }[];
+  states: {
+    id: string;
+    label: string;
+    stateType: LcState['stateType'];
+    gateFields?: string[];
+    gateCriteria?: string[];
+    entryActions?: string[];
+    records?: { record: string; fields?: string[]; quote?: string }[];
+    quote?: string;
+  }[];
   workflows: { id: string; label: string; startState: string; startAction: string; startBy: NonNullable<LcWorkflow['start']>['by']; roles: string[] }[];
   steps: (Omit<LcStep, 'to' | 'verdicts' | 'order' | 'style' | 'completion'> & { workflow: string; completion?: LcStep['completion'] | 'none' })[];
   connections: GLink[];
@@ -102,11 +120,11 @@ const text = <K extends string>(k: K, v: string | undefined) => (v ? ({ [k]: v }
 const list = <K extends string, T>(k: K, v: T[] | undefined) => (v?.length ? ({ [k]: v } as Record<K, T[]>) : {});
 
 const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault object).
-- "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; a cancelled or withdrawn end state is "cancelled"; the rest "steady". Put entry criteria and entry actions on the state they belong to.
+- "states" are the object's lifecycle states in order. Exactly one has stateType "initial"; end states are "final"; a cancelled or withdrawn end state is "cancelled"; the rest "steady". A state's gate is what must hold to enter it: "gateFields" for fields that must be complete, "gateCriteria" for entry criteria. Put entry actions on the state they belong to. Child (related) records made in a state go in its "records", not in a workflow.
 - "display" sets how the chart is drawn; keep the defaults unless asked. "roleLanes" splits each workflow into bands by step owner (e.g. Owner, Approver); a workflow's "roles" orders them.
 - "stages" group adjacent states into lifecycle stages; omit if the material names none.
 - "workflows" are the named workflows; each step belongs to one. Set "startState" (and "startAction", "startBy") when the material says which state, and which user action, entry into the state or scheduled job, starts it.
-- Step kinds: "start" and "end"; "task" for work by a person or group (set "owner" to the role or group; "fields" for fields they complete; "signature", "due", "completion" when stated); "system" for automated actions such as setting field values (list them in "fields" as "Field = value"); "createRecord" when the workflow creates a child (related) record (label "Create <object>", its starting values in "fields" as "Field = value"); "decision" only for a choice no task verdict makes; "notification" (owner = recipients); "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty); "parallel" and "join" where branches split and meet.
+- Step kinds: "start" and "end"; "task" for work by a person or group (set "owner" to the role or group; "fields" for fields they complete; "signature", "due", "completion" when stated); "system" for automated actions such as setting field values (list them in "fields" as "Field = value"); "decision" only for a choice no task verdict makes; "notification" (owner = recipients); "stateChange" when the workflow moves the record to another state (set "target"; leave "state" and "label" empty); "parallel" and "join" where branches split and meet.
 - Every step except a state change has the "state" the record is in while it happens.
 - "verdicts" are a task's outcomes, each leading to the next step (e.g. Approve, Reject); prefer them to a decision after a task. "connections" link the other steps in order.
 - "userActions" are state changes users (or scheduled jobs, by "job") make outside workflows, labelled with the action name. Use "sharedActions" for one action available in many states, such as Cancel.
@@ -115,16 +133,16 @@ const guide = `Diagram type: lifecycle (an object lifecycle, e.g. a Veeva Vault 
 const examples = [
   {
     input:
-      'A deviation starts in Draft; the owner submits it, which starts the investigation workflow and moves it to In Investigation. QA investigates and approves (eSignature) or rejects it back to Draft. Approval closes it. Users can cancel an open deviation.',
+      'A deviation starts in Draft; the owner submits it, which starts the investigation workflow and moves it to In Investigation. QA investigates and approves (eSignature) or rejects it back to Draft. Approval closes it, which needs the Root cause field complete, and opens a CAPA. Users can cancel an open deviation.',
     output: {
       title: 'Deviation lifecycle',
       display: { direction: 'LR', statesAs: 'columns', view: 'detailed', roleLanes: false, legend: true },
       stages: [],
       states: [
-        { id: 'draft', label: 'Draft', stateType: 'initial', entryCriteria: [], entryActions: [], quote: '' },
-        { id: 'investigation', label: 'In Investigation', stateType: 'steady', entryCriteria: [], entryActions: [], quote: '' },
-        { id: 'closed', label: 'Closed', stateType: 'final', entryCriteria: [], entryActions: [], quote: '' },
-        { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled', entryCriteria: [], entryActions: [], quote: '' },
+        { id: 'draft', label: 'Draft', stateType: 'initial', gateFields: [], gateCriteria: [], entryActions: [], records: [], quote: '' },
+        { id: 'investigation', label: 'In Investigation', stateType: 'steady', gateFields: [], gateCriteria: [], entryActions: [], records: [], quote: '' },
+        { id: 'closed', label: 'Closed', stateType: 'final', gateFields: ['Root cause'], gateCriteria: [], entryActions: [], records: [{ record: 'CAPA', fields: [], quote: 'opens a CAPA' }], quote: '' },
+        { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled', gateFields: [], gateCriteria: [], entryActions: [], records: [], quote: '' },
       ],
       workflows: [{ id: 'handle', label: 'Deviation handling', startState: 'draft', startAction: 'Submit', startBy: 'user', roles: [] }],
       steps: [
@@ -163,8 +181,9 @@ export const lifecycleAi: AiAssets<Lifecycle> = {
         id: s.id,
         label: s.label,
         ...(s.stateType !== 'steady' && { stateType: s.stateType }),
-        ...list('entryCriteria', s.entryCriteria),
+        ...((s.gateFields?.length || s.gateCriteria?.length) && { gate: { ...list('fields', s.gateFields), ...list('criteria', s.gateCriteria) } }),
         ...list('entryActions', s.entryActions),
+        ...list('records', s.records?.map((r) => ({ record: r.record, ...list('fields', r.fields), ...text('quote', r.quote) }))),
         ...text('quote', s.quote),
         ...(to.length && { to }),
       };

@@ -3,7 +3,7 @@ import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts
 import { edgeLabels } from '../edge-labels.ts';
 import { over, ruled, styled } from '../section-styles.ts';
 import { lifecycleLegend } from './legend.ts';
-import { ACTIONS_BAND, badStages, pill, sharedFrom, showActions, stateOf, statesArePhases, stepsOf, transitions, type LcAction, type LcState, type LcWorkflow, type Lifecycle } from './model.ts';
+import { ACTIONS_BAND, badStages, entryOf, gateOf, pill, sharedFrom, showActions, stateOf, statesArePhases, stepsOf, transitions, type LcAction, type LcGate, type LcState, type LcWorkflow, type Lifecycle } from './model.ts';
 import { stateStyle } from './state-style.ts';
 import { DASHED, edgeStyleOf, stepEdges, stepNode } from './steps.ts';
 
@@ -16,6 +16,11 @@ const detail = (s: LcState) =>
   ]
     .filter(Boolean)
     .join('\n') || undefined;
+
+/** A gate's text under its label: required fields, then entry criteria (URS-TYP-018). */
+const gateSub = (g: LcGate) => [...(g.fields?.length ? [`Required: ${g.fields.join(', ')}`] : []), ...(g.criteria ?? [])].join('\n') || undefined;
+/** Child records hang off their state by a dotted line, without an arrowhead. */
+const ATTACHED = { dash: 'dotted' } as const;
 
 /** Band for steps without an owner when workflows are split by role. */
 export const SYSTEM_ROLE = 'System';
@@ -82,18 +87,37 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
     if (i >= 0) {
       const src = pointer('states', i, 'stateType');
       nodes.push({ id: 'state:start', shape: 'initial', label: '', ...place(m.states[i]!.id, ACTIONS_BAND), src } as IRNode);
-      edges.push({ id: 'state:start:link', from: 'state:start', to: pill(m.states[i]!.id), src });
+      edges.push({ id: 'state:start:link', from: 'state:start', to: entryOf(m, m.states[i]!.id), src });
     }
     m.states.forEach((s, i) => {
       const st = stateStyle(m, s);
+      // A gate in front of the pill: every way into the state passes it (URS-TYP-018).
+      const g = s.gate;
+      if (g) {
+        const sub = gateSub(g);
+        const src = pointer('states', i, 'gate');
+        nodes.push({ id: gateOf(s.id), shape: 'checkpoint', label: g.label ?? 'Gate', ...(sub && { sub }), ...place(s.id, ACTIONS_BAND), ...(g.style && { style: g.style }), ...(g.quote && { quote: g.quote }), src } as IRNode);
+        // Bold when a main-path action enters the state; faded only when every way in is a faded action.
+        const ins = [...m.states.flatMap((x) => (x.to ?? []).filter((a) => a.state === s.id)), ...(m.sharedActions ?? []).filter((a) => a.state === s.id)];
+        const byWorkflow = transitions(m).some((t) => t.workflow && t.to === s.id);
+        const style = ins.some((a) => a.main) ? edgeStyleOf(m, true, undefined) : ins.length && !byWorkflow ? edgeStyleOf(m, false, undefined) : over(m.edgeStyle, undefined);
+        edges.push({ id: `${gateOf(s.id)}:link`, from: gateOf(s.id), to: pill(s.id), ...style, src });
+      }
       nodes.push({ id: pill(s.id), shape: 'state', label: label.get(s.id)!, ...place(s.id, ACTIONS_BAND), ...(st && { style: st }), src: pointer('states', i) } as IRNode);
+      // Child records made in the state hang off its pill (URS-TYP-018).
+      (s.records ?? []).forEach((r, j) => {
+        const id = `${pill(s.id)}:record:${j}`;
+        const src = pointer('states', i, 'records', j);
+        nodes.push({ id, shape: 'record', label: r.label ?? r.record, ...(r.fields?.length && { sub: r.fields.join('\n') }), ...place(s.id, ACTIONS_BAND), ...(r.style && { style: r.style }), ...(r.quote && { quote: r.quote }), src } as IRNode);
+        edges.push({ id: `${id}:link`, from: pill(s.id), to: id, marker: 'none', ...over(m.edgeStyle, ATTACHED), src });
+      });
       // Actions to unknown states are reported by the rules and left out here.
       (s.to ?? []).forEach((a, j) =>
         label.has(a.state) &&
         edges.push({
           id: a.id ?? `action:${s.id}:${j}`,
           from: pill(s.id),
-          to: pill(a.state),
+          to: entryOf(m, a.state),
           ...actionLabels(a),
           ...edgeStyleOf(m, a.main, a.style),
           ...(a.quote && { quote: a.quote }),
@@ -108,7 +132,7 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
       const from = a.from ? sharedFrom(m, a).map(stateLabel).join(', ') : `Any active state${a.except?.length ? ` except ${a.except.map(stateLabel).join(', ')}` : ''}`;
       const src = pointer('sharedActions', i);
       nodes.push({ id: `${id}:from`, shape: 'state', label: from, ...place(a.state, ACTIONS_BAND), style: { dash: 'dashed' }, src } as IRNode);
-      edges.push({ id, from: `${id}:from`, to: pill(a.state), ...actionLabels(a), ...edgeStyleOf(m, a.main, a.style), ...(a.quote && { quote: a.quote }), src });
+      edges.push({ id, from: `${id}:from`, to: entryOf(m, a.state), ...actionLabels(a), ...edgeStyleOf(m, a.main, a.style), ...(a.quote && { quote: a.quote }), src });
     });
     if (summary) {
       // Workflow state changes collapse into dashed arrows between the states, one per workflow and pair.
@@ -118,7 +142,7 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
         if (!t.workflow || seen.has(key) || !label.has(t.from) || !label.has(t.to)) continue;
         seen.add(key);
         const wi = m.workflows!.indexOf(t.workflow);
-        edges.push({ id: `flow:${t.workflow.id}:${t.from}:${t.to}`, from: pill(t.from), to: pill(t.to), labels: [{ text: t.workflow.label }], ...over(m.edgeStyle, DASHED), src: pointer('workflows', wi) });
+        edges.push({ id: `flow:${t.workflow.id}:${t.from}:${t.to}`, from: pill(t.from), to: entryOf(m, t.to), labels: [{ text: t.workflow.label }], ...over(m.edgeStyle, DASHED), src: pointer('workflows', wi) });
       }
     }
   }
