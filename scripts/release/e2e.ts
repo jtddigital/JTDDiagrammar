@@ -168,7 +168,12 @@ try {
     now = (await health())?.version;
     if (now !== NEXT) await new Promise((r) => setTimeout(r, 500));
   }
-  if (now !== NEXT) console.error(existsSync(join(home, 'update.log')) ? readFileSync(join(home, 'update.log'), 'utf8') : 'no update.log');
+  if (now !== NEXT) {
+    const state = await fetch(`${url}/v1/version`).then((r) => r.json(), (e: unknown) => `server down: ${e}`);
+    const current = existsSync(join(home, 'current')) ? readFileSync(join(home, 'current'), 'utf8') : 'none';
+    console.error({ state, current, versions: existsSync(join(home, 'versions')) ? readdirSync(join(home, 'versions')) : [] });
+    console.error(existsSync(join(home, 'update.log')) ? readFileSync(join(home, 'update.log'), 'utf8') : 'no update.log');
+  }
   check(now === NEXT, 'installs the new release and restarts onto it');
   // The new server was started by the updater, not by this test: stop it with the launcher.
   const halted = await run(...launcher('stop'));

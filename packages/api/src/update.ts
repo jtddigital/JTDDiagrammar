@@ -1,5 +1,5 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { closeSync, existsSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, existsSync, lstatSync, openSync, readFileSync, realpathSync, writeSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 
 /** How this copy was installed, if it can update itself (URS-NF-015). */
@@ -61,16 +61,22 @@ export async function latestRelease(env: NodeJS.ProcessEnv, fetcher: typeof fetc
   }
 }
 
-export type Spawn = (cmd: string, args: string[], opts: SpawnOptions) => Pick<ChildProcess, 'once' | 'unref' | 'pid'>;
+export type Spawn = (cmd: string, args: string[], opts: SpawnOptions) => Pick<ChildProcess, 'once' | 'on' | 'unref' | 'pid'>;
 const quote = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
 const SHELL = { bash: 'bash', powershell: process.platform === 'win32' ? 'powershell' : 'pwsh' } as const;
 const PS = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command'];
-/** Run `cmd` in a process of its own that outlives this server, its output going to `log`. */
+/**
+ * Run `cmd` in a process of its own that outlives this server, its output going to `log` after a line
+ * saying what runs. A process that cannot start is an 'error' event: always listened to, so it can never
+ * bring this server down.
+ */
 function detached(spawn: Spawn, inst: Installation, env: NodeJS.ProcessEnv, log: string, flags: 'w' | 'a', cmd: string, args: string[]) {
   const fd = openSync(log, flags);
   try {
+    writeSync(fd, `${new Date().toISOString()} running: ${[cmd, ...args].join(' ')}\n`);
     const child = spawn(cmd, args, { env, detached: true, stdio: ['ignore', fd, fd], windowsHide: true, cwd: inst.home });
+    child.on('error', () => {});
     child.unref();
     return child;
   } finally {
@@ -87,7 +93,8 @@ export function startUpdate(inst: Installation, tag: string, env: NodeJS.Process
   const child =
     inst.flavour === 'bash'
       ? detached(spawn, inst, env, log, 'w', SHELL.bash, [join(inst.root, 'bin', 'install.sh'), tag])
-      : detached(spawn, inst, env, log, 'w', SHELL.powershell, [...PS, `& ${quote(join(inst.root, 'bin', 'install.ps1'))} ${quote(tag)}; exit $LASTEXITCODE`]);
+      : // *>&1: Write-Host goes to the information stream, which a log file does not get otherwise. A throw is a failure too.
+        detached(spawn, inst, env, log, 'w', SHELL.powershell, [...PS, `try { & ${quote(join(inst.root, 'bin', 'install.ps1'))} ${quote(tag)} *>&1 } catch { $_; exit 1 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }; exit 0`]);
   return { log, child };
 }
 
@@ -105,7 +112,7 @@ export function restartOnto(inst: Installation, env: NodeJS.ProcessEnv, probe: s
       [
         `for ($i = 0; $i -lt 60; $i++) { try { [void](Invoke-WebRequest -Uri ${quote(`${probe}/health`)} -UseBasicParsing -TimeoutSec 2) } catch { break }; Start-Sleep -Milliseconds 500 }`,
         "$v = (Get-Content (Join-Path $env:JTD_HOME 'current') -Raw).Trim()",
-        "& (Join-Path (Join-Path (Join-Path (Join-Path $env:JTD_HOME 'versions') $v) 'bin') 'jtddiagrammar.ps1') start --no-open",
+        "& (Join-Path (Join-Path (Join-Path (Join-Path $env:JTD_HOME 'versions') $v) 'bin') 'jtddiagrammar.ps1') start --no-open *>&1",
       ].join('; '),
     ]);
 }

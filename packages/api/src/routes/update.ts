@@ -82,6 +82,9 @@ export function updateRoutes(d: UpdateDeps): Route[] {
         }
         const { log, child } = startUpdate(inst, to, d.env, d.spawn);
         state = { state: 'updating', to };
+        child.once('error', (e: Error) => {
+          state = { state: 'failed', to, log: `${tail(log)}\ncould not start the installer: ${e.message}`.trim() };
+        });
         // Installed: hand over to the new version and stop. Failed: keep running and say why.
         child.once('exit', (code: number | null) => {
           if (code !== 0) return void (state = { state: 'failed', to, log: tail(log) || `the installer exited with ${code}` });

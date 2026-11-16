@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
@@ -44,7 +44,7 @@ function spawner() {
     children.push(child);
     return child as never;
   };
-  return { spawn, calls, exit: (code: number) => children[0]!.emit('exit', code) };
+  return { spawn, calls, exit: (code: number) => children[0]!.emit('exit', code), fail: (e: Error) => children[0]!.emit('error', e) };
 }
 
 describe('updating in place (URS-NF-015)', () => {
@@ -84,13 +84,15 @@ describe('updating in place (URS-NF-015)', () => {
     const { log } = startUpdate(inst, 'v1.1.0', {}, spawn);
     expect(log).toBe(join(home, 'update.log'));
     expect(s.calls[0]).toEqual({ cmd: 'bash', args: [join(root, 'bin', 'install.sh'), 'v1.1.0'] });
+    // The log starts with what runs.
+    expect(readFileSync(log, 'utf8')).toMatch(/running: bash .*install\.sh v1\.1\.0/);
     expect(opts[0]).toMatchObject({ detached: true, windowsHide: true, cwd: home });
     restartOnto(inst, {}, 'http://127.0.0.1:8080', spawn);
     expect(s.calls[1]!.args.slice(2)).toEqual([home, 'http://127.0.0.1:8080']);
     expect(s.calls[1]!.args[1]).toMatch(/curl -sf "\$1\/health".*exec "\$0\/current\/bin\/jtddiagrammar" start --no-open/);
     const ps = { ...inst, flavour: 'powershell' as const };
     startUpdate(ps, 'v1.1.0', {}, s.spawn);
-    expect(s.calls[2]!.args.at(-1)).toMatch(/install\.ps1' 'v1\.1\.0'; exit \$LASTEXITCODE/);
+    expect(s.calls[2]!.args.at(-1)).toMatch(/install\.ps1' 'v1\.1\.0' \*>&1 \} catch \{ \$_; exit 1 \}; if \(\$LASTEXITCODE\)/);
     restartOnto(ps, {}, 'http://127.0.0.1:8080', s.spawn);
     expect(s.calls[3]!.args.at(-1)).toMatch(/Invoke-WebRequest -Uri 'http:\/\/127\.0\.0\.1:8080\/health'.*jtddiagrammar\.ps1'\) start --no-open/s);
   });
@@ -138,6 +140,14 @@ describe('GET /v1/version and POST /v1/update (URS-WEB-022, URS-NF-015)', () => 
     // A failed install leaves this server running, and a later attempt may start.
     expect(s.exits).toEqual([]);
     expect((await ask()).statusCode).toBe(202);
+  });
+
+  it('reports an installer that cannot start, and keeps running', async () => {
+    const s = await start();
+    expect((await ask()).statusCode).toBe(202);
+    s.fail(new Error('spawn powershell EINVAL'));
+    expect((await app!.inject('/v1/version')).json().update).toEqual({ state: 'failed', to: 'v1.1.0', log: expect.stringMatching(/could not start the installer: spawn powershell EINVAL/) });
+    expect(s.exits).toEqual([]);
   });
 
   it('hands over to the new version once it is installed, then stops', async () => {
