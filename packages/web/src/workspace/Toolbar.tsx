@@ -1,5 +1,6 @@
 import { Download, FolderOpen, Link, Save } from '../ui/icons.tsx';
 import { examples } from '../registry.ts';
+import { VersionBadge } from '../update/VersionBadge.tsx';
 import { PANES, type Layout, type PaneId } from './layout.ts';
 
 export const PANE_LABELS: Record<PaneId, string> = { ai: 'AI', source: 'Source', diagram: 'Diagram' };
@@ -30,6 +31,7 @@ export function Toolbar(p: Props) {
         </span>
         JTDDiagrammar
       </h1>
+      <VersionBadge />
       <button type="button" className="btn" data-variant="ghost" title="Open (Ctrl+O)" onClick={p.onOpen}>
         <FolderOpen /> Open
       </button>

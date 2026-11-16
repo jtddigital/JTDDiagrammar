@@ -1,7 +1,8 @@
 /**
  * Install-and-launch test (URS-NF-010, URS-NF-011), run per OS in CI: pack a release, serve it from a
  * stand-in GitHub API that demands a token (as for a private repo), install it into a temporary
- * home with the real installer, start it with the real launcher, and probe it. Then update in place.
+ * home with the real installer, start it with the real launcher, and probe it. Then update in place,
+ * with the installer and from the app itself (URS-NF-015).
  */
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
@@ -13,6 +14,8 @@ import { join } from 'node:path';
 import { ASSET, pack } from './pack.ts';
 
 const TAG = 'v9.9.9';
+/** A newer release, published part-way through, for the app to update itself to. */
+const NEXT = 'v9.9.10';
 const TOKEN = 'e2e-token';
 const win = process.platform === 'win32';
 /** PowerShell to test with: Windows PowerShell 5.1 by default on Windows; JTD_E2E_PS=pwsh also runs the Windows scripts elsewhere. */
@@ -25,33 +28,37 @@ function check(ok: unknown, what: string): void {
   console.log(`ok - ${what}`);
 }
 
-/** Stand-in for api.github.com: release metadata and asset downloads, token required. */
-async function fakeGitHub(dir: string) {
+/** Stand-in for api.github.com: release metadata and asset downloads, token required. `publish` makes a later release the latest. */
+async function fakeGitHub(dirs: Record<string, string>) {
   let downloads = 0;
+  let latest = TAG;
   const server = createServer((req, res) => {
     if (req.headers.authorization !== `Bearer ${TOKEN}`) return res.writeHead(404).end('{"message":"Not Found"}');
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    if (req.url === '/repos/test/repo/releases/latest' || req.url === `/repos/test/repo/releases/tags/${TAG}`) {
-      const assets = [ASSET, `${ASSET}.sha256`].map((name, i) => ({ name, url: `${base}/assets/${i}` }));
-      return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ tag_name: TAG, assets }));
+    const tag = req.url === '/repos/test/repo/releases/latest' ? latest : Object.keys(dirs).find((t) => req.url === `/repos/test/repo/releases/tags/${t}`);
+    if (tag) {
+      const assets = [ASSET, `${ASSET}.sha256`].map((name, i) => ({ name, url: `${base}/assets/${tag}/${i}` }));
+      return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ tag_name: tag, assets }));
     }
     // A release made on the releases page, without the workflow's files.
     if (req.url === '/repos/test/repo/releases/tags/v0.0.1') return res.writeHead(200).end(JSON.stringify({ tag_name: 'v0.0.1', assets: [] }));
-    const m = /^\/assets\/([01])$/.exec(req.url ?? '');
-    if (m && req.headers.accept === 'application/octet-stream') {
+    const m = /^\/assets\/(v[\w.]+)\/([01])$/.exec(req.url ?? '');
+    if (m && dirs[m[1]!] && req.headers.accept === 'application/octet-stream') {
       downloads++;
-      return res.writeHead(200).end(readFileSync(join(dir, m[1] === '0' ? ASSET : `${ASSET}.sha256`)));
+      return res.writeHead(200).end(readFileSync(join(dirs[m[1]!]!, m[2] === '0' ? ASSET : `${ASSET}.sha256`)));
     }
     res.writeHead(404).end();
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  return { server, url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, downloads: () => downloads };
+  return { server, url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, downloads: () => downloads, publish: (t: string) => void (latest = t) };
 }
 
 const out = mkdtempSync(join(tmpdir(), 'jtd-release-'));
+const later = mkdtempSync(join(tmpdir(), 'jtd-release-next-'));
 const home = mkdtempSync(join(tmpdir(), 'jtd-home-'));
 pack(TAG, out);
-const gh = await fakeGitHub(out);
+pack(NEXT, later, false);
+const gh = await fakeGitHub({ [TAG]: out, [NEXT]: later });
 const env = { ...process.env, JTD_API: gh.url, JTD_REPO: 'test/repo', JTD_HOME: home, JTD_BIN: join(home, 'bin'), GITHUB_TOKEN: TOKEN, GH_TOKEN: '' };
 /** PowerShell arguments that run script `f` with `extra` arguments. */
 const psArgs = (f: string, extra: string[]) =>
@@ -146,6 +153,31 @@ try {
     if (!up) await new Promise((r) => setTimeout(r, 500));
   }
   check(up, 'restart starts it again');
+
+  // Updating from the app (URS-WEB-022, URS-NF-015): a newer release is published; the app installs it and restarts onto it.
+  gh.publish(NEXT);
+  const info = (await (await fetch(`${url}/v1/version?refresh=1`)).json()) as { version: string; latest?: string; updateAvailable: boolean; canUpdate: boolean; reason?: string };
+  if (!info.canUpdate) console.error(info);
+  check(info.version === TAG && info.latest === NEXT && info.updateAvailable && info.canUpdate, 'the app sees a newer release it can install');
+  const bareAsk = await fetch(`${url}/v1/update`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  check(bareAsk.status === 403, 'refuses an update request without the app’s header');
+  const asked = await fetch(`${url}/v1/update`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-jtd-update': '1' }, body: '{}' });
+  check(asked.status === 202, 'starts the update from the app');
+  let now: string | undefined;
+  for (let i = 0; i < 360 && now !== NEXT; i++) {
+    now = (await health())?.version;
+    if (now !== NEXT) await new Promise((r) => setTimeout(r, 500));
+  }
+  if (now !== NEXT) console.error(existsSync(join(home, 'update.log')) ? readFileSync(join(home, 'update.log'), 'utf8') : 'no update.log');
+  check(now === NEXT, 'installs the new release and restarts onto it');
+  // The new server was started by the updater, not by this test: stop it with the launcher.
+  const halted = await run(...launcher('stop'));
+  let quiet = false;
+  for (let i = 0; i < 40 && !quiet; i++) {
+    quiet = !(await health());
+    if (!quiet) await new Promise((r) => setTimeout(r, 500));
+  }
+  check(halted.status === 0 && quiet, 'the updated app stops with the launcher');
   const bare = await run(...installer('v0.0.1'));
   check(bare.status !== 0 && /v0\.0\.1 has no jtddiagrammar\.tar\.gz attached/.test(bare.stderr + bare.stdout), 'explains a release without the app bundle');
   const denied = await run(...installer(), { GITHUB_TOKEN: 'wrong' });
@@ -176,5 +208,6 @@ try {
   gh.server.close();
   await new Promise((r) => setTimeout(r, 500));
   rmSync(out, { recursive: true, force: true });
+  rmSync(later, { recursive: true, force: true });
   rmSync(home, { recursive: true, force: true, maxRetries: 5 });
 }

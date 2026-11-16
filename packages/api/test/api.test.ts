@@ -153,7 +153,9 @@ describe('other endpoints', () => {
       '/v1/schema',
       '/v1/schema/{type}',
       '/v1/types',
+      '/v1/update',
       '/v1/validate',
+      '/v1/version',
     ]);
     expect(Object.keys(doc.paths['/v1/generate'].post.requestBody.content)).toEqual(['multipart/form-data', 'application/json']);
     expect(doc.paths['/v1/render'].post.requestBody.content['application/json'].schema).toEqual({ $ref: '#/components/schemas/Diagram' });
