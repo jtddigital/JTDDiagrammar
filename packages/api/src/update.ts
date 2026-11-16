@@ -1,6 +1,8 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import { closeSync, existsSync, lstatSync, openSync, readFileSync, realpathSync, writeSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { Job } from './updater.ts';
 
 /** How this copy was installed, if it can update itself (URS-NF-015). */
 export interface Installation {
@@ -62,59 +64,29 @@ export async function latestRelease(env: NodeJS.ProcessEnv, fetcher: typeof fetc
 }
 
 export type Spawn = (cmd: string, args: string[], opts: SpawnOptions) => Pick<ChildProcess, 'once' | 'on' | 'unref' | 'pid'>;
-const quote = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
-const SHELL = { bash: 'bash', powershell: process.platform === 'win32' ? 'powershell' : 'pwsh' } as const;
-const PS = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command'];
+const UPDATER = fileURLToPath(new URL('./updater.ts', import.meta.url));
+
 /**
- * Run `cmd` in a process of its own that outlives this server, its output going to `log` after a line
- * saying what runs. A process that cannot start is an 'error' event: always listened to, so it can never
- * bring this server down.
+ * Start the updater (updater.ts) for `tag`, in a Node process of its own that outlives this server, with
+ * an IPC channel on which it says when the release is installed. Its log, `JTD_HOME/update.log`, starts
+ * with what runs. A process that cannot start emits 'error': always listened to, so it never brings this
+ * server down.
  */
-function detached(spawn: Spawn, inst: Installation, env: NodeJS.ProcessEnv, log: string, flags: 'w' | 'a', cmd: string, args: string[]) {
-  const fd = openSync(log, flags);
+export function startUpdate(inst: Installation, tag: string, env: NodeJS.ProcessEnv, probe: string, spawn: Spawn = nodeSpawn): { log: string; child: ReturnType<Spawn> } {
+  const log = join(inst.home, 'update.log');
+  const job: Job = { flavour: inst.flavour, root: inst.root, home: inst.home, tag, probe, log };
+  const args = [UPDATER, JSON.stringify(job)];
+  const fd = openSync(log, 'w');
   try {
-    writeSync(fd, `${new Date().toISOString()} running: ${[cmd, ...args].join(' ')}\n`);
-    const child = spawn(cmd, args, { env, detached: true, stdio: ['ignore', fd, fd], windowsHide: true, cwd: inst.home });
+    writeSync(fd, `${new Date().toISOString()} updating ${inst.version} to ${tag}: ${process.execPath} ${args.join(' ')}\n`);
+    const child = spawn(process.execPath, args, { env, detached: true, stdio: ['ignore', fd, fd, 'ipc'], windowsHide: true, cwd: inst.home });
     child.on('error', () => {});
     child.unref();
-    return child;
+    return { log, child };
   } finally {
     closeSync(fd);
   }
-}
-
-/**
- * Step 1 (URS-NF-015): install `tag` with this copy's own installer (download, checksum, dependencies) in
- * a process of its own, writing `JTD_HOME/update.log`. This server keeps running meanwhile.
- */
-export function startUpdate(inst: Installation, tag: string, env: NodeJS.ProcessEnv, spawn: Spawn = nodeSpawn): { log: string; child: ReturnType<Spawn> } {
-  const log = join(inst.home, 'update.log');
-  const child =
-    inst.flavour === 'bash'
-      ? detached(spawn, inst, env, log, 'w', SHELL.bash, [join(inst.root, 'bin', 'install.sh'), tag])
-      : // *>&1: Write-Host goes to the information stream, which a log file does not get otherwise. A throw is a failure too.
-        detached(spawn, inst, env, log, 'w', SHELL.powershell, [...PS, `try { & ${quote(join(inst.root, 'bin', 'install.ps1'))} ${quote(tag)} *>&1 } catch { $_; exit 1 }; if ($LASTEXITCODE) { exit $LASTEXITCODE }; exit 0`]);
-  return { log, child };
-}
-
-/**
- * Step 2, once the install has succeeded: a process of its own waits until this server stops answering at
- * `probe`, then starts the newly installed version with its launcher. The caller then exits this server.
- */
-export function restartOnto(inst: Installation, env: NodeJS.ProcessEnv, probe: string, spawn: Spawn = nodeSpawn): void {
-  const log = join(inst.home, 'update.log');
-  if (inst.flavour === 'bash')
-    detached(spawn, inst, env, log, 'a', SHELL.bash, ['-c', 'for _ in $(seq 1 60); do curl -sf "$1/health" >/dev/null 2>&1 || break; sleep 0.5; done; exec "$0/current/bin/jtddiagrammar" start --no-open', inst.home, probe]);
-  else
-    detached(spawn, inst, env, log, 'a', SHELL.powershell, [
-      ...PS,
-      [
-        `for ($i = 0; $i -lt 60; $i++) { try { [void](Invoke-WebRequest -Uri ${quote(`${probe}/health`)} -UseBasicParsing -TimeoutSec 2) } catch { break }; Start-Sleep -Milliseconds 500 }`,
-        "$v = (Get-Content (Join-Path $env:JTD_HOME 'current') -Raw).Trim()",
-        "& (Join-Path (Join-Path (Join-Path (Join-Path $env:JTD_HOME 'versions') $v) 'bin') 'jtddiagrammar.ps1') start --no-open *>&1",
-      ].join('; '),
-    ]);
 }
 
 /** The last lines of the update log, for a failed update. */

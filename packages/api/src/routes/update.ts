@@ -1,6 +1,6 @@
 import { error } from '@jtd/core';
 import type { FastifyRequest } from 'fastify';
-import { installation, latestRelease, newer, restartOnto, startUpdate, tail, type Spawn } from '../update.ts';
+import { installation, latestRelease, newer, startUpdate, tail, type Spawn } from '../update.ts';
 import type { Route } from './route.ts';
 
 /** What the update routes depend on, so tests can stand in for GitHub, the installer and the clock. */
@@ -80,17 +80,19 @@ export function updateRoutes(d: UpdateDeps): Route[] {
           if (!newer(l.tag, inst.version)) return reply.code(409).send({ diagnostics: [error('update.current', `${inst.version} is the latest release`)] });
           to = l.tag;
         }
-        const { log, child } = startUpdate(inst, to, d.env, d.spawn);
+        const { log, child } = startUpdate(inst, to, d.env, `http://127.0.0.1:${d.env.PORT || '8080'}`, d.spawn);
         state = { state: 'updating', to };
-        child.once('error', (e: Error) => {
-          state = { state: 'failed', to, log: `${tail(log)}\ncould not start the installer: ${e.message}`.trim() };
-        });
-        // Installed: hand over to the new version and stop. Failed: keep running and say why.
-        child.once('exit', (code: number | null) => {
-          if (code !== 0) return void (state = { state: 'failed', to, log: tail(log) || `the installer exited with ${code}` });
+        const failed = (why: string) => (state = { state: 'failed', to, log: `${tail(log)}\n${why}`.trim() });
+        child.once('error', (e: Error) => failed(`could not start the updater: ${e.message}`));
+        // Installed: the updater starts the new version once this server has gone, so stop.
+        child.on('message', (m: unknown) => {
+          if (state.state !== 'updating' || (m as { installed?: unknown } | null)?.installed !== to) return;
           state = { state: 'restarting', to };
-          restartOnto(inst, d.env, `http://127.0.0.1:${d.env.PORT || '8080'}`, d.spawn);
           (d.exit ?? (() => setTimeout(() => process.exit(0), 250)))();
+        });
+        // Exiting before saying so means the install failed; this server keeps running.
+        child.once('exit', (code: number | null) => {
+          if (state.state === 'updating') failed(`the update stopped (exit code ${code})`);
         });
         return reply.code(202).send({ state: 'updating', to, log });
       },

@@ -6,7 +6,11 @@ import type { FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.ts';
 import { fromEnv, type Config } from '../src/config.ts';
-import { installation, latestRelease, newer, restartOnto, startUpdate, type Spawn } from '../src/update.ts';
+import { fork } from 'node:child_process';
+import { once } from 'node:events';
+import { chmodSync } from 'node:fs';
+import { installation, latestRelease, newer, startUpdate, type Spawn } from '../src/update.ts';
+import { installer, launcher } from '../src/updater.ts';
 
 const cfg = (): Config => ({ ...fromEnv({}), webDist: undefined, renderWorkers: 1, registryModule: new URL('./registry-with-fixture.ts', import.meta.url).href }) as Config;
 
@@ -44,7 +48,8 @@ function spawner() {
     children.push(child);
     return child as never;
   };
-  return { spawn, calls, exit: (code: number) => children[0]!.emit('exit', code), fail: (e: Error) => children[0]!.emit('error', e) };
+  const first = () => children[0]!;
+  return { spawn, calls, exit: (code: number) => first().emit('exit', code), fail: (e: Error) => first().emit('error', e), say: (m: unknown) => first().emit('message', m) };
 }
 
 describe('updating in place (URS-NF-015)', () => {
@@ -75,26 +80,56 @@ describe('updating in place (URS-NF-015)', () => {
     expect(await latestRelease({}, (async () => Promise.reject(new Error('offline'))) as typeof fetch)).toEqual({ reason: expect.stringMatching(/reach GitHub/) });
   });
 
-  it('runs the installer detached, then starts the new version once this server has gone, logging to update.log', () => {
+  it('starts the updater as a Node process of its own, with a channel back, logging to update.log', () => {
     const { home, root } = installed();
     const s = spawner();
     const opts: unknown[] = [];
     const spawn: Spawn = (cmd, args, o) => (opts.push(o), s.spawn(cmd, args, o));
-    const inst = { version: 'v1.0.0', root, home, flavour: 'bash' as const };
-    const { log } = startUpdate(inst, 'v1.1.0', {}, spawn);
+    const { log } = startUpdate({ version: 'v1.0.0', root, home, flavour: 'bash' }, 'v1.1.0', {}, 'http://127.0.0.1:8080', spawn);
     expect(log).toBe(join(home, 'update.log'));
-    expect(s.calls[0]).toEqual({ cmd: 'bash', args: [join(root, 'bin', 'install.sh'), 'v1.1.0'] });
-    // The log starts with what runs.
-    expect(readFileSync(log, 'utf8')).toMatch(/running: bash .*install\.sh v1\.1\.0/);
-    expect(opts[0]).toMatchObject({ detached: true, windowsHide: true, cwd: home });
-    restartOnto(inst, {}, 'http://127.0.0.1:8080', spawn);
-    expect(s.calls[1]!.args.slice(2)).toEqual([home, 'http://127.0.0.1:8080']);
-    expect(s.calls[1]!.args[1]).toMatch(/curl -sf "\$1\/health".*exec "\$0\/current\/bin\/jtddiagrammar" start --no-open/);
-    const ps = { ...inst, flavour: 'powershell' as const };
-    startUpdate(ps, 'v1.1.0', {}, s.spawn);
-    expect(s.calls[2]!.args.at(-1)).toMatch(/install\.ps1' 'v1\.1\.0' \*>&1 \} catch \{ \$_; exit 1 \}; if \(\$LASTEXITCODE\)/);
-    restartOnto(ps, {}, 'http://127.0.0.1:8080', s.spawn);
-    expect(s.calls[3]!.args.at(-1)).toMatch(/Invoke-WebRequest -Uri 'http:\/\/127\.0\.0\.1:8080\/health'.*jtddiagrammar\.ps1'\) start --no-open/s);
+    expect(s.calls[0]!.cmd).toBe(process.execPath);
+    expect(s.calls[0]!.args[0]).toMatch(/updater\.ts$/);
+    expect(JSON.parse(s.calls[0]!.args[1]!)).toEqual({ flavour: 'bash', root, home, tag: 'v1.1.0', probe: 'http://127.0.0.1:8080', log });
+    expect(opts[0]).toMatchObject({ detached: true, windowsHide: true, cwd: home, stdio: ['ignore', expect.any(Number), expect.any(Number), 'ipc'] });
+    expect(readFileSync(log, 'utf8')).toMatch(/updating v1\.0\.0 to v1\.1\.0/);
+  });
+
+  it('runs each installer and launcher with plain arguments (PowerShell with -File)', () => {
+    const j = { root: '/app', home: '/home', tag: 'v1.1.0', probe: '', log: '' };
+    expect(installer({ ...j, flavour: 'bash' })).toEqual(['bash', [join('/app', 'bin', 'install.sh'), 'v1.1.0']]);
+    expect(installer({ ...j, flavour: 'powershell' })[1]).toEqual(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join('/app', 'bin', 'install.ps1'), 'v1.1.0']);
+    expect(launcher({ ...j, flavour: 'bash' }, '')).toEqual([join('/home', 'current', 'bin', 'jtddiagrammar'), ['start', '--no-open']]);
+    expect(launcher({ ...j, flavour: 'powershell' }, 'v1.1.0-ab12')[1]).toEqual(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join('/home', 'versions', 'v1.1.0-ab12', 'bin', 'jtddiagrammar.ps1'), 'start', '--no-open']);
+  });
+
+  it.skipIf(process.platform === 'win32')('installs, says so, waits for the old server, then starts and stays with the new launcher', async () => {
+    const { home, root } = installed();
+    const next = join(home, 'versions', 'v1.1.0');
+    mkdirSync(join(next, 'bin'), { recursive: true });
+    // A stand-in installer that switches `current`, and a launcher that notes it started.
+    writeFileSync(join(root, 'bin', 'install.sh'), `echo installing "$1"; ln -sfn versions/v1.1.0 "${home}/current"\n`);
+    writeFileSync(join(next, 'bin', 'jtddiagrammar'), `#!/usr/bin/env bash\necho "started $*"\n`);
+    chmodSync(join(next, 'bin', 'jtddiagrammar'), 0o755);
+    const log = join(home, 'update.log');
+    const job = { flavour: 'bash', root, home, tag: 'v1.1.0', probe: 'http://127.0.0.1:9', log };
+    const child = fork(new URL('../src/updater.ts', import.meta.url), [JSON.stringify(job)], { stdio: 'ignore' });
+    const [message] = (await once(child, 'message')) as [unknown];
+    expect(message).toEqual({ installed: 'v1.1.0' });
+    const [code] = (await once(child, 'exit')) as [number];
+    expect(code).toBe(0);
+    expect(readFileSync(log, 'utf8')).toMatch(/installing v1\.1\.0[^]*installed v1\.1\.0[^]*started start --no-open/);
+  });
+
+  it.skipIf(process.platform === 'win32')('exits with the installer’s code when it fails, without starting anything', async () => {
+    const { home, root } = installed();
+    writeFileSync(join(root, 'bin', 'install.sh'), 'echo "checksum mismatch"; exit 3\n');
+    const log = join(home, 'update.log');
+    const child = fork(new URL('../src/updater.ts', import.meta.url), [JSON.stringify({ flavour: 'bash', root, home, tag: 'v1.1.0', probe: 'http://127.0.0.1:9', log })], { stdio: 'ignore' });
+    const messages: unknown[] = [];
+    child.on('message', (m) => messages.push(m));
+    const [code] = (await once(child, 'exit')) as [number];
+    expect([code, messages]).toEqual([3, []]);
+    expect(readFileSync(log, 'utf8')).toMatch(/checksum mismatch[^]*the installer exited with 3/);
   });
 });
 
@@ -142,21 +177,22 @@ describe('GET /v1/version and POST /v1/update (URS-WEB-022, URS-NF-015)', () => 
     expect((await ask()).statusCode).toBe(202);
   });
 
-  it('reports an installer that cannot start, and keeps running', async () => {
+  it('reports an updater that cannot start, and keeps running', async () => {
     const s = await start();
     expect((await ask()).statusCode).toBe(202);
-    s.fail(new Error('spawn powershell EINVAL'));
-    expect((await app!.inject('/v1/version')).json().update).toEqual({ state: 'failed', to: 'v1.1.0', log: expect.stringMatching(/could not start the installer: spawn powershell EINVAL/) });
+    s.fail(new Error('spawn EINVAL'));
+    expect((await app!.inject('/v1/version')).json().update).toEqual({ state: 'failed', to: 'v1.1.0', log: expect.stringMatching(/could not start the updater: spawn EINVAL/) });
     expect(s.exits).toEqual([]);
   });
 
-  it('hands over to the new version once it is installed, then stops', async () => {
+  it('stops once the updater says the release is installed, leaving the restart to it', async () => {
     const s = await start();
     expect((await ask()).statusCode).toBe(202);
-    s.exit(0);
-    expect(s.calls).toHaveLength(2);
-    expect(s.calls[1]!.args).toContain('http://127.0.0.1:8080');
+    s.say({ installed: 'v0.0.1' });
+    expect(s.exits).toEqual([]);
+    s.say({ installed: 'v1.1.0' });
     expect(s.exits).toEqual([1]);
+    expect(s.calls).toHaveLength(1);
     expect((await app!.inject('/v1/version')).json().update).toEqual({ state: 'restarting', to: 'v1.1.0' });
   });
 
