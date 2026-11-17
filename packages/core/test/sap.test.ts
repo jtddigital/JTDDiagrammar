@@ -166,12 +166,12 @@ describe('SAP transaction control (URS-TYP-020)', () => {
       'Flag (any time)',
       'Next status (in range)',
       'Workflow start',
-      'Start conditions',
-      'Approval step',
+      'Start or release conditions',
+      'Approval step, release code',
       'Deadline',
       'Sets a status',
-      'Workflow end',
-      'Starts a workflow, rework',
+      'Workflow end, released',
+      'Starts a workflow or strategy, rework',
     ]);
   });
 
@@ -185,5 +185,69 @@ describe('SAP transaction control (URS-TYP-020)', () => {
         expect(n.x >= b.x - 0.5 && n.y >= b.y - 0.5 && n.x + n.w <= b.x + b.w + 0.5 && n.y + n.h <= b.y + b.h + 0.5, `${n.id} in ${id}`).toBe(true);
       }
     }
+  });
+});
+
+describe('SAP document flow (URS-TYP-023)', () => {
+  const flow = reg.type('sap')!.examples.find((e) => e.name === 'document-flow')!.source as Record<string, unknown>;
+
+  it('places each document in the status it is created in, else after the one it follows, linked both ways', () => {
+    const r = ir(flow);
+    const node = (id: string) => r.nodes.find((n) => n.id === id)!;
+    expect(r.partitions!.lanes.map((l) => l.id)).toEqual(['sap:system', 'sap:user', 'sap:documents', 'rs:z1']);
+    expect(node('doc:pr')).toMatchObject({ shape: 'document', label: 'Purchase requisition', sub: 'Non-stock components', lane: 'sap:documents', phase: 'col:user:INWK' });
+    expect(node('doc:gr').phase).toBe('col:user:INWK');
+    expect(node('doc:settle').phase).toBe('col:system:TECO');
+    expect(r.edges.find((e) => e.id === 'sys:REL>doc:pr')).toMatchObject({ marker: 'none', style: { dash: 'dotted' } });
+    expect(r.edges.filter((e) => e.to.startsWith('doc:') && !e.marker).map((e) => e.id)).toEqual(['doc:pr>doc:po', 'doc:po>doc:gr', 'doc:gr>doc:settle']);
+  });
+
+  it('checks document references and loops', () => {
+    const docs = (documents: object[]) => codes({ ...base, documents });
+    expect(docs([{ id: 'a', label: 'A', status: 'ZZ', from: ['nope'] }])).toEqual(
+      expect.arrayContaining([
+        ['ref.status', '/documents/0/status'],
+        ['ref.document', '/documents/0/from/0'],
+      ]),
+    );
+    expect(docs([{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }])).toContainEqual(['sap.document', '/documents/1/id']);
+    expect(docs([{ id: 'a', label: 'A', from: ['b'] }, { id: 'b', label: 'B', from: ['a'] }])).toContainEqual(['sap.documentLoop', '/documents/0']);
+  });
+});
+
+describe('SAP release strategy (URS-TYP-022)', () => {
+  const flow = reg.type('sap')!.examples.find((e) => e.name === 'document-flow')!.source as Record<string, unknown>;
+  const edge = (d: unknown, id: string) => ir(d).edges.find((e) => e.id === id);
+
+  it('starts from the document it releases, through its release conditions, releasing codes after their prerequisites', () => {
+    const r = ir(flow);
+    const node = (id: string) => r.nodes.find((n) => n.id === id)!;
+    expect(edge(flow, 'doc:pr>rs:z1:start:Release strategy')).toMatchObject({ style: { dash: 'dashed' } });
+    expect(node('rs:z1:start').phase).toBe('col:user:INWK');
+    expect(node('rs:z1:if')).toMatchObject({ shape: 'checkpoint', label: 'Release conditions', sub: 'Total value > 10,000 EUR\nPlant 1000' });
+    expect(node('rs:z1:code:P1')).toMatchObject({ shape: 'process', label: 'Purchasing manager', sub: 'Release code P1\nIndicator: Blocked, changeable' });
+    // P1 first; F1 and Q1 after it, in parallel; both last, so both release the document.
+    expect(edge(flow, 'rs:z1:if>rs:z1:code:P1')).toBeDefined();
+    expect(edge(flow, 'rs:z1:code:P1>rs:z1:code:F1:Release')).toBeDefined();
+    expect(edge(flow, 'rs:z1:code:P1>rs:z1:code:Q1:Release')).toBeDefined();
+    expect(edge(flow, 'rs:z1:code:P1>rs:z1:end:Release')).toBeUndefined();
+    expect(edge(flow, 'rs:z1:code:F1>rs:z1:end:Release')).toBeDefined();
+    expect(edge(flow, 'rs:z1:if>rs:z1:end:Conditions not met')).toMatchObject({ style: { dash: 'dashed' } });
+    expect(r.legend!.map((l) => l.label)).toEqual(expect.arrayContaining(['Document', 'Created in status', 'Start or release conditions']));
+  });
+
+  it('checks release codes: unique, at most eight, known prerequisites, no loops', () => {
+    const rs = (codes_: object[], extra: object = {}) => codes({ ...base, releaseStrategies: [{ id: 'z', label: 'Z', codes: codes_, ...extra }] });
+    expect(rs([{ code: 'A1' }, { code: 'A1' }])).toContainEqual(['sap.releaseCode', '/releaseStrategies/0/codes/1/code']);
+    expect(rs([{ code: 'A1', prerequisites: ['A1', 'B9'] }])).toEqual(
+      expect.arrayContaining([
+        ['sap.releaseCode', '/releaseStrategies/0/codes/0/prerequisites/0'],
+        ['ref.releaseCode', '/releaseStrategies/0/codes/0/prerequisites/1'],
+      ]),
+    );
+    expect(rs([{ code: 'A1', prerequisites: ['B1'] }, { code: 'B1', prerequisites: ['A1'] }])).toContainEqual(['sap.releaseOrder', '/releaseStrategies/0/codes']);
+    expect(rs(Array.from({ length: 9 }, (_, i) => ({ code: `C${i}` })))).toContainEqual(['schema.maxItems', '/releaseStrategies/0/codes']);
+    expect(rs([{ code: 'A1' }], { document: 'nope' })).toContainEqual(['ref.document', '/releaseStrategies/0/document']);
+    expect(rs([{ code: 'TOO' }])).toContainEqual(['schema.pattern', '/releaseStrategies/0/codes/0/code']);
   });
 });

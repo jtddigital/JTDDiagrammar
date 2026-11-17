@@ -56,5 +56,66 @@ export function validateSap(m: Sap): Diagnostic[] {
     });
     if (!w.trigger && !w.steps.some((s) => s.status)) out.push(warning('sap.place', `workflow '${w.id}' has no trigger status, so it is placed in the first column`, pointer('workflows', i)));
   });
+
+  // Document flow (URS-TYP-023): unique ids, known statuses and preceding documents, no loops.
+  const docs = new Map<string, number>();
+  m.documents?.forEach((d, i) => {
+    if (docs.has(d.id)) out.push(error('sap.document', `document id '${d.id}' is used twice`, pointer('documents', i, 'id')));
+    docs.set(d.id, i);
+    status(d.status, pointer('documents', i, 'status'), `document '${d.id}'`);
+  });
+  m.documents?.forEach((d, i) =>
+    d.from?.forEach((f, j) => {
+      if (!docs.has(f)) out.push(error('ref.document', `document '${d.id}' follows unknown document '${f}'`, pointer('documents', i, 'from', j)));
+      else if (f === d.id) out.push(error('sap.document', `document '${d.id}' follows itself`, pointer('documents', i, 'from', j)));
+    }),
+  );
+  const loop = cycle(new Map((m.documents ?? []).map((d) => [d.id, d.from ?? []])));
+  if (loop) out.push(warning('sap.documentLoop', `the document flow goes round in a loop: ${loop.join(' → ')}`, pointer('documents', docs.get(loop[0]!)!)));
+
+  // Release strategies (URS-TYP-022): known document and status; unique codes; prerequisites known and not circular.
+  m.releaseStrategies?.forEach((r, i) => {
+    if (r.document !== undefined && !docs.has(r.document)) out.push(error('ref.document', `release strategy '${r.id}' releases unknown document '${r.document}'`, pointer('releaseStrategies', i, 'document')));
+    status(r.status, pointer('releaseStrategies', i, 'status'), `release strategy '${r.id}'`);
+    const codes = new Set<string>();
+    r.codes.forEach((c, j) => {
+      if (codes.has(c.code)) out.push(error('sap.releaseCode', `release code '${c.code}' is used twice in '${r.id}'`, pointer('releaseStrategies', i, 'codes', j, 'code')));
+      codes.add(c.code);
+    });
+    r.codes.forEach((c, j) =>
+      c.prerequisites?.forEach((q, k) => {
+        const at = pointer('releaseStrategies', i, 'codes', j, 'prerequisites', k);
+        if (q === c.code) out.push(error('sap.releaseCode', `release code '${c.code}' cannot wait for itself`, at));
+        else if (!codes.has(q)) out.push(error('ref.releaseCode', `release code '${c.code}' waits for unknown code '${q}'`, at));
+      }),
+    );
+    const order = cycle(new Map(r.codes.map((c) => [c.code, c.prerequisites ?? []])));
+    if (order) out.push(error('sap.releaseOrder', `release codes wait for each other in a loop: ${order.join(' → ')}`, pointer('releaseStrategies', i, 'codes')));
+  });
   return out;
+}
+
+/** A loop in a graph given as node → predecessors, as the nodes along it; undefined when there is none. */
+function cycle(before: Map<string, string[]>): string[] | undefined {
+  const state = new Map<string, 'open' | 'done'>();
+  const path: string[] = [];
+  const visit = (n: string): string[] | undefined => {
+    if (state.get(n) === 'done') return undefined;
+    if (state.get(n) === 'open') return [...path.slice(path.indexOf(n)), n];
+    state.set(n, 'open');
+    path.push(n);
+    for (const p of before.get(n) ?? []) {
+      if (p === n || !before.has(p)) continue;
+      const found = visit(p);
+      if (found) return found;
+    }
+    path.pop();
+    state.set(n, 'done');
+    return undefined;
+  };
+  for (const n of before.keys()) {
+    const found = visit(n);
+    if (found) return found;
+  }
+  return undefined;
 }
