@@ -117,7 +117,8 @@ export interface Geometry {
 
 /** Annotations beside the diagram, as on an engineering drawing (URS-DM-029): each note's number and text. */
 export interface PlacedNotes extends Box {
-  items: { n: number; x: number; y: number; lines: string[] }[];
+  /** `text` is the note as written: the marker's tooltip. */
+  items: { n: number; text: string; x: number; y: number; lines: string[] }[];
 }
 
 /** The legend box under the diagram (URS-DM-026): each entry's sample box and text. */
