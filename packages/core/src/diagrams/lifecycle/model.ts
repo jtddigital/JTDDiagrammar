@@ -184,12 +184,14 @@ export interface Lifecycle {
   roleLanes?: boolean;
   /** Legend of the shapes, colours and markers used; default on (URS-DM-026). */
   legend?: boolean;
+  /** Show each step's owner under its label; default on (URS-DM-021). */
+  showOwners?: boolean;
   styles?: Partial<Record<'stages' | 'states' | 'workflows' | 'steps', Style>>;
   edgeStyle?: Style;
   /** Step styles by kind and owner, state styles by type (URS-DM-023). */
   styleBy?: StyleBy<'kind' | 'owner' | 'stateType'>;
-  /** Kinds of shape whose descriptive text (gate fields and criteria, record values, step fields) goes into annotations (URS-DM-029). */
-  annotate?: Annotated[];
+  /** By shape type, like `styles`: whether descriptive text (gate fields and criteria, record values, step fields) goes into annotations (URS-DM-029). */
+  annotate?: Annotate;
   stages?: LcStage[];
   states: LcState[];
   /** User actions available in several states, each drawn once. */
@@ -197,10 +199,15 @@ export interface Lifecycle {
   workflows?: LcWorkflow[];
 }
 
-export const ANNOTATED = ['gates', 'records', 'steps'] as const;
-export type Annotated = (typeof ANNOTATED)[number];
-/** Whether an item's descriptive text goes into its annotation: its own setting, else the chart's (URS-DM-029). */
-export const annotated = (m: Pick<Lifecycle, 'annotate'>, kind: Annotated, own: boolean | undefined) => own ?? !!m.annotate?.includes(kind);
+/** Shape types `annotate` takes: gates, records, every step, or one step kind. */
+export const ANNOTATED = ['gates', 'records', 'steps', ...STEP_KINDS] as const;
+export type Annotate = Partial<Record<(typeof ANNOTATED)[number], boolean>>;
+/**
+ * Whether an item's descriptive text goes into its annotation (URS-DM-029). Like styles: the item's own
+ * setting, then its shape type (a step's kind), then all steps.
+ */
+export const annotated = (m: Pick<Lifecycle, 'annotate'>, type: 'gates' | 'records' | StepKind, own: boolean | undefined) =>
+  own ?? m.annotate?.[type] ?? ((STEP_KINDS as readonly string[]).includes(type) ? m.annotate?.steps : undefined) ?? false;
 /** Annotation text from its parts, one per line. */
 export const noteOf = (...parts: (string | undefined)[]) => parts.filter(Boolean).join('\n') || undefined;
 

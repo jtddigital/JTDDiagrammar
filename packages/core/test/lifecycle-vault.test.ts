@@ -186,7 +186,7 @@ describe('legend (URS-DM-026)', () => {
       'Notification',
       'Parallel split / join',
       'System action',
-      'End',
+      'Workflow end',
       'QA Reviewer',
       'Change Owner',
       'Initial state',

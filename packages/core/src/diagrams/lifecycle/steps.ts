@@ -5,7 +5,7 @@ import { annotated, noteOf, stepsOf, type LcLink, type LcStep, type LcVerdict, t
 
 export const SHAPE: Record<StepKind, string> = {
   start: 'start',
-  end: 'terminator',
+  end: 'end',
   task: 'process',
   decision: 'decision',
   notification: 'document',
@@ -52,8 +52,8 @@ export function stepNode(m: Lifecycle, s: LcStep, src: string, stateLabel: (id: 
     s.label ??
     (kind === 'stateChange' ? stateLabel(s.target) : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
   // Owner under the divider (URS-DM-021), then the fields, unless they go into the annotation (URS-DM-029).
-  const note = annotated(m, 'steps', s.annotate);
-  const sub = [s.owner, ...(note ? [] : fieldsOf(s, kind))].filter(Boolean).join('\n') || undefined;
+  const note = annotated(m, kind, s.annotate);
+  const sub = [m.showOwners === false ? undefined : s.owner, ...(note ? [] : fieldsOf(s, kind))].filter(Boolean).join('\n') || undefined;
   const text = noteOf(note ? fieldsOf(s, kind).join('\n') : undefined, s.annotation);
   const badges = badgesOf(s);
   return {

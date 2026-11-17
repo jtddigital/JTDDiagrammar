@@ -10,7 +10,7 @@ const quote = text('Supporting excerpt from the source material; shown as a tool
 const optionalId = { ...id, description: 'Optional; generated when absent.' };
 const main = flag('On the main path: drawn bold while other connections fade.');
 const annotation = text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing.');
-const annotate = flag('Put the descriptive text in the annotation instead of on the chart. Default: whether the chart’s `annotate` lists this kind.');
+const annotate = flag('Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type.');
 
 /** A user action's fields; shared actions add their source states (URS-TYP-008, URS-TYP-009). */
 const action = {
@@ -47,7 +47,7 @@ const step = {
       type: 'string',
       enum: STEP_KINDS,
       default: 'task',
-      description: '`start` (a dot inside a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`.',
+      description: '`start` (a dot inside a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end` (a square inside a ring).',
     },
     label: text('Defaults: the id; for a state change, the target state’s name.'),
     owner: text('Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`.'),
@@ -105,10 +105,13 @@ export const lifecycleSchema = {
     styles: sectionStyles(['stages', 'states', 'workflows', 'steps']),
     edgeStyle: { ...style, description: 'Default style for every connection and user action; each one’s own `style` overrides it field by field.' },
     annotate: {
-      type: 'array',
-      items: { type: 'string', enum: ANNOTATED },
-      description: 'Kinds of shape whose descriptive text goes into annotations instead of on the chart: `gates` (label, required fields and criteria), `records` (starting values), `steps` (fields). Each item’s own `annotate` overrides it.',
+      type: 'object',
+      additionalProperties: false,
+      properties: Object.fromEntries(ANNOTATED.map((k) => [k, { type: 'boolean' }])),
+      description:
+        'By shape type, like `styles`: `true` puts the descriptive text into annotations instead of on the chart. `gates` (label, required fields and criteria), `records` (starting values), `steps` (every step’s fields), or a step kind (`task`, `system`, …) over `steps`. Each item’s own `annotate` wins. E.g. `{ "gates": true, "task": true }`.',
     },
+    showOwners: { type: 'boolean', default: true, description: 'Show each step’s owner under its label. Off, owners still pick their role band and `styleBy.owner` colour.' },
     styleBy: styleBy(
       { kind: STEP_KINDS, owner: undefined, stateType: STATE_TYPES },
       'Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`.',
