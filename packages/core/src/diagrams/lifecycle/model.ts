@@ -33,6 +33,8 @@ export interface LcSharedAction extends LcAction {
   /** Source states; default every state that is not final or cancelled. */
   from?: string[];
   except?: string[];
+  /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
+  annotation?: string;
 }
 
 /** What must hold to enter a state: drawn as a gate in front of it, which every way in passes (URS-TYP-018). */
@@ -42,6 +44,10 @@ export interface LcGate {
   fields?: string[];
   /** Entry criteria, e.g. "All change actions closed". */
   criteria?: string[];
+  /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
+  annotation?: string;
+  /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
+  annotate?: boolean;
   quote?: string;
   style?: Style;
 }
@@ -54,6 +60,10 @@ export interface LcRecord {
   label?: string;
   /** Values it is created with, e.g. "Owner = Change Owner". */
   fields?: string[];
+  /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
+  annotation?: string;
+  /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
+  annotate?: boolean;
   quote?: string;
   style?: Style;
 }
@@ -71,6 +81,8 @@ export interface LcState {
   gate?: LcGate;
   /** Child records made in this state. */
   records?: LcRecord[];
+  /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
+  annotation?: string;
   quote?: string;
   style?: Style;
   /** User actions leaving this state. */
@@ -131,6 +143,10 @@ export interface LcStep {
   /** Task with several participants. */
   completion?: (typeof COMPLETIONS)[number];
   order?: number;
+  /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
+  annotation?: string;
+  /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
+  annotate?: boolean;
   quote?: string;
   style?: Style;
   to?: LcLink[];
@@ -172,12 +188,21 @@ export interface Lifecycle {
   edgeStyle?: Style;
   /** Step styles by kind and owner, state styles by type (URS-DM-023). */
   styleBy?: StyleBy<'kind' | 'owner' | 'stateType'>;
+  /** Kinds of shape whose descriptive text (gate fields and criteria, record values, step fields) goes into annotations (URS-DM-029). */
+  annotate?: Annotated[];
   stages?: LcStage[];
   states: LcState[];
   /** User actions available in several states, each drawn once. */
   sharedActions?: LcSharedAction[];
   workflows?: LcWorkflow[];
 }
+
+export const ANNOTATED = ['gates', 'records', 'steps'] as const;
+export type Annotated = (typeof ANNOTATED)[number];
+/** Whether an item's descriptive text goes into its annotation: its own setting, else the chart's (URS-DM-029). */
+export const annotated = (m: Pick<Lifecycle, 'annotate'>, kind: Annotated, own: boolean | undefined) => own ?? !!m.annotate?.includes(kind);
+/** Annotation text from its parts, one per line. */
+export const noteOf = (...parts: (string | undefined)[]) => parts.filter(Boolean).join('\n') || undefined;
 
 export const ACTIONS_BAND = 'lifecycle:actions';
 export const pill = (state: string) => `state:${state}`;

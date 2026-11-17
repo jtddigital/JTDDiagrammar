@@ -1,5 +1,5 @@
 import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
-import { COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
+import { ANNOTATED, COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
 const text = (description: string) => ({ type: 'string', description }) as const;
@@ -9,6 +9,8 @@ const map = (description: string) => ({ type: 'object', additionalProperties: { 
 const quote = text('Supporting excerpt from the source material; shown as a tooltip.');
 const optionalId = { ...id, description: 'Optional; generated when absent.' };
 const main = flag('On the main path: drawn bold while other connections fade.');
+const annotation = text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing.');
+const annotate = flag('Put the descriptive text in the annotation instead of on the chart. Default: whether the chart’s `annotate` lists this kind.');
 
 /** A user action's fields; shared actions add their source states (URS-TYP-008, URS-TYP-009). */
 const action = {
@@ -45,7 +47,7 @@ const step = {
       type: 'string',
       enum: STEP_KINDS,
       default: 'task',
-      description: '`start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`.',
+      description: '`start` (a dot inside a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`.',
     },
     label: text('Defaults: the id; for a state change, the target state’s name.'),
     owner: text('Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`.'),
@@ -72,6 +74,8 @@ const step = {
     due: text('Task: time allowed, e.g. "5d" (badge).'),
     completion: { type: 'string', enum: COMPLETIONS, description: 'Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge).' },
     order: { type: 'integer', description: 'Hint: steps in the same cell are placed in ascending order.' },
+    annotation,
+    annotate,
     quote,
     style,
     to: {
@@ -100,6 +104,11 @@ export const lifecycleSchema = {
     legend: { type: 'boolean', default: true, description: 'Draw a legend of the shapes, colours and markers used.' },
     styles: sectionStyles(['stages', 'states', 'workflows', 'steps']),
     edgeStyle: { ...style, description: 'Default style for every connection and user action; each one’s own `style` overrides it field by field.' },
+    annotate: {
+      type: 'array',
+      items: { type: 'string', enum: ANNOTATED },
+      description: 'Kinds of shape whose descriptive text goes into annotations instead of on the chart: `gates` (label, required fields and criteria), `records` (starting values), `steps` (fields). Each item’s own `annotate` overrides it.',
+    },
     styleBy: styleBy(
       { kind: STEP_KINDS, owner: undefined, stateType: STATE_TYPES },
       'Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`.',
@@ -131,11 +140,13 @@ export const lifecycleSchema = {
           gate: {
             type: 'object',
             additionalProperties: false,
-            description: 'What must hold to enter the state: a gate (a box between two posts) in front of its pill in the actions band; every user action, shared action and transition into the state passes it.',
+            description: 'What must hold to enter the state: a small gate in front of its pill in the actions band, its text beside it (or in an annotation); every user action, shared action and transition into the state passes it.',
             properties: {
               label: text('Defaults to "Gate".'),
               fields: texts('Fields that must be complete; shown as "Required: …".'),
               criteria: texts('Entry criteria, one per line.'),
+              annotation,
+              annotate,
               quote,
               style,
             },
@@ -151,11 +162,14 @@ export const lifecycleSchema = {
                 record: text('Object of the child record, e.g. "Change Action".'),
                 label: text('Defaults to the object.'),
                 fields: texts('Values it is created with, e.g. "Owner = Change Owner"; shown under the label.'),
+                annotation,
+                annotate,
                 quote,
                 style,
               },
             },
           },
+          annotation,
           quote,
           style,
           to: {
@@ -177,6 +191,7 @@ export const lifecycleSchema = {
           ...action,
           from: { type: 'array', items: ref('State id.'), description: 'Source states. Default: every state that is not final or cancelled.' },
           except: { type: 'array', items: ref('State id.'), description: 'States left out of the default.' },
+          annotation,
         },
       },
     },

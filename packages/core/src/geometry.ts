@@ -31,6 +31,8 @@ export interface PlacedNode extends Box {
   sub?: string[];
   badges?: Badge[];
   callout?: Callout;
+  /** Number of its annotation in the notes (URS-DM-029). */
+  note?: number;
 }
 
 /** A placed edge label; `at` (percent of the edge's length) pins it (URS-DM-024). */
@@ -110,6 +112,12 @@ export interface Geometry {
   cells?: PlacedCell[];
   rules?: PlacedRule[];
   legend?: PlacedLegend;
+  notes?: PlacedNotes;
+}
+
+/** Annotations beside the diagram, as on an engineering drawing (URS-DM-029): each note's number and text. */
+export interface PlacedNotes extends Box {
+  items: { n: number; x: number; y: number; lines: string[] }[];
 }
 
 /** The legend box under the diagram (URS-DM-026): each entry's sample box and text. */

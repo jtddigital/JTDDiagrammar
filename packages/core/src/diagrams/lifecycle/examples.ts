@@ -7,6 +7,7 @@ const changeControl = {
   title: 'Change Control lifecycle',
   object: 'change_control__c',
   info: { Lifecycle: 'Change Control', Version: '3' },
+  annotate: ['gates'],
   styleBy: { owner: { 'QA Reviewer': { fill: '#e0f2f1', stroke: '#00897b' }, 'Change Owner': { fill: '#fdecea', stroke: '#c62828' } } },
   stages: [
     { id: 'initiation', label: 'Initiation', states: ['draft', 'in_review'] },
@@ -24,7 +25,7 @@ const changeControl = {
       to: [{ state: 'in_progress', label: 'Start work', main: true }],
     },
     { id: 'in_progress', label: 'In Progress', gate: { criteria: ['Change actions assigned'] } },
-    { id: 'closed', label: 'Closed', stateType: 'final', entryActions: ['Lock record'] },
+    { id: 'closed', label: 'Closed', stateType: 'final', entryActions: ['Lock record'], annotation: 'Closed records are kept for 10 years, then archived by the retention job.' },
     { id: 'cancelled', label: 'Cancelled', stateType: 'cancelled' },
   ],
   sharedActions: [{ state: 'cancelled', label: 'Cancel', except: ['closed'] }],
@@ -44,6 +45,7 @@ const changeControl = {
           due: '5d',
           completion: 'all',
           fields: ['Risk level'],
+          annotation: 'The reviewer must not be the change owner.',
           verdicts: [
             { name: 'Approve', step: 'r_approve', signature: true, main: true },
             { name: 'Reject', step: 'r_return', reasons: ['Incomplete', 'Out of scope'], comment: true },
@@ -77,7 +79,7 @@ export const examples: [Example, ...Example[]] = [
     name: 'change-control',
     title: 'Object lifecycle',
     description:
-      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates with required fields and criteria; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
+      'States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates and annotations; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.',
     source: changeControl,
   },
   {

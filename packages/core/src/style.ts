@@ -37,6 +37,11 @@ export const BADGE_H = 14;
 export const LEGEND_FONT: Font = { size: 11 };
 export const LEGEND_SAMPLE = { w: 34, h: 20 };
 export const LEGEND_GAP = 20;
+/** Annotations (URS-DM-029): marker balloon radius, notes text and width, gap to the diagram. */
+export const NOTE_R = 7;
+export const NOTE_FONT: Font = { size: 11 };
+export const NOTE_TEXT_MAX = 260;
+export const NOTES_GAP = 24;
 /** Title block text (URS-DM-027). */
 export const META_FONT: Font = { size: 11 };
 /** Default line width; arrowheads grow with thicker lines so they stay visible (URS-DM-014). */

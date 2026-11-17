@@ -249,7 +249,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 7
+    "bends": 8
   },
   "lifecycle-roles": {
     "crossings": 0,
@@ -258,7 +258,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 13
+    "bends": 14
   },
   "lifecycle-summary": {
     "crossings": 0,
@@ -267,7 +267,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 3
+    "bends": 8
   },
   "lifecycle-states-as-rows": {
     "crossings": 0,
@@ -276,7 +276,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 2
+    "bends": 0
   },
   "gantt-basic": {
     "crossings": 0,

@@ -22,6 +22,8 @@ export interface Shape {
   solid?(w: number, h: number): string;
   /** The shape draws no label (pseudostates). */
   unlabelled?: boolean;
+  /** A symbol that keeps its own size: its text, if any, always goes in a callout beside it (gates, URS-TYP-018). */
+  aside?: boolean;
   /** Sized for left-to-right flow and turned a quarter for top-to-bottom, so it always lies across the flow (bars). */
   across?: boolean;
   /** Edges attach only at the four side midpoints (diamonds); the router allocates them jointly. */

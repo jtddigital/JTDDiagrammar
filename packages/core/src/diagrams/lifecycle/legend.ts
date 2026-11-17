@@ -5,8 +5,8 @@ import { DASHED, hasMain, MAIN, SHAPE } from './steps.ts';
 import { stateStyle } from './state-style.ts';
 
 const KIND: Record<StepKind, string> = {
-  start: 'Start / end',
-  end: 'Start / end',
+  start: 'Workflow start',
+  end: 'End',
   task: 'Task',
   decision: 'Decision',
   notification: 'Notification',
