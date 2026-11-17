@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.56 (draft) |
+| Version | 0.57 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -101,7 +101,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-026 | S | Legend: a type lists what a chart uses (shape, icon or line sample plus text). It is drawn in a box under the diagram, in rows no wider than the diagram, independent of the layout engine. | Only used items; inside the drawing; can be switched off. | T | Verified |
 | URS-DM-027 | S | Title block: key–value pairs on one line under the title. | Rendered under the title; drawing grows for it. | T | Verified |
 | URS-DM-028 | S | Bar shape for parallel splits and joins. It lies across the flow in both directions and takes edges only on its long sides. | Turned for TB; polish never enters a short side. | T | Verified |
-| URS-DM-029 | S | Annotations, as on an engineering drawing: a node can carry an annotation, drawn as a numbered balloon on its top-left corner, with the text listed by number in a Notes box beside the diagram (top right). Numbers follow node order; nodes with the same text share a number. Works with every layout engine. | Balloons in the node's group; notes box right of the drawing, which grows to hold it; long text wraps; nothing drawn without annotations. | T | Verified |
+| URS-DM-029 | S | Annotations, as on an engineering drawing: a node can carry an annotation, drawn as a numbered balloon on its top-left corner, with the text listed by number in a Notes box beside the diagram (top right). Numbers follow node order; nodes with the same text share a number. Hovering a balloon shows its note as a tooltip. Works with every layout engine. | Balloons in the node's group, each with its note as a tooltip; notes box right of the drawing, which grows to hold it; long text wraps; nothing drawn without annotations. | T | Verified |
 | URS-DM-018 | C | Org charts: a top-level `lineStyle` for reporting lines, consistent with `edgeStyle` and `transitionStyle`, replacing `styles.lines`. | Default applied to every reporting line; `styles.lines` removed. | T | Proposed |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
 | URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
@@ -375,6 +375,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.57 | 2026-11-17 | Owner request: annotation markers show their note as a tooltip. DM-029 extended. |
 | 0.56 | 2026-11-17 | Owner request: a chart designed for SAP. Added TYP-019 (statuses), TYP-020 (transaction control matrix, off by default), TYP-021 (flexible workflow), per the agreed proposal: two status rows, arrows from ranges by default. |
 | 0.55 | 2026-11-17 | Owner request: workflow start as a play button in a ring, end as an X in a ring. TYP-009 updated. |
 | 0.54 | 2026-11-17 | Owner request: owners under steps optional; workflow end drawn small as a stop; `annotate` by shape type like styles. TYP-009 and TYP-018 extended. |

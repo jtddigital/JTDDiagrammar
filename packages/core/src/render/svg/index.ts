@@ -53,7 +53,7 @@ const marker = (a: Arrow, P: Palette) => {
 const arrowOf = (e: RoutedEdge, P: Palette): Arrow | undefined =>
   e.marker === 'none' || e.style?.arrowhead === 'none' ? undefined : { head: e.style?.arrowhead ?? 'triangle', color: e.style?.stroke ?? P.edge, width: e.style?.lineWidth ?? M.stroke };
 
-function node(n: PlacedNode, P: Palette): string {
+function node(n: PlacedNode, P: Palette, notes?: ReadonlyMap<number, string>): string {
   const s = shape(n.shape);
   const line = n.style?.stroke ?? P.nodeStroke;
   const width: number = n.style?.lineWidth ?? M.stroke;
@@ -67,7 +67,7 @@ function node(n: PlacedNode, P: Palette): string {
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})"${opacity(n.style?.opacity)}>` +
     tooltip(n.quote) +
-    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${badges(n, line, P)}${callout(n, font, attrs, P)}${n.note ? balloon(-3, -3, n.note, line, P) : ''}</g>`
+    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${badges(n, line, P)}${callout(n, font, attrs, P)}${n.note ? balloon(-3, -3, n.note, line, P, notes?.get(n.note)) : ''}</g>`
   );
 }
 
@@ -141,6 +141,8 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
   const H = g.height + titleH + 2 * M.margin;
   const cls = ['jtd', ...(opts.className ? [opts.className] : [])].join(' ');
   const titleSvg = title ? lines(title.lines, W / 2, M.margin, TITLE_FONT, ` font-size="${TITLE_FONT.size}" font-weight="bold" class="jtd-title"`) : '';
+  // Each annotation marker's tooltip is its note (URS-DM-029).
+  const noteText = new Map((g.notes?.items ?? []).map((i) => [i.n, i.text]));
   const plain: Arrow = { head: 'triangle', color: P.edge, width: M.stroke };
   const arrows = new Map<string, Arrow>([[markerId(plain, P), plain]]);
   for (const e of g.edges) {
@@ -160,7 +162,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     grid(g.cells, g.rules, P) +
     containers(g.containers, P) +
     g.edges.map((e) => edge(e, P)).join('') +
-    g.nodes.map((n) => node(n, P)).join('') +
+    g.nodes.map((n) => node(n, P, noteText)).join('') +
     legend(g.legend, P) +
     notes(g.notes, P) +
     `</g></g></svg>\n`

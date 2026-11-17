@@ -28,7 +28,7 @@ export function withNotes(g: Geometry, nodes: readonly IRNode[]): Geometry {
   let w = 0;
   const items: PlacedNotes['items'] = texts.map((t, i) => {
     const b = textBlock(t, NOTE_TEXT_MAX, NOTE_FONT);
-    const item = { n: i + 1, x: x + PAD, y, lines: b.lines };
+    const item = { n: i + 1, text: t, x: x + PAD, y, lines: b.lines };
     y += Math.max(2 * NOTE_R, b.height) + ROW_GAP;
     w = Math.max(w, b.width);
     return item;
