@@ -1060,7 +1060,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Object lifecycle
 
-`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates with required fields and criteria; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
+`type: lifecycle` · States as columns grouped by lifecycle stage, workflows as rows. Task verdicts with eSignature, due time and participants; a parallel split and join; a system action setting fields; entry gates and annotations; a child record made on approval; a shared Cancel action; what starts each workflow; the main path in bold; security, title block and legend.
 
 ![Object lifecycle](docs/img/lifecycle-change-control.svg)
 
@@ -1076,6 +1076,9 @@ The examples and images below are generated from the registered types (`pnpm doc
     "Lifecycle": "Change Control",
     "Version": "3"
   },
+  "annotate": [
+    "gates"
+  ],
   "styleBy": {
     "owner": {
       "QA Reviewer": {
@@ -1175,7 +1178,8 @@ The examples and images below are generated from the registered types (`pnpm doc
       "stateType": "final",
       "entryActions": [
         "Lock record"
-      ]
+      ],
+      "annotation": "Closed records are kept for 10 years, then archived by the retention job."
     },
     {
       "id": "cancelled",
@@ -1233,6 +1237,7 @@ The examples and images below are generated from the registered types (`pnpm doc
           "fields": [
             "Risk level"
           ],
+          "annotation": "The reviewer must not be the change owner.",
           "verdicts": [
             {
               "name": "Approve",
@@ -1401,6 +1406,9 @@ The examples and images below are generated from the registered types (`pnpm doc
     "Lifecycle": "Change Control",
     "Version": "3"
   },
+  "annotate": [
+    "gates"
+  ],
   "styleBy": {
     "owner": {
       "QA Reviewer": {
@@ -1500,7 +1508,8 @@ The examples and images below are generated from the registered types (`pnpm doc
       "stateType": "final",
       "entryActions": [
         "Lock record"
-      ]
+      ],
+      "annotation": "Closed records are kept for 10 years, then archived by the retention job."
     },
     {
       "id": "cancelled",
@@ -1558,6 +1567,7 @@ The examples and images below are generated from the registered types (`pnpm doc
           "fields": [
             "Risk level"
           ],
+          "annotation": "The reviewer must not be the change owner.",
           "verdicts": [
             {
               "name": "Approve",
@@ -1727,6 +1737,9 @@ The examples and images below are generated from the registered types (`pnpm doc
     "Lifecycle": "Change Control",
     "Version": "3"
   },
+  "annotate": [
+    "gates"
+  ],
   "styleBy": {
     "owner": {
       "QA Reviewer": {
@@ -1826,7 +1839,8 @@ The examples and images below are generated from the registered types (`pnpm doc
       "stateType": "final",
       "entryActions": [
         "Lock record"
-      ]
+      ],
+      "annotation": "Closed records are kept for 10 years, then archived by the retention job."
     },
     {
       "id": "cancelled",
@@ -1884,6 +1898,7 @@ The examples and images below are generated from the registered types (`pnpm doc
           "fields": [
             "Risk level"
           ],
+          "annotation": "The reviewer must not be the change owner.",
           "verdicts": [
             {
               "name": "Approve",
@@ -2665,6 +2680,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `legend` | boolean |  | Draw a legend of the shapes, colours and markers used. |
 | `styles` | styles by key |  | Default style per section (`stages`, `states`, `workflows`, `steps`); each item’s own `style` overrides it field by field. |
 | `edgeStyle` | style |  | Default style for every connection and user action; each one’s own `style` overrides it field by field. |
+| `annotate` | list of `gates` \| `records` \| `steps` |  | Kinds of shape whose descriptive text goes into annotations instead of on the chart: `gates` (label, required fields and criteria), `records` (starting values), `steps` (fields). Each item’s own `annotate` overrides it. |
 | `styleBy` | object |  | Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`. |
 | `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `parallel`, `join`, `end`. |
 | `styleBy.owner` | object |  | Style for every item with this `owner`, by value. |
@@ -2681,18 +2697,23 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].entryCriteria` | list of string |  | Shown under the state header. To draw them in front of the state, use `gate`. |
 | `states[].entryActions` | list of string |  | Shown under the state header. |
 | `states[].security` | object |  | Access per role in this state, e.g. `{ "Owner": "Edit", "Viewer": "Read" }`; shown under the header. |
-| `states[].gate` | object |  | What must hold to enter the state: a gate (a box between two posts) in front of its pill in the actions band; every user action, shared action and transition into the state passes it. |
+| `states[].gate` | object |  | What must hold to enter the state: a small gate in front of its pill in the actions band, its text beside it (or in an annotation); every user action, shared action and transition into the state passes it. |
 | `states[].gate.label` | string |  | Defaults to "Gate". |
 | `states[].gate.fields` | list of string |  | Fields that must be complete; shown as "Required: …". |
 | `states[].gate.criteria` | list of string |  | Entry criteria, one per line. |
+| `states[].gate.annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `states[].gate.annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: whether the chart’s `annotate` lists this kind. |
 | `states[].gate.quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].gate.style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].records` | list of objects |  | Child (related) records made in this state: drawn in the actions band next to the state, joined to it by a dotted line, not as workflow steps. |
 | `states[].records[].record` | string | yes | Object of the child record, e.g. "Change Action". |
 | `states[].records[].label` | string |  | Defaults to the object. |
 | `states[].records[].fields` | list of string |  | Values it is created with, e.g. "Owner = Change Owner"; shown under the label. |
+| `states[].records[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `states[].records[].annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: whether the chart’s `annotate` lists this kind. |
 | `states[].records[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].records[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `states[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
@@ -2721,6 +2742,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `sharedActions[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `sharedActions[].from` | list of string |  | Source states. Default: every state that is not final or cancelled. |
 | `sharedActions[].except` | list of string |  | States left out of the default. |
+| `sharedActions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
 | `workflows` | list of objects |  | Workflows: one row (or column) each. |
 | `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].label` | string | yes | Workflow name. |
@@ -2732,7 +2754,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].start.by` | `user` \| `entry` \| `job` |  | `user` action, `entry` into the state, or a scheduled `job`. |
 | `workflows[].steps` | list of objects | yes |  |
 | `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
-| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `parallel` \| `join` \| `end` |  | `start`, `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`. |
+| `workflows[].steps[].kind` | `start` \| `task` \| `decision` \| `notification` \| `system` \| `stateChange` \| `parallel` \| `join` \| `end` |  | `start` (a dot inside a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end`. |
 | `workflows[].steps[].label` | string |  | Defaults: the id; for a state change, the target state’s name. |
 | `workflows[].steps[].owner` | string |  | Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`. |
 | `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
@@ -2757,6 +2779,8 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].steps[].due` | string |  | Task: time allowed, e.g. "5d" (badge). |
 | `workflows[].steps[].completion` | `all` \| `any` \| `each` |  | Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge). |
 | `workflows[].steps[].order` | integer |  | Hint: steps in the same cell are placed in ascending order. |
+| `workflows[].steps[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `workflows[].steps[].annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: whether the chart’s `annotate` lists this kind. |
 | `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows[].steps[].to` | list of objects |  | Next steps. |

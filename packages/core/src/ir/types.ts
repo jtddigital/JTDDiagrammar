@@ -40,6 +40,8 @@ export interface IRNode extends Sourced {
   label: string;
   /** Secondary text under a divider, e.g. who owns a task (URS-DM-021). */
   sub?: string;
+  /** Annotation (URS-DM-029): listed in the notes beside the diagram, referenced by a numbered marker on the node. */
+  note?: string;
   badges?: Badge[];
   parent?: string;
   order?: number;

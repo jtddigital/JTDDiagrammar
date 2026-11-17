@@ -48,6 +48,13 @@ function sizedLR(n: IRNode): SizedNode {
   const font = fontOf(NODE_FONT, st);
   const base = { id: n.id, shape: n.shape, ...(n.order !== undefined && { order: n.order }) };
   const mode = st?.label ?? 'inside';
+  // Symbols of their own size with text beside them (gates).
+  if (s.aside) {
+    const own = s.size(0, 0);
+    if (!n.label && !n.sub) return { ...base, lines: [], ...own };
+    const c = stack(n.label, n.sub, CALLOUT_TEXT_MAX, font);
+    return { ...base, lines: [], ...own, callout: { ...text(c), w: c.width + 2 * CALLOUT_PAD.x, h: c.height + 2 * CALLOUT_PAD.y } };
+  }
   // Symbols without labels (pseudostates) keep their own size.
   if (s.unlabelled || (mode === 'inside' && st?.width === undefined && st?.height === undefined)) {
     const t = stack(n.label, n.sub, NODE_TEXT_MAX, font);

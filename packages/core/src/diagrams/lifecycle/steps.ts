@@ -1,10 +1,10 @@
 import type { Badge, EdgeLabel, IREdge, IRNode, Style } from '../../ir/types.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { merged, over, ruled } from '../section-styles.ts';
-import { stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
+import { annotated, noteOf, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
 
 export const SHAPE: Record<StepKind, string> = {
-  start: 'terminator',
+  start: 'start',
   end: 'terminator',
   task: 'process',
   decision: 'decision',
@@ -31,9 +31,8 @@ export const hasMain = (m: Lifecycle) =>
 export const edgeStyleOf = (m: Lifecycle, main: boolean | undefined, own: Style | undefined, extra?: Style) =>
   over(merged(merged(m.edgeStyle, hasMain(m) ? (main ? MAIN : FADED) : undefined), extra), own);
 
-/** Text under the divider: owner, then the fields a task completes or a system action sets (URS-DM-021). */
-const subOf = (s: LcStep, kind: StepKind) =>
-  [s.owner, ...(s.fields?.length ? (kind === 'task' ? [`Complete: ${s.fields.join(', ')}`] : s.fields) : [])].filter(Boolean).join('\n') || undefined;
+/** The fields a task completes or a system action sets. */
+const fieldsOf = (s: LcStep, kind: StepKind) => (s.fields?.length ? (kind === 'task' ? [`Complete: ${s.fields.join(', ')}`] : s.fields) : []);
 
 /** Badges: eSignature, due time, and how several participants complete (URS-DM-025). */
 const badgesOf = (s: LcStep): Badge[] => [
@@ -52,13 +51,17 @@ export function stepNode(m: Lifecycle, s: LcStep, src: string, stateLabel: (id: 
   const label =
     s.label ??
     (kind === 'stateChange' ? stateLabel(s.target) : kind === 'start' ? 'Start' : kind === 'end' ? 'End' : kind === 'parallel' || kind === 'join' ? '' : s.id);
-  const sub = subOf(s, kind);
+  // Owner under the divider (URS-DM-021), then the fields, unless they go into the annotation (URS-DM-029).
+  const note = annotated(m, 'steps', s.annotate);
+  const sub = [s.owner, ...(note ? [] : fieldsOf(s, kind))].filter(Boolean).join('\n') || undefined;
+  const text = noteOf(note ? fieldsOf(s, kind).join('\n') : undefined, s.annotation);
   const badges = badgesOf(s);
   return {
     id: s.id,
     shape: SHAPE[kind],
     label,
     ...(sub && { sub }),
+    ...(text && { note: text }),
     ...(badges.length && { badges }),
     ...place,
     ...(s.order !== undefined && { order: s.order }),

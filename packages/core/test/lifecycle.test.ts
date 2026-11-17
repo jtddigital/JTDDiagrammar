@@ -69,8 +69,9 @@ describe('lifecycle type (URS-TYP-008)', () => {
 
   it('puts a gate in front of a state that every way in passes (URS-TYP-018)', () => {
     const r = ir(ex);
-    expect(r.nodes.find((n) => n.id === 'state:in_review:gate')).toMatchObject({ shape: 'checkpoint', label: 'Gate', sub: 'Required: Description, Impact assessment', phase: 'in_review', src: '/states/1/gate' });
-    expect(r.nodes.find((n) => n.id === 'state:in_progress:gate')!.sub).toBe('Change actions assigned');
+    // The example annotates its gates: the text goes into the note (URS-DM-029).
+    expect(r.nodes.find((n) => n.id === 'state:in_review:gate')).toMatchObject({ shape: 'checkpoint', label: '', note: 'Required: Description, Impact assessment', phase: 'in_review', src: '/states/1/gate' });
+    expect(r.nodes.find((n) => n.id === 'state:in_progress:gate')!.note).toBe('Change actions assigned');
     expect(r.edges.find((e) => e.id === 'state:in_progress:gate:link')).toMatchObject({ from: 'state:in_progress:gate', to: 'state:in_progress', style: { lineWidth: 2.5 } });
     // User actions end at the gate, not the pill.
     expect(r.edges.find((e) => e.id === 'action:approved:0')!.to).toBe('state:in_progress:gate');
@@ -83,6 +84,57 @@ describe('lifecycle type (URS-TYP-008)', () => {
     const s = ir({ ...ex, view: 'summary' });
     expect(s.edges.find((e) => e.id === 'flow:review:draft:in_review')!.to).toBe('state:in_review:gate');
     expect(s.nodes.some((n) => n.shape === 'checkpoint')).toBe(true);
+  });
+
+  it('draws a gate as a small symbol with its text beside it, or in its annotation (URS-TYP-018, URS-DM-029)', () => {
+    const gate = { label: 'QA check', fields: ['X'], criteria: ['Y'] };
+    const d = (over: object, own: object = {}) => ({ ...tiny, ...over, states: [{ id: 'a', stateType: 'initial', gate: { ...gate, ...own } }, { id: 'b' }] });
+    const node = (doc: object) => ir(doc).nodes.find((n) => n.id === 'state:a:gate')!;
+    const placed = (doc: object) => render(doc, reg).geometry!.nodes.find((n) => n.id === 'state:a:gate')!;
+    // Beside it: a callout with the label over the text; the symbol keeps its size.
+    expect(node(d({}))).toMatchObject({ label: 'QA check', sub: 'Required: X\nY' });
+    const beside = placed(d({}));
+    expect([beside.w, beside.h, beside.lines]).toEqual([28, 36, []]);
+    expect(beside.callout!.lines).toEqual(['QA check']);
+    // Annotated, by the chart or by the gate: everything in the note, no callout.
+    for (const doc of [d({ annotate: ['gates'] }), d({}, { annotate: true })]) {
+      expect(node(doc)).toMatchObject({ label: '', note: 'QA check\nRequired: X\nY' });
+      expect(node(doc).sub).toBeUndefined();
+      expect(placed(doc).callout).toBeUndefined();
+      expect(placed(doc).note).toBe(1);
+    }
+    // The gate's own setting wins; its own annotation is added either way.
+    expect(node(d({ annotate: ['gates'] }, { annotate: false, annotation: 'Z' }))).toMatchObject({ label: 'QA check', note: 'Z' });
+  });
+
+  it('annotates any shape, and moves descriptive text into annotations when asked (URS-DM-029)', () => {
+    const d = {
+      ...tiny,
+      states: [{ id: 'a', stateType: 'initial', annotation: 'On pill', records: [{ record: 'CAPA', fields: ['Owner = QA'] }] }, { id: 'b' }],
+      sharedActions: [{ state: 'b', from: ['a'], annotation: 'On shared' }],
+      workflows: [{ id: 'w', label: 'W', steps: [{ id: 's', kind: 'start', state: 'a', to: [{ step: 't' }] }, { id: 't', owner: 'QA', fields: ['F'], state: 'a', annotation: 'On step', to: [{ step: 'go' }] }, { id: 'go', kind: 'stateChange', target: 'b' }] }],
+    };
+    const nodes = (doc: object) => new Map(ir(doc).nodes.map((n) => [n.id, n]));
+    const plain = nodes(d);
+    expect(plain.get('state:a')!.note).toBe('On pill');
+    expect(plain.get('shared:0:from')!.note).toBe('On shared');
+    expect(plain.get('t')).toMatchObject({ sub: 'QA\nComplete: F', note: 'On step' });
+    expect(plain.get('state:a:record:0')).toMatchObject({ sub: 'Owner = QA' });
+    expect(plain.get('state:a:record:0')!.note).toBeUndefined();
+    // Records and steps annotated: the owner stays under the divider, the fields join the note.
+    const moved = nodes({ ...d, annotate: ['records', 'steps'] });
+    expect(moved.get('t')).toMatchObject({ sub: 'QA', note: 'Complete: F\nOn step' });
+    expect(moved.get('state:a:record:0')).toMatchObject({ note: 'Owner = QA' });
+    expect(moved.get('state:a:record:0')!.sub).toBeUndefined();
+    // Numbered in node order, listed beside the chart.
+    const g = render({ ...d, annotate: ['records', 'steps'] }, reg).geometry!;
+    expect(g.notes!.items.map((i) => i.lines.join(' '))).toEqual(['On pill', 'Owner = QA', 'On shared', 'Complete: F On step']);
+    expect(codes({ ...d, annotate: ['nope'] })).toEqual([['schema.enum', '/annotate/0']]);
+  });
+
+  it('draws a workflow start as a dot inside a ring (URS-TYP-009)', () => {
+    expect(ir(tiny).nodes.find((n) => n.id === 's')).toMatchObject({ shape: 'start' });
+    expect(render(tiny, reg).svg).toContain('class="jtd-node jtd-shape-start"');
   });
 
   it('styles steps by section, then kind, then owner, then their own style (URS-DM-023)', () => {

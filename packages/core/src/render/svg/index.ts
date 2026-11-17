@@ -10,6 +10,7 @@ import { esc } from './escape.ts';
 import { grid } from './grid.ts';
 import { icon } from './icons.ts';
 import { legend } from './legend.ts';
+import { balloon, notes } from './notes.ts';
 import { fontAttrs, lines, stack } from './text.ts';
 import { dash, METRICS as M, opacity, PALETTES, type Palette } from './theme.ts';
 import type { Style } from '../../ir/types.ts';
@@ -66,7 +67,7 @@ function node(n: PlacedNode, P: Palette): string {
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})"${opacity(n.style?.opacity)}>` +
     tooltip(n.quote) +
-    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${badges(n, line, P)}${callout(n, font, attrs, P)}</g>`
+    `<path d="${s.outline(n.w, n.h)}" fill="${fill}" ${stroke(line, width)}${dash(n.style?.dash)}/>${detail}${solid}${text}${badges(n, line, P)}${callout(n, font, attrs, P)}${n.note ? balloon(-3, -3, n.note, line, P) : ''}</g>`
   );
 }
 
@@ -161,6 +162,7 @@ export function renderSvg(g: Geometry, opts: SvgOptions = {}): string {
     g.edges.map((e) => edge(e, P)).join('') +
     g.nodes.map((n) => node(n, P)).join('') +
     legend(g.legend, P) +
+    notes(g.notes, P) +
     `</g></g></svg>\n`
   );
 }

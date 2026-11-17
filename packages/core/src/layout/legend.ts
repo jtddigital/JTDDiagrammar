@@ -15,7 +15,7 @@ function sampleSize(it: LegendItem): { w: number; h: number } {
   if (it.icon) return { w: ICON, h: ICON };
   if (!it.shape) return { w: LINE_W, h: ICON };
   const s = shape(it.shape);
-  if (!s.unlabelled) return LEGEND_SAMPLE;
+  if (!s.unlabelled && !s.aside) return LEGEND_SAMPLE;
   const own = s.size(0, 0);
   return { w: Math.min(own.w, LEGEND_SAMPLE.w), h: Math.min(own.h, LEGEND_SAMPLE.h) };
 }

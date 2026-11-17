@@ -180,12 +180,13 @@ describe('role lanes (URS-TYP-010)', () => {
 describe('legend (URS-DM-026)', () => {
   it('lists the shapes, colours, markers and lines the chart uses, and nothing else', () => {
     expect(ir(cc).legend!.map((l) => l.label)).toEqual([
-      'Start / end',
+      'Workflow start',
       'State change',
       'Task',
       'Notification',
       'Parallel split / join',
       'System action',
+      'End',
       'QA Reviewer',
       'Change Owner',
       'Initial state',

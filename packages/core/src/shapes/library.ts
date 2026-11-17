@@ -119,6 +119,18 @@ const initial: Shape = { id: 'initial', unlabelled: true, size: fixed(18), outli
 /** Final state: ring around a dot. */
 const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2 - 4), port: round };
 
+/** Workflow start: a dot, a thin ring of the fill colour, and a dot inside (URS-TYP-009). */
+const ccw = (cx: number, cy: number, r: number) =>
+  `M${n(cx - r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 0 ${n(cx + r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 0 ${n(cx - r)} ${n(cy)}Z`;
+const start: Shape = {
+  id: 'start',
+  unlabelled: true,
+  size: fixed(22),
+  outline: (w) => circle(w / 2, w / 2, w / 2),
+  solid: (w) => circle(w / 2, w / 2, w / 2) + ccw(w / 2, w / 2, w / 2 - 2.5) + circle(w / 2, w / 2, w / 2 - 4),
+  port: round,
+};
+
 /** Choice pseudostate: small diamond. */
 const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26) };
 
@@ -247,18 +259,24 @@ const record: Shape = {
   port: boxPort(),
 };
 
-/** Checkpoint: a box between two solid posts, a gate every way into a state passes (URS-TYP-018). */
-const POST = 5;
+/**
+ * Checkpoint: a small field gate, two posts with rails and a brace, that every way into a state passes
+ * (URS-TYP-018). Its text goes beside it, or into an annotation.
+ */
+const POST = 4;
+const posts = (w: number, h: number) => `M0 0H${n(POST)}V${n(h)}H0ZM${n(w - POST)} 0H${n(w)}V${n(h)}H${n(w - POST)}Z`;
 const checkpoint: Shape = {
   id: 'checkpoint',
-  size: (tw, th) => {
-    const { w, h } = boxSize()(tw, th);
-    return { w: w + 2 * POST, h };
+  aside: true,
+  size: () => ({ w: 28, h: 36 }),
+  outline: posts,
+  solid: posts,
+  // Top and bottom rails, and a brace from the bottom of the hinge post to the top of the latch post.
+  detail: (w, h) => {
+    const [top, bottom] = [h * 0.25, h * 0.78];
+    return `M${n(POST)} ${n(top)}H${n(w - POST)}M${n(POST)} ${n(bottom)}H${n(w - POST)}M${n(POST)} ${n(bottom)}L${n(w - POST)} ${n(top)}`;
   },
-  inner: (w, h) => ({ w: w - 2 * POST - 2 * PAD_X, h: h - 2 * PAD_Y }),
-  outline: rect,
-  solid: (w, h) => `M0 0H${n(POST)}V${n(h)}H0ZM${n(w - POST)} 0H${n(w)}V${n(h)}H${n(w - POST)}Z`,
-  port: boxPort(),
+  port: (side, w, h) => (side === 'W' ? { x: 0, y: h / 2 } : side === 'E' ? { x: w, y: h / 2 } : { x: w / 2, y: side === 'N' ? 0 : h }),
 };
 
 /** Card: rounded rectangle for people and entities. */
@@ -266,7 +284,7 @@ const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;
