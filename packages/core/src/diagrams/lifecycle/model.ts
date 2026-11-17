@@ -1,5 +1,6 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
+import type { AnnotationTarget } from '../annotations.ts';
 import type { StyleBy } from '../section-styles.ts';
 
 export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'parallel', 'join', 'end'] as const;
@@ -192,6 +193,8 @@ export interface Lifecycle {
   styleBy?: StyleBy<'kind' | 'owner' | 'stateType'>;
   /** By shape type, like `styles`: whether descriptive text (gate fields and criteria, record values, step fields) goes into annotations (URS-DM-029). */
   annotate?: Annotate;
+  /** Name what each annotation is attached to in the notes: by id or by label (URS-DM-029). */
+  annotationTarget?: AnnotationTarget;
   stages?: LcStage[];
   states: LcState[];
   /** User actions available in several states, each drawn once. */

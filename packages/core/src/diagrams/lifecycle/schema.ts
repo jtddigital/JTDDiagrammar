@@ -1,4 +1,5 @@
 import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
+import { annotationTargetSchema } from '../annotations.ts';
 import { ANNOTATED, COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -111,6 +112,7 @@ export const lifecycleSchema = {
       description:
         'By shape type, like `styles`: `true` puts the descriptive text into annotations instead of on the chart. `gates` (label, required fields and criteria), `records` (starting values), `steps` (every step’s fields), or a step kind (`task`, `system`, …) over `steps`. Each item’s own `annotate` wins. E.g. `{ "gates": true, "task": true }`.',
     },
+    annotationTarget: annotationTargetSchema,
     showOwners: { type: 'boolean', default: true, description: 'Show each step’s owner under its label. Off, owners still pick their role band and `styleBy.owner` colour.' },
     styleBy: styleBy(
       { kind: STEP_KINDS, owner: undefined, stateType: STATE_TYPES },

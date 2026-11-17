@@ -1390,7 +1390,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Object lifecycle, workflows split by role
 
-`type: lifecycle` · `roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, and `annotate` puts task fields into annotations.
+`type: lifecycle` · `roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, `annotate` puts task fields into annotations, and `annotationTarget: id` names what each is attached to.
 
 ![Object lifecycle, workflows split by role](docs/img/lifecycle-roles.svg)
 
@@ -1715,7 +1715,8 @@ The examples and images below are generated from the registered types (`pnpm doc
     }
   ],
   "roleLanes": true,
-  "showOwners": false
+  "showOwners": false,
+  "annotationTarget": "id"
 }
 ```
 
@@ -2688,7 +2689,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### SAP transaction control
 
-`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations.
+`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, and `annotationTarget: label` names what each is attached to.
 
 ![SAP transaction control](docs/img/sap-transaction-control.svg)
 
@@ -2844,7 +2845,8 @@ The examples and images below are generated from the registered types (`pnpm doc
     }
   ],
   "matrix": true,
-  "annotate": true
+  "annotate": true,
+  "annotationTarget": "label"
 }
 ```
 
@@ -3021,6 +3023,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `annotate.parallel` | boolean |  |  |
 | `annotate.join` | boolean |  |  |
 | `annotate.end` | boolean |  |  |
+| `annotationTarget` | `none` \| `id` \| `label` |  | Name what each annotation is attached to, in bold above its note: by `id` or by `label`; `none` (default) leaves it out. |
 | `showOwners` | boolean |  | Show each step’s owner under its label. Off, owners still pick their role band and `styleBy.owner` colour. |
 | `styleBy` | object |  | Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`. |
 | `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `parallel`, `join`, `end`. |
@@ -3181,6 +3184,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `matrix` | boolean |  | Draw transaction control as a matrix: one row per business transaction, a mark per status that allows it (✓), allows it with a warning (!), forbids it (⊘), sets it (+) or deletes it (−). |
 | `transitions` | `arrows` \| `ranges` |  | `arrows`: from each numbered user status to every status in its range. `ranges`: the range written under the status instead. |
 | `annotate` | boolean |  | Put start and step conditions into annotations instead of on the chart. |
+| `annotationTarget` | `none` \| `id` \| `label` |  | Name what each annotation is attached to, in bold above its note: by `id` or by `label`; `none` (default) leaves it out. |
 | `legend` | boolean |  | Draw a legend of the shapes, marks and lines used. |
 | `styles` | styles by key |  | Default style per section (`systemStatuses`, `userStatuses`, `steps`); each item’s own `style` overrides it field by field. |
 | `edgeStyle` | style |  | Default style for every arrow. |

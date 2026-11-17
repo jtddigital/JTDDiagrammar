@@ -121,6 +121,19 @@ describe('SAP flexible workflow (URS-TYP-021)', () => {
   });
 });
 
+describe('SAP annotations (URS-DM-029)', () => {
+  it('names what each annotation is attached to, by code or label, only when asked', () => {
+    const on = (annotationTarget?: string) => {
+      const n = new Map(ir({ ...ex, annotate: true, ...(annotationTarget && { annotationTarget }) }).nodes.map((x) => [x.id, x.noteOn]));
+      return ['sys:CLSD', 'wf:approval:if', 'wf:approval:step:plant'].map((id) => n.get(id));
+    };
+    expect(on()).toEqual([undefined, undefined, undefined]);
+    expect(on('id')).toEqual(['CLSD', 'approval', 'plant']);
+    expect(on('label')).toEqual(['Closed', 'Order approval (start conditions)', 'Approve (Plant manager)']);
+    expect(render({ ...ex, annotationTarget: 'label' }, reg).svg).toMatch(/font-weight="bold">Closed<\/text>/);
+  });
+});
+
 describe('SAP transaction control (URS-TYP-020)', () => {
   it('draws the matrix only when asked: a row per business transaction, a mark per rule', () => {
     expect(ir(ex).partitions!.lanes.some((l) => l.id.startsWith('tx:'))).toBe(false);

@@ -23,7 +23,16 @@ export function balloon(cx: number, cy: number, n: number, line: string, P: Pale
 export function notes(b: PlacedNotes | undefined, P: Palette): string {
   if (!b) return '';
   const font = ` font-size="${NOTE_FONT.size}"`;
-  const items = b.items.map((it) => balloon(it.x + NOTE_R, it.y + NOTE_R, it.n, P.nodeStroke, P, it.text) + left(it.lines, it.x + NOTE_TEXT_X, it.y + Math.max(0, NOTE_R - lineHeight(NOTE_FONT) / 2), font));
+  // What it is attached to, in bold, then the note.
+  const items = b.items.map((it) => {
+    const top = it.y + Math.max(0, NOTE_R - lineHeight(NOTE_FONT) / 2);
+    const on = it.on ?? [];
+    return (
+      balloon(it.x + NOTE_R, it.y + NOTE_R, it.n, P.nodeStroke, P, on.length ? `${on.join(' ')}: ${it.text}` : it.text) +
+      left(on, it.x + NOTE_TEXT_X, top, `${font} font-weight="bold"`) +
+      left(it.lines, it.x + NOTE_TEXT_X, top + on.length * lineHeight({ ...NOTE_FONT, bold: true }), font)
+    );
+  });
   return (
     `<g class="jtd-notes"><rect x="${num(b.x)}" y="${num(b.y)}" width="${num(b.w)}" height="${num(b.h)}" fill="${P.background}" stroke="${P.bandStroke}" stroke-width="1"/>` +
     left([NOTES_TITLE], b.x + 10, b.y + 10, `${font} font-weight="bold"`) +
