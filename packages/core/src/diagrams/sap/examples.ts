@@ -11,7 +11,7 @@ const order = {
     { code: 'CRTD', label: 'Created' },
     { code: 'REL', label: 'Released' },
     { code: 'TECO', label: 'Technically completed' },
-    { code: 'CLSD', label: 'Closed', annotation: 'No more postings, including costs; the order is locked for changes.' },
+    { code: 'CLSD', label: 'Closed', annotation: 'No more postings, including costs; the order is locked for changes.', tags: ['Compliance'] },
   ],
   userStatuses: [
     { code: 'INIT', label: 'Initial', number: 10, low: 10, high: 20, initial: true, system: 'CRTD', auth: 'PLANNER', control: { release: 'forbidden' } },
@@ -32,9 +32,10 @@ const order = {
       label: 'Order approval',
       trigger: { status: 'INIT', event: 'Order created' },
       conditions: ['Estimated costs > 10,000 EUR'],
+      tags: ['Cost control'],
       steps: [
         { id: 'planning', recipients: 'Maintenance planning manager', deadline: '2d', rework: 'repeat' },
-        { id: 'plant', recipients: 'Plant manager', conditions: ['Estimated costs > 50,000 EUR'], deadline: '3d' },
+        { id: 'plant', recipients: 'Plant manager', conditions: ['Estimated costs > 50,000 EUR'], deadline: '3d', tags: ['Cost control', 'Compliance'] },
       ],
       released: 'APPR',
     },
@@ -52,7 +53,7 @@ export const examples: [Example, ...Example[]] = [
   {
     name: 'transaction-control',
     title: 'SAP transaction control',
-    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, and `annotationTarget: label` names what each is attached to.',
-    source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true, annotationTarget: 'label' },
+    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).',
+    source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true, annotationTarget: 'label', annotationGroups: ['tag'] },
   },
 ];

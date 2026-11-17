@@ -143,6 +143,19 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(codes({ ...tiny, annotationTarget: 'both' })).toEqual([['schema.enum', '/annotationTarget']]);
   });
 
+  it('groups annotations by type, owner and tag, in the order asked (URS-DM-030)', () => {
+    const d = { ...ex, annotate: { gates: true, task: true }, states: (ex.states as object[]).map((s, i) => (i === 5 ? { ...s, annotation: 'Cancelled', tags: ['Audit', 'Retention'] } : s)) };
+    const groups = (annotationGroups: string[]) => new Map(ir({ ...d, annotationGroups }).nodes.filter((n) => n.note).map((n) => [n.id, n.noteGroups]));
+    const g = groups(['type', 'owner']);
+    expect(g.get('r_review')).toEqual([['Task'], ['QA Reviewer']]);
+    expect(g.get('state:in_review:gate')).toEqual([['Gate'], ['No owner']]);
+    expect(groups(['tag']).get('state:cancelled')).toEqual([['Audit', 'Retention']]);
+    expect(groups(['owner', 'tag']).get('r_review')).toEqual([['QA Reviewer'], ['No tag']]);
+    expect(ir(d).nodes.find((n) => n.id === 'r_review')!.noteGroups).toBeUndefined();
+    expect(codes({ ...tiny, annotationGroups: ['type', 'type'] })).toEqual([['schema.uniqueItems', '/annotationGroups']]);
+    expect(codes({ ...tiny, annotationGroups: ['colour'] })).toEqual([['schema.enum', '/annotationGroups/0']]);
+  });
+
   it('annotates by shape type like styles: the item, then its kind, then all steps (URS-DM-029)', () => {
     const steps = [
       { id: 's', kind: 'start', state: 'a', to: [{ step: 't' }] },

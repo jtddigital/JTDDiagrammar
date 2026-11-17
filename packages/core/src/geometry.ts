@@ -119,6 +119,8 @@ export interface Geometry {
 export interface PlacedNotes extends Box {
   /** `text` is the note as written: the marker's tooltip. */
   items: { n: number; text: string; x: number; y: number; lines: string[]; on?: string[] }[];
+  /** Group headings, `level` 0 outermost (URS-DM-030). */
+  heads?: { x: number; y: number; lines: string[]; level: number }[];
 }
 
 /** The legend box under the diagram (URS-DM-026): each entry's sample box and text. */

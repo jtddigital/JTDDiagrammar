@@ -44,6 +44,8 @@ export interface IRNode extends Sourced {
   note?: string;
   /** What the annotation is attached to, named in bold above it in the notes (URS-DM-029). */
   noteOn?: string;
+  /** The headings its note goes under in the notes, one list of values per level (URS-DM-030). */
+  noteGroups?: string[][];
   badges?: Badge[];
   parent?: string;
   order?: number;

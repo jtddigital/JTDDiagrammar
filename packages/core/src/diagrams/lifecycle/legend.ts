@@ -1,20 +1,9 @@
 import type { Icon, IREdge, IRNode, LegendItem } from '../../ir/types.ts';
 import { merged, ruled } from '../section-styles.ts';
-import { stepsOf, type Lifecycle, type StateType, type StepKind } from './model.ts';
+import { KIND, stepsOf, type Lifecycle, type StateType } from './model.ts';
 import { DASHED, hasMain, MAIN, SHAPE } from './steps.ts';
 import { stateStyle } from './state-style.ts';
 
-const KIND: Record<StepKind, string> = {
-  start: 'Workflow start',
-  end: 'Workflow end',
-  task: 'Task',
-  decision: 'Decision',
-  notification: 'Notification',
-  system: 'System action',
-  stateChange: 'State change',
-  parallel: 'Parallel split / join',
-  join: 'Parallel split / join',
-};
 const TYPE: Record<StateType, string> = { initial: 'Initial state', steady: 'State', final: 'Final state', cancelled: 'Cancelled state' };
 const ICON_TEXT: Record<Icon, string> = {
   signature: 'eSignature required',

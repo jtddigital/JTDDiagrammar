@@ -34,6 +34,35 @@ describe('annotations (URS-DM-029)', () => {
     expect(g.notes!.items[1]!.y - g.notes!.items[0]!.y).toBeGreaterThan(withNotes(geo, ir({ a: 'Shared', c: 'Own' })).notes!.items[1]!.y - withNotes(geo, ir({ a: 'Shared', c: 'Own' })).notes!.items[0]!.y);
   });
 
+  it('groups notes under headings level after level, numbered in listed order (URS-DM-030)', () => {
+    const groups: Record<string, string[][]> = { a: [['Task'], ['QA']], b: [['Gate'], ['No owner']], c: [['Task'], ['Owner']] };
+    const nodes = ir({ a: 'A note', b: 'B note', c: 'C note' }).map((n) => ({ ...n, noteGroups: groups[n.id]! }));
+    const g = withNotes(geo, nodes);
+    expect(g.notes!.heads!.map((h) => [h.lines[0], h.level])).toEqual([
+      ['Task', 0],
+      ['QA', 1],
+      ['Owner', 1],
+      ['Gate', 0],
+      ['No owner', 1],
+    ]);
+    // Listed by group, so numbered by group: A, C (both tasks), then B; markers follow.
+    expect(g.notes!.items.map((i) => [i.n, i.text])).toEqual([
+      [1, 'A note'],
+      [2, 'C note'],
+      [3, 'B note'],
+    ]);
+    expect(g.nodes.map((n) => n.note)).toEqual([1, 3, 2]);
+    // Indented under their headings.
+    expect(g.notes!.items[0]!.x).toBeGreaterThan(g.notes!.heads![1]!.x);
+  });
+
+  it('lists a note with several values under each, with one number', () => {
+    const nodes = ir({ a: 'Tagged twice' }).map((n) => ({ ...n, noteGroups: [['Compliance', 'Cost']] }));
+    const g = withNotes(geo, nodes);
+    expect(g.notes!.heads!.map((h) => h.lines[0])).toEqual(['Compliance', 'Cost']);
+    expect(g.notes!.items.map((i) => i.n)).toEqual([1, 1]);
+  });
+
   it('wraps long notes and leaves a drawing without annotations alone', () => {
     const g = withNotes(geo, ir({ a: 'word '.repeat(80).trim() }));
     expect(g.notes!.items[0]!.lines.length).toBeGreaterThan(1);
