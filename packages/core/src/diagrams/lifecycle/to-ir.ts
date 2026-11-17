@@ -1,9 +1,10 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
+import { noteOf } from '../annotations.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { over, ruled, styled } from '../section-styles.ts';
 import { lifecycleLegend } from './legend.ts';
-import { ACTIONS_BAND, annotated, badStages, entryOf, gateOf, noteOf, pill, sharedFrom, showActions, stateOf, statesArePhases, stepsOf, transitions, type LcAction, type LcGate, type LcState, type LcWorkflow, type Lifecycle } from './model.ts';
+import { ACTIONS_BAND, annotated, badStages, entryOf, gateOf, pill, sharedFrom, showActions, stateOf, statesArePhases, stepsOf, transitions, type LcAction, type LcGate, type LcState, type LcWorkflow, type Lifecycle } from './model.ts';
 import { stateStyle } from './state-style.ts';
 import { DASHED, edgeStyleOf, stepEdges, stepNode } from './steps.ts';
 

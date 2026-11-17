@@ -1,7 +1,8 @@
 import type { Badge, EdgeLabel, IREdge, IRNode, Style } from '../../ir/types.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { merged, over, ruled } from '../section-styles.ts';
-import { annotated, noteOf, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
+import { noteOf } from '../annotations.ts';
+import { annotated, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
 
 export const SHAPE: Record<StepKind, string> = {
   start: 'start',
