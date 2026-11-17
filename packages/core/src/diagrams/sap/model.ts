@@ -83,6 +83,42 @@ export interface SapWorkflow extends Annotated {
   rejected?: string;
 }
 
+/** A release code of a release strategy: a release point, released after its prerequisites (URS-TYP-022). */
+export interface SapReleaseCode extends Annotated {
+  code: string;
+  /** Who releases, e.g. "Purchasing manager". */
+  label?: string;
+  /** Codes that must release first; none: released straight away. */
+  prerequisites?: string[];
+  /** Release indicator once released, e.g. "2 – Released, changeable". */
+  indicator?: string;
+}
+
+/** A classic release strategy, e.g. for purchase requisitions (URS-TYP-022). */
+export interface SapReleaseStrategy extends Annotated {
+  id: string;
+  label: string;
+  /** Document (id) it releases; a dashed arrow from it starts the strategy. */
+  document?: string;
+  /** Status (code) the object is in while it runs, which places it; default the document's. */
+  status?: string;
+  /** Release conditions (classification): the strategy applies only when they hold; else the document is released at once. */
+  conditions?: string[];
+  codes: SapReleaseCode[];
+}
+
+/** A document in the document flow, e.g. a purchase requisition created on release (URS-TYP-023). */
+export interface SapDocument extends Annotated {
+  id: string;
+  label: string;
+  /** Document type, e.g. "NB"; shown under the label. */
+  kind?: string;
+  /** Status (code) in which it is created: its column, and a dotted line from that status. */
+  status?: string;
+  /** Preceding documents (ids): an arrow from each. */
+  from?: string[];
+}
+
 export interface Sap extends AnnotationOptions {
   version: string;
   type: 'sap';
@@ -97,6 +133,8 @@ export interface Sap extends AnnotationOptions {
   userStatuses?: SapUserStatus[];
   transactions?: SapTransaction[];
   workflows?: SapWorkflow[];
+  releaseStrategies?: SapReleaseStrategy[];
+  documents?: SapDocument[];
   /** Draw transaction control as a matrix, one row per business transaction (URS-TYP-020). */
   matrix?: boolean;
   /** `arrows` (default) from each numbered status to those in its range, or `ranges`: the range written under it. */

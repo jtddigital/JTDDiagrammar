@@ -323,6 +323,15 @@
     "edgeThroughLabel": 0,
     "bends": 11
   },
+  "sap-document-flow": {
+    "crossings": 1,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 12
+  },
   "random-30": {
     "crossings": 34,
     "overlaps": 0,

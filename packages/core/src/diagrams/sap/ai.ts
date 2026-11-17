@@ -1,5 +1,5 @@
 import type { AiAssets } from '../../registry/diagram-type.ts';
-import { REWORK, RULES, type Rule, type Sap, type SapStep, type SapUserStatus, type SapWorkflow } from './model.ts';
+import { REWORK, RULES, type Rule, type Sap, type SapDocument, type SapReleaseStrategy, type SapStep, type SapUserStatus, type SapWorkflow } from './model.ts';
 
 const str = { type: 'string' } as const;
 const strs = { type: 'array', items: str } as const;
@@ -63,6 +63,21 @@ const schema = obj({
       quote,
     }),
   },
+  documents: {
+    type: 'array',
+    description: 'Document flow: documents created as the object moves on.',
+    items: obj({ id: str, label: str, kind: desc('Document type; empty if not stated.'), status: desc('Status code it is created in; empty if not stated.'), from: { ...strs, description: 'Preceding document ids.' }, quote }),
+  },
+  releaseStrategies: {
+    type: 'array',
+    description: 'Classic release strategies (e.g. for purchase requisitions).',
+    items: obj({ id: str, label: str, document: desc('Document id it releases; empty if none.'), conditions: { ...strs, description: 'Release conditions (classification).' }, quote }),
+  },
+  releaseCodes: {
+    type: 'array',
+    description: 'Release codes of the strategies, at most eight per strategy.',
+    items: obj({ strategy: str, code: desc('Two-character release code.'), label: desc('Who releases.'), prerequisites: { ...strs, description: 'Codes that must release first.' }, indicator: desc('Release indicator once released; empty if not stated.'), quote }),
+  },
 });
 
 interface G {
@@ -75,6 +90,9 @@ interface G {
   control: { status: string; transaction: string; rule: Rule | 'none'; action: 'set' | 'delete' | 'none' }[];
   workflows: { id: string; label: string; triggerStatus: string; event: string; conditions: string[]; released: string; rejected: string; quote: string }[];
   steps: { workflow: string; id: string; label: string; recipients: string; conditions: string[]; deadline: string; optional: boolean; rework: SapStep['rework'] | 'none'; quote: string }[];
+  documents: { id: string; label: string; kind: string; status: string; from: string[]; quote: string }[];
+  releaseStrategies: { id: string; label: string; document: string; conditions: string[]; quote: string }[];
+  releaseCodes: { strategy: string; code: string; label: string; prerequisites: string[]; indicator: string; quote: string }[];
 }
 
 const text = <K extends string>(k: K, v: string | undefined) => (v ? ({ [k]: v } as Record<K, string>) : {});
@@ -87,6 +105,8 @@ const guide = `Diagram type: sap (SAP status management and flexible workflow fo
 - "transactions" are business transactions (e.g. Release, Complete technically); "sets" lists the system statuses each sets.
 - "control" is transaction control: for a user status and a business transaction, whether it is "allowed", "warning" (allowed with a warning) or "forbidden" while the status is active, and whether the transaction sets or deletes the status.
 - "workflows" are flexible workflows: what starts them ("triggerStatus", "event"), their start conditions, and the statuses set on release or rejection. "steps" are their approval steps in order, with recipients, step conditions, deadline, and what follows rework.
+- "documents" are the document flow: documents the object creates (e.g. a purchase requisition on release), the status each is created in, and the documents each follows ("from").
+- "releaseStrategies" are classic release strategies: the document each releases and its release conditions; "releaseCodes" are their release codes, each with the codes that must release first ("prerequisites") and the release indicator once released.
 - Where the material supports an item directly, set "quote" to a short verbatim excerpt (at most 20 words). Use "", [], 0, false or "none" for anything not stated.`;
 
 const examples = [
@@ -112,6 +132,9 @@ const examples = [
       ],
       workflows: [{ id: 'approval', label: 'Order approval', triggerStatus: 'INIT', event: 'Order created', conditions: ['Estimated costs > 10,000 EUR'], released: 'APPR', rejected: '', quote: '' }],
       steps: [{ workflow: 'approval', id: 'manager', label: '', recipients: 'Planning manager', conditions: [], deadline: '2d', optional: false, rework: 'none', quote: 'approval by the planning manager within 2 days' }],
+      documents: [],
+      releaseStrategies: [],
+      releaseCodes: [],
     },
   },
 ];
@@ -162,6 +185,14 @@ export const sapAi: AiAssets<Sap> = {
       ...text('rejected', w.rejected),
       ...text('quote', w.quote),
     }));
+    const documents: SapDocument[] = (g.documents ?? []).map((d) => ({ id: d.id, label: d.label, ...text('kind', d.kind), ...text('status', d.status), ...list('from', d.from), ...text('quote', d.quote) }));
+    // A strategy without release codes is dropped.
+    const strategies: SapReleaseStrategy[] = (g.releaseStrategies ?? []).flatMap((r) => {
+      const codes = (g.releaseCodes ?? [])
+        .filter((c) => c.strategy === r.id)
+        .map((c) => ({ code: c.code, ...text('label', c.label), ...list('prerequisites', c.prerequisites), ...text('indicator', c.indicator), ...text('quote', c.quote) }));
+      return codes.length ? [{ id: r.id, label: r.label, ...text('document', r.document), ...list('conditions', r.conditions), codes, ...text('quote', r.quote) }] : [];
+    });
     return {
       version: '1',
       type: 'sap',
@@ -171,6 +202,8 @@ export const sapAi: AiAssets<Sap> = {
       ...(g.systemStatuses.length && { systemStatuses: g.systemStatuses.map((s) => ({ code: s.code, ...text('label', s.label), ...text('quote', s.quote) })) }),
       ...(userStatuses.length && { userStatuses }),
       ...(g.transactions.length && { transactions: g.transactions.map((t) => ({ id: t.id, ...text('label', t.label), ...list('sets', t.sets), ...text('quote', t.quote) })) }),
+      ...(documents.length && { documents }),
+      ...(strategies.length && { releaseStrategies: strategies }),
       // A workflow without steps is not a workflow.
       ...(workflows.some((w) => w.steps.length) && { workflows: workflows.filter((w) => w.steps.length) }),
     };

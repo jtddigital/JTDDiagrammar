@@ -42,6 +42,32 @@ const order = {
   ],
 };
 
+/** The same order's document flow, and the release strategy of the purchase requisition it creates (URS-TYP-022, URS-TYP-023). */
+const { workflows: _approval, ...statuses } = order;
+const flow = {
+  ...statuses,
+  title: 'Maintenance order document flow',
+  documents: [
+    { id: 'pr', label: 'Purchase requisition', kind: 'Non-stock components', status: 'REL' },
+    { id: 'po', label: 'Purchase order', kind: 'NB', from: ['pr'] },
+    { id: 'gr', label: 'Goods receipt', from: ['po'], annotation: 'Costs post to the order on goods receipt.' },
+    { id: 'settle', label: 'Settlement document', status: 'TECO', from: ['gr'] },
+  ],
+  releaseStrategies: [
+    {
+      id: 'z1',
+      label: 'Requisition release (Z1)',
+      document: 'pr',
+      conditions: ['Total value > 10,000 EUR', 'Plant 1000'],
+      codes: [
+        { code: 'P1', label: 'Purchasing manager', indicator: 'Blocked, changeable' },
+        { code: 'F1', label: 'Finance controller', prerequisites: ['P1'], indicator: 'Released' },
+        { code: 'Q1', label: 'Quality lead', prerequisites: ['P1'], indicator: 'Released' },
+      ],
+    },
+  ],
+};
+
 export const examples: [Example, ...Example[]] = [
   {
     name: 'maintenance-order',
@@ -55,5 +81,12 @@ export const examples: [Example, ...Example[]] = [
     title: 'SAP transaction control',
     description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).',
     source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true, annotationTarget: 'label', annotationGroups: ['tag'] },
+  },
+  {
+    name: 'document-flow',
+    title: 'SAP document flow and release strategy',
+    description:
+      'The documents the order creates, each in the status it is created in and joined to it by a dotted line, with arrows from preceding to subsequent documents. The purchase requisition’s release strategy: release conditions as a gate, release codes released after their prerequisites (two in parallel), release indicators, and release at once when the conditions do not hold.',
+    source: flow,
   },
 ];

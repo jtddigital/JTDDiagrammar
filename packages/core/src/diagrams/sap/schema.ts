@@ -93,5 +93,42 @@ export const sapSchema = {
         ...notes,
       }),
     },
+    releaseStrategies: {
+      type: 'array',
+      description: 'Classic release strategies, e.g. for purchase requisitions: one row each.',
+      items: obj(['id', 'label', 'codes'], {
+        id,
+        label: text('Strategy name, e.g. "Z1 Requisitions over 10,000 EUR".'),
+        document: ref('Document it releases: a dashed arrow from the document starts it.'),
+        status: codeRef('Status the object is in while it runs, which places it; default the document’s.'),
+        conditions: texts('Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate.'),
+        codes: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 8,
+          description: 'Release codes (release points), at most eight.',
+          items: obj(['code'], {
+            code: { type: 'string', pattern: '^[A-Za-z0-9]{1,2}$', description: 'Two-character release code, e.g. `P1`.' },
+            label: text('Who releases, e.g. "Purchasing manager".'),
+            prerequisites: { type: 'array', items: text('Release code.'), description: 'Codes that must release first; none: released straight away.' },
+            indicator: text('Release indicator once released, e.g. "2 – Released, changeable".'),
+            ...notes,
+          }),
+        },
+        ...notes,
+      }),
+    },
+    documents: {
+      type: 'array',
+      description: 'The document flow: documents created as the object moves on, e.g. a purchase requisition on release. One row.',
+      items: obj(['id', 'label'], {
+        id,
+        label: text('Document, e.g. "Purchase requisition".'),
+        kind: text('Document type, e.g. "NB"; shown under the label.'),
+        status: codeRef('Status in which it is created: its column, and a dotted line from that status.'),
+        from: { type: 'array', items: ref('Document id.'), description: 'Preceding documents: an arrow from each.' },
+        ...notes,
+      }),
+    },
   },
 } as const;

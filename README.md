@@ -2879,6 +2879,207 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### SAP document flow and release strategy
+
+`type: sap` · The documents the order creates, each in the status it is created in and joined to it by a dotted line, with arrows from preceding to subsequent documents. The purchase requisition’s release strategy: release conditions as a gate, release codes released after their prerequisites (two in parallel), release indicators, and release at once when the conditions do not hold.
+
+![SAP document flow and release strategy](docs/img/sap-document-flow.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "sap",
+  "title": "Maintenance order document flow",
+  "object": "Maintenance order (PM01)",
+  "profile": "ZPMORD",
+  "systemStatuses": [
+    {
+      "code": "CRTD",
+      "label": "Created"
+    },
+    {
+      "code": "REL",
+      "label": "Released"
+    },
+    {
+      "code": "TECO",
+      "label": "Technically completed"
+    },
+    {
+      "code": "CLSD",
+      "label": "Closed",
+      "annotation": "No more postings, including costs; the order is locked for changes.",
+      "tags": [
+        "Compliance"
+      ]
+    }
+  ],
+  "userStatuses": [
+    {
+      "code": "INIT",
+      "label": "Initial",
+      "number": 10,
+      "low": 10,
+      "high": 20,
+      "initial": true,
+      "system": "CRTD",
+      "auth": "PLANNER",
+      "control": {
+        "release": "forbidden"
+      }
+    },
+    {
+      "code": "APPR",
+      "label": "Approved",
+      "number": 20,
+      "low": 10,
+      "high": 30,
+      "system": "CRTD",
+      "auth": "SUPERV",
+      "control": {
+        "release": "allowed"
+      }
+    },
+    {
+      "code": "INWK",
+      "label": "In work",
+      "number": 30,
+      "low": 30,
+      "high": 40,
+      "system": "REL",
+      "setBy": [
+        "release"
+      ],
+      "control": {
+        "confirm": "allowed",
+        "teco": "warning"
+      }
+    },
+    {
+      "code": "DONE",
+      "label": "Work done",
+      "number": 40,
+      "low": 40,
+      "high": 40,
+      "system": "REL",
+      "auth": "PLANNER",
+      "control": {
+        "confirm": "warning",
+        "teco": "allowed"
+      }
+    },
+    {
+      "code": "HOLD",
+      "label": "On hold",
+      "control": {
+        "release": "forbidden",
+        "confirm": "forbidden"
+      },
+      "deletedBy": [
+        "teco"
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "id": "release",
+      "label": "Release",
+      "sets": [
+        "REL"
+      ]
+    },
+    {
+      "id": "confirm",
+      "label": "Enter confirmation"
+    },
+    {
+      "id": "teco",
+      "label": "Complete technically",
+      "sets": [
+        "TECO"
+      ]
+    },
+    {
+      "id": "close",
+      "label": "Complete (business)",
+      "sets": [
+        "CLSD"
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "id": "pr",
+      "label": "Purchase requisition",
+      "kind": "Non-stock components",
+      "status": "REL"
+    },
+    {
+      "id": "po",
+      "label": "Purchase order",
+      "kind": "NB",
+      "from": [
+        "pr"
+      ]
+    },
+    {
+      "id": "gr",
+      "label": "Goods receipt",
+      "from": [
+        "po"
+      ],
+      "annotation": "Costs post to the order on goods receipt."
+    },
+    {
+      "id": "settle",
+      "label": "Settlement document",
+      "status": "TECO",
+      "from": [
+        "gr"
+      ]
+    }
+  ],
+  "releaseStrategies": [
+    {
+      "id": "z1",
+      "label": "Requisition release (Z1)",
+      "document": "pr",
+      "conditions": [
+        "Total value > 10,000 EUR",
+        "Plant 1000"
+      ],
+      "codes": [
+        {
+          "code": "P1",
+          "label": "Purchasing manager",
+          "indicator": "Blocked, changeable"
+        },
+        {
+          "code": "F1",
+          "label": "Finance controller",
+          "prerequisites": [
+            "P1"
+          ],
+          "indicator": "Released"
+        },
+        {
+          "code": "Q1",
+          "label": "Quality lead",
+          "prerequisites": [
+            "P1"
+          ],
+          "indicator": "Released"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -3279,6 +3480,35 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `workflows[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `workflows[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `releaseStrategies` | list of objects |  | Classic release strategies, e.g. for purchase requisitions: one row each. |
+| `releaseStrategies[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `releaseStrategies[].label` | string | yes | Strategy name, e.g. "Z1 Requisitions over 10,000 EUR". |
+| `releaseStrategies[].document` | string |  | Document it releases: a dashed arrow from the document starts it. |
+| `releaseStrategies[].status` | string |  | Status the object is in while it runs, which places it; default the document’s. |
+| `releaseStrategies[].conditions` | list of string |  | Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate. |
+| `releaseStrategies[].codes` | list of objects | yes | Release codes (release points), at most eight. |
+| `releaseStrategies[].codes[].code` | string | yes | Two-character release code, e.g. `P1`. |
+| `releaseStrategies[].codes[].label` | string |  | Who releases, e.g. "Purchasing manager". |
+| `releaseStrategies[].codes[].prerequisites` | list of string |  | Codes that must release first; none: released straight away. |
+| `releaseStrategies[].codes[].indicator` | string |  | Release indicator once released, e.g. "2 – Released, changeable". |
+| `releaseStrategies[].codes[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `releaseStrategies[].codes[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `releaseStrategies[].codes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `releaseStrategies[].codes[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `releaseStrategies[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `releaseStrategies[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `releaseStrategies[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `releaseStrategies[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `documents` | list of objects |  | The document flow: documents created as the object moves on, e.g. a purchase requisition on release. One row. |
+| `documents[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `documents[].label` | string | yes | Document, e.g. "Purchase requisition". |
+| `documents[].kind` | string |  | Document type, e.g. "NB"; shown under the label. |
+| `documents[].status` | string |  | Status in which it is created: its column, and a dotted line from that status. |
+| `documents[].from` | list of string |  | Preceding documents: an arrow from each. |
+| `documents[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `documents[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `documents[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `documents[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 
 <!-- END GENERATED: reference -->
 

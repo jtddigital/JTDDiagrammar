@@ -3,9 +3,11 @@ import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts
 import { noted } from '../annotations.ts';
 import { merged, over, styled } from '../section-styles.ts';
 import { columnsOf } from './columns.ts';
+import { documentColumns, documentParts } from './documents.ts';
 import { sapLegend } from './legend.ts';
 import { matrixParts } from './matrix.ts';
 import { nextOf, numbered, type Sap } from './model.ts';
+import { strategyParts } from './release.ts';
 import { DASHED, workflowParts } from './workflows.ts';
 
 export const SYSTEM_LANE = 'sap:system';
@@ -14,8 +16,9 @@ export const USER_LANE = 'sap:user';
 /**
  * SAP status management and flexible workflow (URS-TYP-019..021). Columns are the numbered user statuses,
  * under the system status each is used in, then the flags. Rows: the system statuses, set by business
- * transactions; the user statuses, with an arrow to each status in a numbered status's range; one row
- * per workflow; and with `matrix`, one row per business transaction.
+ * transactions; the user statuses, with an arrow to each status in a numbered status's range; the document
+ * flow (URS-TYP-023); one row per workflow and per release strategy (URS-TYP-022); and with `matrix`, one
+ * row per business transaction.
  */
 export function sapToIR(m: Sap): GraphIR {
   const sys = m.systemStatuses ?? [];
@@ -84,12 +87,21 @@ export function sapToIR(m: Sap): GraphIR {
     });
   }
 
+  const parts = (part: { lane: Band; nodes: IRNode[]; edges: IREdge[] }) => {
+    lanes.push(part.lane);
+    nodes.push(...part.nodes);
+    edges.push(...part.edges);
+  };
+  const docCol = documentColumns(m, col);
+  if (m.documents?.length) parts(documentParts(m, docCol, pill));
+
   (m.workflows ?? []).forEach((w, wi) => {
     const part = workflowParts({ m, col, pill }, w, wi);
     lanes.push(part.lane);
     nodes.push(...part.nodes);
     edges.push(...part.edges);
   });
+  (m.releaseStrategies ?? []).forEach((r, ri) => parts(strategyParts({ m, col, docCol: (id) => docCol.get(id) }, r, ri)));
 
   const laneGroups: BandGroup[] = [];
   if (m.matrix) {
