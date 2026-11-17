@@ -1,5 +1,6 @@
 import { num as n } from '../num.ts';
 import type { Point } from '../geometry.ts';
+import { MARKS } from './marks.ts';
 import { boxPort, boxSize, circlePort, midPort, PAD_X, PAD_Y, type Shape, type Side } from './shape.ts';
 
 const rect = (w: number, h: number) => `M0 0H${n(w)}V${n(h)}H0Z`;
@@ -315,7 +316,7 @@ const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, end, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, end, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer, ...MARKS].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

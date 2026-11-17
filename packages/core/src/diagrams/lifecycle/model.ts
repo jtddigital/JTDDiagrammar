@@ -208,8 +208,6 @@ export type Annotate = Partial<Record<(typeof ANNOTATED)[number], boolean>>;
  */
 export const annotated = (m: Pick<Lifecycle, 'annotate'>, type: 'gates' | 'records' | StepKind, own: boolean | undefined) =>
   own ?? m.annotate?.[type] ?? ((STEP_KINDS as readonly string[]).includes(type) ? m.annotate?.steps : undefined) ?? false;
-/** Annotation text from its parts, one per line. */
-export const noteOf = (...parts: (string | undefined)[]) => parts.filter(Boolean).join('\n') || undefined;
 
 export const ACTIONS_BAND = 'lifecycle:actions';
 export const pill = (state: string) => `state:${state}`;

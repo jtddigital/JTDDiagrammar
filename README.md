@@ -2524,6 +2524,332 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### SAP status and workflow
+
+`type: sap` · System statuses set by business transactions over the user status profile: numbered statuses linked by their ranges, a flag, authorization keys. A flexible workflow started by an event, with start conditions, approval steps with recipients, deadlines and a step condition, rework, rejection, and the status set on release; an annotation and the legend.
+
+![SAP status and workflow](docs/img/sap-maintenance-order.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "sap",
+  "title": "Maintenance order status and approval",
+  "object": "Maintenance order (PM01)",
+  "profile": "ZPMORD",
+  "systemStatuses": [
+    {
+      "code": "CRTD",
+      "label": "Created"
+    },
+    {
+      "code": "REL",
+      "label": "Released"
+    },
+    {
+      "code": "TECO",
+      "label": "Technically completed"
+    },
+    {
+      "code": "CLSD",
+      "label": "Closed",
+      "annotation": "No more postings, including costs; the order is locked for changes."
+    }
+  ],
+  "userStatuses": [
+    {
+      "code": "INIT",
+      "label": "Initial",
+      "number": 10,
+      "low": 10,
+      "high": 20,
+      "initial": true,
+      "system": "CRTD",
+      "auth": "PLANNER",
+      "control": {
+        "release": "forbidden"
+      }
+    },
+    {
+      "code": "APPR",
+      "label": "Approved",
+      "number": 20,
+      "low": 10,
+      "high": 30,
+      "system": "CRTD",
+      "auth": "SUPERV",
+      "control": {
+        "release": "allowed"
+      }
+    },
+    {
+      "code": "INWK",
+      "label": "In work",
+      "number": 30,
+      "low": 30,
+      "high": 40,
+      "system": "REL",
+      "setBy": [
+        "release"
+      ],
+      "control": {
+        "confirm": "allowed",
+        "teco": "warning"
+      }
+    },
+    {
+      "code": "DONE",
+      "label": "Work done",
+      "number": 40,
+      "low": 40,
+      "high": 40,
+      "system": "REL",
+      "auth": "PLANNER",
+      "control": {
+        "confirm": "warning",
+        "teco": "allowed"
+      }
+    },
+    {
+      "code": "HOLD",
+      "label": "On hold",
+      "control": {
+        "release": "forbidden",
+        "confirm": "forbidden"
+      },
+      "deletedBy": [
+        "teco"
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "id": "release",
+      "label": "Release",
+      "sets": [
+        "REL"
+      ]
+    },
+    {
+      "id": "confirm",
+      "label": "Enter confirmation"
+    },
+    {
+      "id": "teco",
+      "label": "Complete technically",
+      "sets": [
+        "TECO"
+      ]
+    },
+    {
+      "id": "close",
+      "label": "Complete (business)",
+      "sets": [
+        "CLSD"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Order approval",
+      "trigger": {
+        "status": "INIT",
+        "event": "Order created"
+      },
+      "conditions": [
+        "Estimated costs > 10,000 EUR"
+      ],
+      "steps": [
+        {
+          "id": "planning",
+          "recipients": "Maintenance planning manager",
+          "deadline": "2d",
+          "rework": "repeat"
+        },
+        {
+          "id": "plant",
+          "recipients": "Plant manager",
+          "conditions": [
+            "Estimated costs > 50,000 EUR"
+          ],
+          "deadline": "3d"
+        }
+      ],
+      "released": "APPR"
+    }
+  ]
+}
+```
+
+</details>
+
+### SAP transaction control
+
+`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations.
+
+![SAP transaction control](docs/img/sap-transaction-control.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "sap",
+  "title": "Maintenance order transaction control",
+  "object": "Maintenance order (PM01)",
+  "profile": "ZPMORD",
+  "systemStatuses": [
+    {
+      "code": "CRTD",
+      "label": "Created"
+    },
+    {
+      "code": "REL",
+      "label": "Released"
+    },
+    {
+      "code": "TECO",
+      "label": "Technically completed"
+    },
+    {
+      "code": "CLSD",
+      "label": "Closed",
+      "annotation": "No more postings, including costs; the order is locked for changes."
+    }
+  ],
+  "userStatuses": [
+    {
+      "code": "INIT",
+      "label": "Initial",
+      "number": 10,
+      "low": 10,
+      "high": 20,
+      "initial": true,
+      "system": "CRTD",
+      "auth": "PLANNER",
+      "control": {
+        "release": "forbidden"
+      }
+    },
+    {
+      "code": "APPR",
+      "label": "Approved",
+      "number": 20,
+      "low": 10,
+      "high": 30,
+      "system": "CRTD",
+      "auth": "SUPERV",
+      "control": {
+        "release": "allowed"
+      }
+    },
+    {
+      "code": "INWK",
+      "label": "In work",
+      "number": 30,
+      "low": 30,
+      "high": 40,
+      "system": "REL",
+      "setBy": [
+        "release"
+      ],
+      "control": {
+        "confirm": "allowed",
+        "teco": "warning"
+      }
+    },
+    {
+      "code": "DONE",
+      "label": "Work done",
+      "number": 40,
+      "low": 40,
+      "high": 40,
+      "system": "REL",
+      "auth": "PLANNER",
+      "control": {
+        "confirm": "warning",
+        "teco": "allowed"
+      }
+    },
+    {
+      "code": "HOLD",
+      "label": "On hold",
+      "control": {
+        "release": "forbidden",
+        "confirm": "forbidden"
+      },
+      "deletedBy": [
+        "teco"
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "id": "release",
+      "label": "Release",
+      "sets": [
+        "REL"
+      ]
+    },
+    {
+      "id": "confirm",
+      "label": "Enter confirmation"
+    },
+    {
+      "id": "teco",
+      "label": "Complete technically",
+      "sets": [
+        "TECO"
+      ]
+    },
+    {
+      "id": "close",
+      "label": "Complete (business)",
+      "sets": [
+        "CLSD"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Order approval",
+      "trigger": {
+        "status": "INIT",
+        "event": "Order created"
+      },
+      "conditions": [
+        "Estimated costs > 10,000 EUR"
+      ],
+      "steps": [
+        {
+          "id": "planning",
+          "recipients": "Maintenance planning manager",
+          "deadline": "2d",
+          "rework": "repeat"
+        },
+        {
+          "id": "plant",
+          "recipients": "Plant manager",
+          "conditions": [
+            "Estimated costs > 50,000 EUR"
+          ],
+          "deadline": "3d"
+        }
+      ],
+      "released": "APPR"
+    }
+  ],
+  "matrix": true,
+  "annotate": true
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -2556,7 +2882,7 @@ Fields every diagram has:
 |-------|------|----------|-------------|
 | `$schema` | string |  | Optional schema URL for editor tooling. |
 | `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
-| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` \| `gantt` | yes | Diagram type. |
+| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` \| `gantt` \| `sap` | yes | Diagram type. |
 | `title` | string |  | Title shown above the diagram. |
 | `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
@@ -2842,6 +3168,74 @@ Tasks, milestones and their dependencies over time. For project plans.
 | `tasks[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `tasks[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `tasks[].tasks` | list of objects |  | Items inside this one, which makes it a summary spanning them. Same fields as `tasks[]`. |
+
+### `sap`
+
+An SAP object’s system and user statuses, the business transactions each allows, and the flexible workflows that approve it. For status profiles, transaction control and flexible workflow.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `object` | string |  | Object, e.g. "Maintenance order (PM01)"; the title when there is none, else shown in the title block. |
+| `profile` | string |  | Status profile, e.g. `ZPMORD`; shown in the title block. |
+| `info` | object |  | More of the title block, e.g. `{ "Order type": "PM01" }`. |
+| `matrix` | boolean |  | Draw transaction control as a matrix: one row per business transaction, a mark per status that allows it (✓), allows it with a warning (!), forbids it (⊘), sets it (+) or deletes it (−). |
+| `transitions` | `arrows` \| `ranges` |  | `arrows`: from each numbered user status to every status in its range. `ranges`: the range written under the status instead. |
+| `annotate` | boolean |  | Put start and step conditions into annotations instead of on the chart. |
+| `legend` | boolean |  | Draw a legend of the shapes, marks and lines used. |
+| `styles` | styles by key |  | Default style per section (`systemStatuses`, `userStatuses`, `steps`); each item’s own `style` overrides it field by field. |
+| `edgeStyle` | style |  | Default style for every arrow. |
+| `systemStatuses` | list of objects |  | System statuses in order, e.g. CRTD, REL, TECO, CLSD: the top row. Only business transactions set them. |
+| `systemStatuses[].code` | string | yes | Status code, e.g. `REL` or `INIT`; unique across system and user statuses. |
+| `systemStatuses[].label` | string |  | Text, e.g. "Released". |
+| `systemStatuses[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `systemStatuses[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `systemStatuses[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `userStatuses` | list of objects |  | The status profile’s user statuses: numbered ones in sequence (one active at a time) and flags without a number (any number active). |
+| `userStatuses[].code` | string | yes | Status code, e.g. `REL` or `INIT`; unique across system and user statuses. |
+| `userStatuses[].label` | string |  | Text, e.g. "Approved"; the column header. |
+| `userStatuses[].number` | integer |  | Status number: its place in the sequence. Without one the status is a flag. |
+| `userStatuses[].low` | integer |  | Lowest number the next status may have; default its own. |
+| `userStatuses[].high` | integer |  | Highest number the next status may have; default its own. |
+| `userStatuses[].initial` | boolean |  | Set when the object is created. |
+| `userStatuses[].system` | string |  | System status it is used in, which places its column; default the previous numbered status’s. |
+| `userStatuses[].auth` | string |  | Authorization key: who may set or delete it. |
+| `userStatuses[].control` | object |  | Transaction control while it is active, by business transaction id: `allowed`, `warning` (allowed with a warning) or `forbidden`. |
+| `userStatuses[].setBy` | list of string |  | Business transactions that set it. |
+| `userStatuses[].deletedBy` | list of string |  | Business transactions that delete it. |
+| `userStatuses[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `userStatuses[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `userStatuses[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `transactions` | list of objects |  | Business transactions, e.g. Release or Complete technically. |
+| `transactions[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `transactions[].label` | string |  | Defaults to the id. |
+| `transactions[].sets` | list of string |  | System statuses it sets; labels the arrow into each. |
+| `transactions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `transactions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `transactions[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows` | list of objects |  | Flexible workflows: one row each. |
+| `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].label` | string | yes | Workflow name. |
+| `workflows[].trigger` | object |  | What starts it: a dashed arrow from the status. |
+| `workflows[].trigger.status` | string | yes | Status whose setting raises the event that starts it. |
+| `workflows[].trigger.event` | string |  | Event, e.g. "Order created"; default "<status> set". |
+| `workflows[].conditions` | list of string |  | Start conditions: the workflow is used only when they hold. Drawn as a gate. |
+| `workflows[].steps` | list of objects | yes | Approval steps, in order: Release leads on, Reject cancels the workflow. |
+| `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].steps[].label` | string |  | Defaults to "Approve". |
+| `workflows[].steps[].recipients` | string |  | Who approves, e.g. a role found by agent determination; shown under the label. |
+| `workflows[].steps[].conditions` | list of string |  | Step conditions: the step runs only when they hold, else it is skipped. Shown as "If: …" under the label, or in its annotation with `annotate`. |
+| `workflows[].steps[].deadline` | string |  | Time allowed, e.g. "2d" (clock badge). |
+| `workflows[].steps[].optional` | boolean |  | Optional step (dashed). |
+| `workflows[].steps[].rework` | `repeat` \| `continue` \| `restart` |  | The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s. |
+| `workflows[].steps[].status` | string |  | Status the object is in during the step, which places it; default the workflow’s trigger status. |
+| `workflows[].steps[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].released` | string |  | Status set when it is released. |
+| `workflows[].rejected` | string |  | Status set when it is rejected. |
+| `workflows[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 
 <!-- END GENERATED: reference -->
 

@@ -305,6 +305,24 @@
     "edgeThroughLabel": 0,
     "bends": 38
   },
+  "sap-maintenance-order": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 10
+  },
+  "sap-transaction-control": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 11
+  },
   "random-30": {
     "crossings": 34,
     "overlaps": 0,
