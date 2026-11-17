@@ -119,27 +119,45 @@ const initial: Shape = { id: 'initial', unlabelled: true, size: fixed(18), outli
 /** Final state: ring around a dot. */
 const final: Shape = { id: 'final', unlabelled: true, size: fixed(22), outline: (w) => circle(w / 2, w / 2, w / 2), solid: (w) => circle(w / 2, w / 2, w / 2 - 4), port: round };
 
-/** Workflow start: a dot, a thin ring of the fill colour, and a dot inside (URS-TYP-009). */
 const ccw = (cx: number, cy: number, r: number) =>
   `M${n(cx - r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 0 ${n(cx + r)} ${n(cy)}A${n(r)} ${n(r)} 0 1 0 ${n(cx - r)} ${n(cy)}Z`;
+/** A solid ring, its hole open to the fill colour, for the workflow start and end symbols. */
+const RING = 2.5;
+const ring = (c: number) => circle(c, c, c) + ccw(c, c, c - RING);
+/** A closed polygon. */
+const poly = (pts: [number, number][]) => `M${pts.map(([x, y]) => `${n(x)} ${n(y)}`).join('L')}Z`;
+
+/** Workflow start: a play button, a triangle pointing along the flow inside a ring (URS-TYP-009). */
 const start: Shape = {
   id: 'start',
   unlabelled: true,
   size: fixed(22),
   outline: (w) => circle(w / 2, w / 2, w / 2),
-  solid: (w) => circle(w / 2, w / 2, w / 2) + ccw(w / 2, w / 2, w / 2 - 2.5) + circle(w / 2, w / 2, w / 2 - 4),
+  // Nudged right of centre, so the triangle looks centred.
+  solid: (w) => {
+    const c = w / 2;
+    return ring(c) + poly([[c - 3, c - 5], [c + 5.5, c], [c - 3, c + 5]]);
+  },
   port: round,
 };
 
-/** Workflow end: a stop, a square in a ring the size of the start (URS-TYP-009). */
+/** Workflow end: an X inside a ring the size of the start (URS-TYP-009). */
 const end: Shape = {
   id: 'end',
   unlabelled: true,
   size: fixed(22),
   outline: (w) => circle(w / 2, w / 2, w / 2),
+  // Two bars across the ring's hole, each wound the same way so they fill where they cross.
   solid: (w) => {
-    const [c, s] = [w / 2, w / 2 - 6.5];
-    return circle(c, c, c) + ccw(c, c, c - 2.5) + `M${n(c - s)} ${n(c - s)}H${n(c + s)}V${n(c + s)}H${n(c - s)}Z`;
+    const [c, a, t] = [w / 2, 5, 1.3];
+    const bar = (dx: number, dy: number): [number, number][] => [
+      [c - a * dx - t * dy, c - a * dy + t * dx],
+      [c + a * dx - t * dy, c + a * dy + t * dx],
+      [c + a * dx + t * dy, c + a * dy - t * dx],
+      [c - a * dx + t * dy, c - a * dy - t * dx],
+    ];
+    const k = Math.SQRT1_2;
+    return ring(c) + poly(bar(k, k)) + poly(bar(k, -k));
   },
   port: round,
 };

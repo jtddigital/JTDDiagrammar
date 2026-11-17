@@ -157,7 +157,7 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(t({ showOwners: false, roleLanes: true }).lane).toBe('w::QA');
   });
 
-  it('draws a workflow start as a dot inside a ring, and its end as a square inside one (URS-TYP-009)', () => {
+  it('draws a workflow start as a play button in a ring, and its end as an X in one (URS-TYP-009)', () => {
     expect(ir(tiny).nodes.find((n) => n.id === 's')).toMatchObject({ shape: 'start' });
     expect(ir({ ...tiny, workflows: [{ ...tiny.workflows[0]!, steps: [...tiny.workflows[0]!.steps, { id: 'e', kind: 'end', state: 'b' }] }] }).nodes.find((n) => n.id === 'e')).toMatchObject({ shape: 'end' });
     expect(render(tiny, reg).svg).toContain('class="jtd-node jtd-shape-start"');

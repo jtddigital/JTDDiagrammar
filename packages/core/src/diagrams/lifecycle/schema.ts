@@ -47,7 +47,7 @@ const step = {
       type: 'string',
       enum: STEP_KINDS,
       default: 'task',
-      description: '`start` (a dot inside a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end` (a square inside a ring).',
+      description: '`start` (a play button in a ring), `task` (default), `decision`, `notification`, `system` (an automated action, e.g. setting field values), `stateChange`, `parallel` and `join` (a bar where branches split or meet) or `end` (an X in a ring).',
     },
     label: text('Defaults: the id; for a state change, the target state’s name.'),
     owner: text('Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`.'),
