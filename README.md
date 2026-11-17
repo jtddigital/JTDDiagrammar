@@ -1390,7 +1390,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### Object lifecycle, workflows split by role
 
-`type: lifecycle` · `roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, `annotate` puts task fields into annotations, and `annotationTarget: id` names what each is attached to.
+`type: lifecycle` · `roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, `annotate` puts task fields into annotations, `annotationTarget: id` names what each is attached to, and `annotationGroups` lists the notes by type, then owner.
 
 ![Object lifecycle, workflows split by role](docs/img/lifecycle-roles.svg)
 
@@ -1716,7 +1716,11 @@ The examples and images below are generated from the registered types (`pnpm doc
   ],
   "roleLanes": true,
   "showOwners": false,
-  "annotationTarget": "id"
+  "annotationTarget": "id",
+  "annotationGroups": [
+    "type",
+    "owner"
+  ]
 }
 ```
 
@@ -2556,7 +2560,10 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "code": "CLSD",
       "label": "Closed",
-      "annotation": "No more postings, including costs; the order is locked for changes."
+      "annotation": "No more postings, including costs; the order is locked for changes.",
+      "tags": [
+        "Compliance"
+      ]
     }
   ],
   "userStatuses": [
@@ -2663,6 +2670,9 @@ The examples and images below are generated from the registered types (`pnpm doc
       "conditions": [
         "Estimated costs > 10,000 EUR"
       ],
+      "tags": [
+        "Cost control"
+      ],
       "steps": [
         {
           "id": "planning",
@@ -2676,7 +2686,11 @@ The examples and images below are generated from the registered types (`pnpm doc
           "conditions": [
             "Estimated costs > 50,000 EUR"
           ],
-          "deadline": "3d"
+          "deadline": "3d",
+          "tags": [
+            "Cost control",
+            "Compliance"
+          ]
         }
       ],
       "released": "APPR"
@@ -2689,7 +2703,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### SAP transaction control
 
-`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, and `annotationTarget: label` names what each is attached to.
+`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).
 
 ![SAP transaction control](docs/img/sap-transaction-control.svg)
 
@@ -2718,7 +2732,10 @@ The examples and images below are generated from the registered types (`pnpm doc
     {
       "code": "CLSD",
       "label": "Closed",
-      "annotation": "No more postings, including costs; the order is locked for changes."
+      "annotation": "No more postings, including costs; the order is locked for changes.",
+      "tags": [
+        "Compliance"
+      ]
     }
   ],
   "userStatuses": [
@@ -2825,6 +2842,9 @@ The examples and images below are generated from the registered types (`pnpm doc
       "conditions": [
         "Estimated costs > 10,000 EUR"
       ],
+      "tags": [
+        "Cost control"
+      ],
       "steps": [
         {
           "id": "planning",
@@ -2838,7 +2858,11 @@ The examples and images below are generated from the registered types (`pnpm doc
           "conditions": [
             "Estimated costs > 50,000 EUR"
           ],
-          "deadline": "3d"
+          "deadline": "3d",
+          "tags": [
+            "Cost control",
+            "Compliance"
+          ]
         }
       ],
       "released": "APPR"
@@ -2846,7 +2870,10 @@ The examples and images below are generated from the registered types (`pnpm doc
   ],
   "matrix": true,
   "annotate": true,
-  "annotationTarget": "label"
+  "annotationTarget": "label",
+  "annotationGroups": [
+    "tag"
+  ]
 }
 ```
 
@@ -3024,6 +3051,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `annotate.join` | boolean |  |  |
 | `annotate.end` | boolean |  |  |
 | `annotationTarget` | `none` \| `id` \| `label` |  | Name what each annotation is attached to, in bold above its note: by `id` or by `label`; `none` (default) leaves it out. |
+| `annotationGroups` | list of `type` \| `owner` \| `tag` |  | Group the notes under headings, level after level: by `type` (kind of shape, e.g. Task, Gate), `owner` or `tag`. E.g. `["type", "owner"]`: by type, then by owner within each. A note with several tags is listed under each. |
 | `showOwners` | boolean |  | Show each step’s owner under its label. Off, owners still pick their role band and `styleBy.owner` colour. |
 | `styleBy` | object |  | Step styles by kind and owner, state styles by type, e.g. `{ "owner": { "QA": { "fill": "#dff" } } }`. Precedence: section default, then kind (or state type), then owner, then the item’s own `style`. |
 | `styleBy.kind` | styles by key |  | Style for every item with this `kind`, by value: `start`, `task`, `decision`, `notification`, `system`, `stateChange`, `parallel`, `join`, `end`. |
@@ -3046,6 +3074,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].gate.fields` | list of string |  | Fields that must be complete; shown as "Required: …". |
 | `states[].gate.criteria` | list of string |  | Entry criteria, one per line. |
 | `states[].gate.annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `states[].gate.tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `states[].gate.annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type. |
 | `states[].gate.quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].gate.style` | style |  | Colours, lines, text and node sizing (see Styling). |
@@ -3054,10 +3083,12 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].records[].label` | string |  | Defaults to the object. |
 | `states[].records[].fields` | list of string |  | Values it is created with, e.g. "Owner = Change Owner"; shown under the label. |
 | `states[].records[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `states[].records[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `states[].records[].annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type. |
 | `states[].records[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].records[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `states[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `states[].to` | list of objects |  | User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band. |
@@ -3087,6 +3118,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `sharedActions[].from` | list of string |  | Source states. Default: every state that is not final or cancelled. |
 | `sharedActions[].except` | list of string |  | States left out of the default. |
 | `sharedActions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `sharedActions[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `workflows` | list of objects |  | Workflows: one row (or column) each. |
 | `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].label` | string | yes | Workflow name. |
@@ -3124,6 +3156,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].steps[].completion` | `all` \| `any` \| `each` |  | Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge). |
 | `workflows[].steps[].order` | integer |  | Hint: steps in the same cell are placed in ascending order. |
 | `workflows[].steps[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
+| `workflows[].steps[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `workflows[].steps[].annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type. |
 | `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
@@ -3185,6 +3218,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `transitions` | `arrows` \| `ranges` |  | `arrows`: from each numbered user status to every status in its range. `ranges`: the range written under the status instead. |
 | `annotate` | boolean |  | Put start and step conditions into annotations instead of on the chart. |
 | `annotationTarget` | `none` \| `id` \| `label` |  | Name what each annotation is attached to, in bold above its note: by `id` or by `label`; `none` (default) leaves it out. |
+| `annotationGroups` | list of `type` \| `owner` \| `tag` |  | Group the notes under headings, level after level: by `type` (kind of shape, e.g. Task, Gate), `owner` or `tag`. E.g. `["type", "owner"]`: by type, then by owner within each. A note with several tags is listed under each. |
 | `legend` | boolean |  | Draw a legend of the shapes, marks and lines used. |
 | `styles` | styles by key |  | Default style per section (`systemStatuses`, `userStatuses`, `steps`); each item’s own `style` overrides it field by field. |
 | `edgeStyle` | style |  | Default style for every arrow. |
@@ -3192,6 +3226,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `systemStatuses[].code` | string | yes | Status code, e.g. `REL` or `INIT`; unique across system and user statuses. |
 | `systemStatuses[].label` | string |  | Text, e.g. "Released". |
 | `systemStatuses[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `systemStatuses[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `systemStatuses[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `systemStatuses[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `userStatuses` | list of objects |  | The status profile’s user statuses: numbered ones in sequence (one active at a time) and flags without a number (any number active). |
@@ -3207,6 +3242,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `userStatuses[].setBy` | list of string |  | Business transactions that set it. |
 | `userStatuses[].deletedBy` | list of string |  | Business transactions that delete it. |
 | `userStatuses[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `userStatuses[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `userStatuses[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `userStatuses[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `transactions` | list of objects |  | Business transactions, e.g. Release or Complete technically. |
@@ -3214,6 +3250,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `transactions[].label` | string |  | Defaults to the id. |
 | `transactions[].sets` | list of string |  | System statuses it sets; labels the arrow into each. |
 | `transactions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `transactions[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `transactions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `transactions[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows` | list of objects |  | Flexible workflows: one row each. |
@@ -3233,11 +3270,13 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `workflows[].steps[].rework` | `repeat` \| `continue` \| `restart` |  | The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s. |
 | `workflows[].steps[].status` | string |  | Status the object is in during the step, which places it; default the workflow’s trigger status. |
 | `workflows[].steps[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].steps[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `workflows[].steps[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].steps[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows[].released` | string |  | Status set when it is released. |
 | `workflows[].rejected` | string |  | Status set when it is rejected. |
 | `workflows[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `workflows[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 

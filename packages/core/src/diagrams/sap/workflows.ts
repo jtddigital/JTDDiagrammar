@@ -42,11 +42,11 @@ export function workflowParts(c: Ctx, w: SapWorkflow, wi: number): { lane: Band;
 
   let entry = p('start');
   if (w.conditions?.length) {
-    const note = noted(m.annotationTarget, m.annotate ? noteOf(ifs(w.conditions), w.annotation) : w.annotation, w.id, `${w.label} (start conditions)`);
+    const note = noted(m, m.annotate ? noteOf(ifs(w.conditions), w.annotation) : w.annotation, { id: w.id, label: `${w.label} (start conditions)`, type: 'Start conditions', ...(w.tags && { tags: w.tags }) });
     nodes.push({ id: p('if'), shape: 'checkpoint', label: m.annotate ? '' : 'Start conditions', ...(!m.annotate && { sub: w.conditions.join('\n') }), ...note, ...at(home), src: src('conditions') });
     link(entry, p('if'));
     entry = p('if');
-  } else Object.assign(nodes[0]!, noted(m.annotationTarget, w.annotation, w.id, w.label));
+  } else Object.assign(nodes[0]!, noted(m, w.annotation, { id: w.id, label: w.label, type: 'Workflow', ...(w.tags && { tags: w.tags }) }));
 
   // What release and rejection lead to: the status set, then the end.
   nodes.push({ id: p('end'), shape: 'end', label: 'End', ...at(w.released ?? w.steps.at(-1)!.status), src: src() });
@@ -63,7 +63,13 @@ export function workflowParts(c: Ctx, w: SapWorkflow, wi: number): { lane: Band;
   const after = (i: number) => (i + 1 < w.steps.length ? id(w.steps[i + 1]!) : released);
   w.steps.forEach((s, i) => {
     const label = s.label ?? 'Approve';
-    const note = noted(m.annotationTarget, m.annotate ? noteOf(ifs(s.conditions), s.annotation) : s.annotation, s.id, s.recipients ? `${label} (${s.recipients})` : label);
+    const note = noted(m, m.annotate ? noteOf(ifs(s.conditions), s.annotation) : s.annotation, {
+      id: s.id,
+      label: s.recipients ? `${label} (${s.recipients})` : label,
+      type: 'Approval step',
+      ...(s.recipients && { owner: s.recipients }),
+      ...(s.tags && { tags: s.tags }),
+    });
     const sub = [s.recipients, m.annotate ? undefined : ifs(s.conditions)].filter(Boolean).join('\n');
     nodes.push({
       id: id(s),

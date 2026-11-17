@@ -2,7 +2,7 @@ import type { Badge, EdgeLabel, IREdge, IRNode, Style } from '../../ir/types.ts'
 import { edgeLabels } from '../edge-labels.ts';
 import { merged, over, ruled } from '../section-styles.ts';
 import { noted, noteOf } from '../annotations.ts';
-import { annotated, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
+import { annotated, KIND, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
 
 export const SHAPE: Record<StepKind, string> = {
   start: 'start',
@@ -62,7 +62,7 @@ export function stepNode(m: Lifecycle, s: LcStep, src: string, stateLabel: (id: 
     shape: SHAPE[kind],
     label,
     ...(sub && { sub }),
-    ...noted(m.annotationTarget, text, s.id, label || s.id),
+    ...noted(m, text, { id: s.id, label: label || s.id, type: KIND[kind], ...(s.owner && { owner: s.owner }), ...(s.tags && { tags: s.tags }) }),
     ...(badges.length && { badges }),
     ...place,
     ...(s.order !== undefined && { order: s.order }),

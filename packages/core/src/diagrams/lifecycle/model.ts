@@ -1,10 +1,22 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
-import type { AnnotationTarget } from '../annotations.ts';
+import type { AnnotationOptions } from '../annotations.ts';
 import type { StyleBy } from '../section-styles.ts';
 
 export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'parallel', 'join', 'end'] as const;
 export type StepKind = (typeof STEP_KINDS)[number];
+/** Name of each step kind, for the legend and annotation groups. */
+export const KIND: Record<StepKind, string> = {
+  start: 'Workflow start',
+  end: 'Workflow end',
+  task: 'Task',
+  decision: 'Decision',
+  notification: 'Notification',
+  system: 'System action',
+  stateChange: 'State change',
+  parallel: 'Parallel split / join',
+  join: 'Parallel split / join',
+};
 export const STATE_TYPES = ['initial', 'steady', 'final', 'cancelled'] as const;
 export type StateType = (typeof STATE_TYPES)[number];
 /** How a task with several participants completes: all of them, any one, or one task each. */
@@ -36,6 +48,8 @@ export interface LcSharedAction extends LcAction {
   except?: string[];
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
 }
 
 /** What must hold to enter a state: drawn as a gate in front of it, which every way in passes (URS-TYP-018). */
@@ -47,6 +61,8 @@ export interface LcGate {
   criteria?: string[];
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
   /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
   annotate?: boolean;
   quote?: string;
@@ -63,6 +79,8 @@ export interface LcRecord {
   fields?: string[];
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
   /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
   annotate?: boolean;
   quote?: string;
@@ -84,6 +102,8 @@ export interface LcState {
   records?: LcRecord[];
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
   quote?: string;
   style?: Style;
   /** User actions leaving this state. */
@@ -146,6 +166,8 @@ export interface LcStep {
   order?: number;
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
   /** Put the descriptive text in the annotation instead of on the chart; default from the chart's `annotate`. */
   annotate?: boolean;
   quote?: string;
@@ -164,7 +186,7 @@ export interface LcWorkflow {
   steps: LcStep[];
 }
 
-export interface Lifecycle {
+export interface Lifecycle extends AnnotationOptions {
   version: string;
   type: 'lifecycle';
   title?: string;
@@ -193,8 +215,6 @@ export interface Lifecycle {
   styleBy?: StyleBy<'kind' | 'owner' | 'stateType'>;
   /** By shape type, like `styles`: whether descriptive text (gate fields and criteria, record values, step fields) goes into annotations (URS-DM-029). */
   annotate?: Annotate;
-  /** Name what each annotation is attached to in the notes: by id or by label (URS-DM-029). */
-  annotationTarget?: AnnotationTarget;
   stages?: LcStage[];
   states: LcState[];
   /** User actions available in several states, each drawn once. */

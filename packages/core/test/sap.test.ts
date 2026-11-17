@@ -134,6 +134,18 @@ describe('SAP annotations (URS-DM-029)', () => {
   });
 });
 
+describe('SAP annotation groups (URS-DM-030)', () => {
+  it('groups by type, owner (the step recipients) and tag', () => {
+    const groups = (annotationGroups: string[]) => new Map(ir({ ...ex, annotate: true, annotationGroups }).nodes.filter((n) => n.note).map((n) => [n.id, n.noteGroups]));
+    const g = groups(['type', 'owner']);
+    expect(g.get('wf:approval:step:plant')).toEqual([['Approval step'], ['Plant manager']]);
+    expect(g.get('sys:CLSD')).toEqual([['System status'], ['No owner']]);
+    expect(g.get('wf:approval:if')).toEqual([['Start conditions'], ['No owner']]);
+    const t = ir({ ...reg.type('sap')!.examples[1]!.source as object });
+    expect(t.nodes.find((n) => n.id === 'wf:approval:step:plant')!.noteGroups).toEqual([['Cost control', 'Compliance']]);
+  });
+});
+
 describe('SAP transaction control (URS-TYP-020)', () => {
   it('draws the matrix only when asked: a row per business transaction, a mark per rule', () => {
     expect(ir(ex).partitions!.lanes.some((l) => l.id.startsWith('tx:'))).toBe(false);

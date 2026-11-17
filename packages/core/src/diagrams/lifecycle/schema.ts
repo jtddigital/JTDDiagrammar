@@ -1,5 +1,5 @@
 import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
-import { annotationTargetSchema } from '../annotations.ts';
+import { annotationSchema, tagsSchema } from '../annotations.ts';
 import { ANNOTATED, COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -76,6 +76,7 @@ const step = {
     completion: { type: 'string', enum: COMPLETIONS, description: 'Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge).' },
     order: { type: 'integer', description: 'Hint: steps in the same cell are placed in ascending order.' },
     annotation,
+    tags: tagsSchema,
     annotate,
     quote,
     style,
@@ -112,7 +113,7 @@ export const lifecycleSchema = {
       description:
         'By shape type, like `styles`: `true` puts the descriptive text into annotations instead of on the chart. `gates` (label, required fields and criteria), `records` (starting values), `steps` (every step’s fields), or a step kind (`task`, `system`, …) over `steps`. Each item’s own `annotate` wins. E.g. `{ "gates": true, "task": true }`.',
     },
-    annotationTarget: annotationTargetSchema,
+    ...annotationSchema,
     showOwners: { type: 'boolean', default: true, description: 'Show each step’s owner under its label. Off, owners still pick their role band and `styleBy.owner` colour.' },
     styleBy: styleBy(
       { kind: STEP_KINDS, owner: undefined, stateType: STATE_TYPES },
@@ -151,6 +152,7 @@ export const lifecycleSchema = {
               fields: texts('Fields that must be complete; shown as "Required: …".'),
               criteria: texts('Entry criteria, one per line.'),
               annotation,
+              tags: tagsSchema,
               annotate,
               quote,
               style,
@@ -168,6 +170,7 @@ export const lifecycleSchema = {
                 label: text('Defaults to the object.'),
                 fields: texts('Values it is created with, e.g. "Owner = Change Owner"; shown under the label.'),
                 annotation,
+                tags: tagsSchema,
                 annotate,
                 quote,
                 style,
@@ -175,6 +178,7 @@ export const lifecycleSchema = {
             },
           },
           annotation,
+          tags: tagsSchema,
           quote,
           style,
           to: {
@@ -197,6 +201,7 @@ export const lifecycleSchema = {
           from: { type: 'array', items: ref('State id.'), description: 'Source states. Default: every state that is not final or cancelled.' },
           except: { type: 'array', items: ref('State id.'), description: 'States left out of the default.' },
           annotation,
+          tags: tagsSchema,
         },
       },
     },

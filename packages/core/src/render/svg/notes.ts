@@ -33,9 +33,12 @@ export function notes(b: PlacedNotes | undefined, P: Palette): string {
       left(it.lines, it.x + NOTE_TEXT_X, top + on.length * lineHeight({ ...NOTE_FONT, bold: true }), font)
     );
   });
+  // Group headings: bold, then bold italic, then italic, deeper in.
+  const heads = (b.heads ?? []).map((h) => left(h.lines, h.x, h.y, `${font}${h.level < 2 ? ' font-weight="bold"' : ''}${h.level ? ' font-style="italic"' : ''} class="jtd-note-group"`));
   return (
     `<g class="jtd-notes"><rect x="${num(b.x)}" y="${num(b.y)}" width="${num(b.w)}" height="${num(b.h)}" fill="${P.background}" stroke="${P.bandStroke}" stroke-width="1"/>` +
     left([NOTES_TITLE], b.x + 10, b.y + 10, `${font} font-weight="bold"`) +
+    heads.join('') +
     items.join('') +
     '</g>'
   );

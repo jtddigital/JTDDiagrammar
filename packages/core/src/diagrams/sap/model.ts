@@ -1,5 +1,5 @@
 import type { Style, Theme } from '../../ir/types.ts';
-import type { AnnotationTarget } from '../annotations.ts';
+import type { AnnotationOptions } from '../annotations.ts';
 
 /** How a business transaction stands in a user status (SAP transaction control, URS-TYP-020). */
 export const RULES = ['allowed', 'warning', 'forbidden'] as const;
@@ -10,6 +10,8 @@ export const REWORK = ['repeat', 'continue', 'restart'] as const;
 interface Annotated {
   /** Annotation: a numbered marker, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
+  /** Tags, e.g. for grouping annotations (URS-DM-030). */
+  tags?: string[];
   quote?: string;
   style?: Style;
 }
@@ -81,7 +83,7 @@ export interface SapWorkflow extends Annotated {
   rejected?: string;
 }
 
-export interface Sap {
+export interface Sap extends AnnotationOptions {
   version: string;
   type: 'sap';
   title?: string;
@@ -101,8 +103,6 @@ export interface Sap {
   transitions?: 'arrows' | 'ranges';
   /** Start and step conditions go into annotations. */
   annotate?: boolean;
-  /** Name what each annotation is attached to in the notes: by id (code) or by label (URS-DM-029). */
-  annotationTarget?: AnnotationTarget;
   legend?: boolean;
   styles?: Partial<Record<'systemStatuses' | 'userStatuses' | 'steps', Style>>;
   edgeStyle?: Style;
