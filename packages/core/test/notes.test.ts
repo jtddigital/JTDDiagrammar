@@ -23,6 +23,17 @@ describe('annotations (URS-DM-029)', () => {
     expect(g.height).toBeGreaterThanOrEqual(g.notes!.h);
   });
 
+  it('names what each note is attached to, every shape sharing it once, when the type says', () => {
+    const nodes = ir({ a: 'Shared', b: 'Shared', c: 'Own' }).map((n) => ({ ...n, noteOn: n.id === 'c' ? undefined : n.id.toUpperCase() }));
+    const g = withNotes(geo, [...nodes, { ...nodes[0]!, id: 'a2' }]);
+    expect(g.notes!.items.map((i) => [i.on, i.lines])).toEqual([
+      [['A, B'], ['Shared']],
+      [undefined, ['Own']],
+    ]);
+    // Taller by the name's line.
+    expect(g.notes!.items[1]!.y - g.notes!.items[0]!.y).toBeGreaterThan(withNotes(geo, ir({ a: 'Shared', c: 'Own' })).notes!.items[1]!.y - withNotes(geo, ir({ a: 'Shared', c: 'Own' })).notes!.items[0]!.y);
+  });
+
   it('wraps long notes and leaves a drawing without annotations alone', () => {
     const g = withNotes(geo, ir({ a: 'word '.repeat(80).trim() }));
     expect(g.notes!.items[0]!.lines.length).toBeGreaterThan(1);

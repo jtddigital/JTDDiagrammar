@@ -1,6 +1,6 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, IREdge, IRNode, Style } from '../../ir/types.ts';
-import { noteOf } from '../annotations.ts';
+import { noted, noteOf } from '../annotations.ts';
 import { merged, over } from '../section-styles.ts';
 import type { Sap, SapStep, SapWorkflow } from './model.ts';
 
@@ -42,11 +42,11 @@ export function workflowParts(c: Ctx, w: SapWorkflow, wi: number): { lane: Band;
 
   let entry = p('start');
   if (w.conditions?.length) {
-    const note = m.annotate ? noteOf(ifs(w.conditions), w.annotation) : w.annotation;
-    nodes.push({ id: p('if'), shape: 'checkpoint', label: m.annotate ? '' : 'Start conditions', ...(!m.annotate && { sub: w.conditions.join('\n') }), ...(note && { note }), ...at(home), src: src('conditions') });
+    const note = noted(m.annotationTarget, m.annotate ? noteOf(ifs(w.conditions), w.annotation) : w.annotation, w.id, `${w.label} (start conditions)`);
+    nodes.push({ id: p('if'), shape: 'checkpoint', label: m.annotate ? '' : 'Start conditions', ...(!m.annotate && { sub: w.conditions.join('\n') }), ...note, ...at(home), src: src('conditions') });
     link(entry, p('if'));
     entry = p('if');
-  } else if (w.annotation) nodes[0]!.note = w.annotation;
+  } else Object.assign(nodes[0]!, noted(m.annotationTarget, w.annotation, w.id, w.label));
 
   // What release and rejection lead to: the status set, then the end.
   nodes.push({ id: p('end'), shape: 'end', label: 'End', ...at(w.released ?? w.steps.at(-1)!.status), src: src() });
@@ -62,15 +62,16 @@ export function workflowParts(c: Ctx, w: SapWorkflow, wi: number): { lane: Band;
   const id = (s: SapStep) => p(`step:${s.id}`);
   const after = (i: number) => (i + 1 < w.steps.length ? id(w.steps[i + 1]!) : released);
   w.steps.forEach((s, i) => {
-    const note = m.annotate ? noteOf(ifs(s.conditions), s.annotation) : s.annotation;
+    const label = s.label ?? 'Approve';
+    const note = noted(m.annotationTarget, m.annotate ? noteOf(ifs(s.conditions), s.annotation) : s.annotation, s.id, s.recipients ? `${label} (${s.recipients})` : label);
     const sub = [s.recipients, m.annotate ? undefined : ifs(s.conditions)].filter(Boolean).join('\n');
     nodes.push({
       id: id(s),
       shape: 'process',
-      label: s.label ?? 'Approve',
+      label,
       ...(sub && { sub }),
       ...(s.deadline && { badges: [{ icon: 'clock' as const, text: s.deadline }] }),
-      ...(note && { note }),
+      ...note,
       ...at(s.status),
       ...over(merged(m.styles?.steps, s.optional ? DASHED : undefined), s.style),
       ...(s.quote && { quote: s.quote }),

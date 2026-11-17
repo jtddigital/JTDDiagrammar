@@ -132,6 +132,17 @@ describe('lifecycle type (URS-TYP-008)', () => {
     expect(codes({ ...d, annotate: { nope: true } })).toEqual([['schema.additionalProperties', '/annotate/nope']]);
   });
 
+  it('names what each annotation is attached to, by id or label, only when asked (URS-DM-029)', () => {
+    const on = (annotationTarget?: string) => {
+      const n = new Map(ir({ ...ex, ...(annotationTarget && { annotationTarget }) }).nodes.map((x) => [x.id, x.noteOn]));
+      return ['state:in_review:gate', 'state:closed', 'r_review'].map((id) => n.get(id));
+    };
+    expect(on()).toEqual([undefined, undefined, undefined]);
+    expect(on('id')).toEqual(['in_review gate', 'closed', 'r_review']);
+    expect(on('label')).toEqual(['In Review gate', 'Closed', 'Review change']);
+    expect(codes({ ...tiny, annotationTarget: 'both' })).toEqual([['schema.enum', '/annotationTarget']]);
+  });
+
   it('annotates by shape type like styles: the item, then its kind, then all steps (URS-DM-029)', () => {
     const steps = [
       { id: 's', kind: 'start', state: 'a', to: [{ step: 't' }] },

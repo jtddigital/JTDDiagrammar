@@ -16,10 +16,14 @@ export const NOTES_TITLE = 'Notes';
 export function withNotes(g: Geometry, nodes: readonly IRNode[]): Geometry {
   const texts: string[] = [];
   const numbers = new Map<string, number>();
+  // What each note is attached to, when named: every shape sharing it, once each.
+  const on: string[][] = [];
   for (const n of nodes) {
     if (!n.note) continue;
-    const i = texts.indexOf(n.note);
-    numbers.set(n.id, (i < 0 ? texts.push(n.note) - 1 : i) + 1);
+    let i = texts.indexOf(n.note);
+    if (i < 0) on[(i = texts.push(n.note) - 1)] = [];
+    numbers.set(n.id, i + 1);
+    if (n.noteOn && !on[i]!.includes(n.noteOn)) on[i]!.push(n.noteOn);
   }
   if (!texts.length) return g;
   const x = g.width + NOTES_GAP;
@@ -28,9 +32,10 @@ export function withNotes(g: Geometry, nodes: readonly IRNode[]): Geometry {
   let w = 0;
   const items: PlacedNotes['items'] = texts.map((t, i) => {
     const b = textBlock(t, NOTE_TEXT_MAX, NOTE_FONT);
-    const item = { n: i + 1, text: t, x: x + PAD, y, lines: b.lines };
-    y += Math.max(2 * NOTE_R, b.height) + ROW_GAP;
-    w = Math.max(w, b.width);
+    const o = on[i]!.length ? textBlock(on[i]!.join(', '), NOTE_TEXT_MAX, { ...NOTE_FONT, bold: true }) : undefined;
+    const item = { n: i + 1, text: t, x: x + PAD, y, lines: b.lines, ...(o && { on: o.lines }) };
+    y += Math.max(2 * NOTE_R, b.height + (o?.height ?? 0)) + ROW_GAP;
+    w = Math.max(w, b.width, o?.width ?? 0);
     return item;
   });
   const notes: PlacedNotes = { x, y: 0, w: 2 * PAD + 2 * NOTE_R + TEXT_GAP + w, h: y - ROW_GAP + PAD, items };

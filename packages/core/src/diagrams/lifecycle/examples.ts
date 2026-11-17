@@ -85,8 +85,8 @@ export const examples: [Example, ...Example[]] = [
   {
     name: 'roles',
     title: 'Object lifecycle, workflows split by role',
-    description: '`roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, and `annotate` puts task fields into annotations.',
-    source: { ...changeControl, roleLanes: true, showOwners: false, annotate: { gates: true, task: true } },
+    description: '`roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, `annotate` puts task fields into annotations, and `annotationTarget: id` names what each is attached to.',
+    source: { ...changeControl, roleLanes: true, showOwners: false, annotate: { gates: true, task: true }, annotationTarget: 'id' },
   },
   {
     name: 'summary',

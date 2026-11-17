@@ -52,7 +52,7 @@ export const examples: [Example, ...Example[]] = [
   {
     name: 'transaction-control',
     title: 'SAP transaction control',
-    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations.',
-    source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true },
+    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, and `annotationTarget: label` names what each is attached to.',
+    source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true, annotationTarget: 'label' },
   },
 ];

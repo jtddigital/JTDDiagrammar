@@ -1,4 +1,5 @@
 import { envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { annotationTargetSchema } from '../annotations.ts';
 import { REWORK, RULES } from './model.ts';
 
 const text = (description: string) => ({ type: 'string', description }) as const;
@@ -41,6 +42,7 @@ export const sapSchema = {
     matrix: flag('Draw transaction control as a matrix: one row per business transaction, a mark per status that allows it (✓), allows it with a warning (!), forbids it (⊘), sets it (+) or deletes it (−).'),
     transitions: { type: 'string', enum: ['arrows', 'ranges'], default: 'arrows', description: '`arrows`: from each numbered user status to every status in its range. `ranges`: the range written under the status instead.' },
     annotate: flag('Put start and step conditions into annotations instead of on the chart.'),
+    annotationTarget: annotationTargetSchema,
     legend: { type: 'boolean', default: true, description: 'Draw a legend of the shapes, marks and lines used.' },
     styles: sectionStyles(['systemStatuses', 'userStatuses', 'steps']),
     edgeStyle: { ...style, description: 'Default style for every arrow.' },

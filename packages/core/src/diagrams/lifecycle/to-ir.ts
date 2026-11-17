@@ -1,6 +1,6 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
-import { noteOf } from '../annotations.ts';
+import { noted, noteOf } from '../annotations.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { over, ruled, styled } from '../section-styles.ts';
 import { lifecycleLegend } from './legend.ts';
@@ -21,13 +21,12 @@ const detail = (s: LcState) =>
 /** A gate's text: required fields, then entry criteria (URS-TYP-018). */
 const gateSub = (g: LcGate) => [...(g.fields?.length ? [`Required: ${g.fields.join(', ')}`] : []), ...(g.criteria ?? [])].join('\n') || undefined;
 /** A gate's label and text beside it, or (annotated) all of it in its annotation (URS-TYP-018, URS-DM-029). */
-const gateText = (m: Lifecycle, g: LcGate) => {
+const gateText = (m: Lifecycle, g: LcGate, state: { id: string; label: string }) => {
   const sub = gateSub(g);
-  if (annotated(m, 'gates', g.annotate)) {
-    const note = noteOf(g.label, sub, g.annotation);
-    return { label: '', ...(note && { note }) };
-  }
-  return { label: g.label ?? 'Gate', ...(sub && { sub }), ...(g.annotation && { note: g.annotation }) };
+  // Named after the state it guards.
+  const on = (note: string | undefined) => noted(m.annotationTarget, note, `${state.id} gate`, `${state.label} gate`);
+  if (annotated(m, 'gates', g.annotate)) return { label: '', ...on(noteOf(g.label, sub, g.annotation)) };
+  return { label: g.label ?? 'Gate', ...(sub && { sub }), ...on(g.annotation) };
 };
 /** Child records hang off their state by a dotted line, without an arrowhead. */
 const ATTACHED = { dash: 'dotted' } as const;
@@ -105,22 +104,22 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
       const g = s.gate;
       if (g) {
         const src = pointer('states', i, 'gate');
-        nodes.push({ id: gateOf(s.id), shape: 'checkpoint', ...gateText(m, g), ...place(s.id, ACTIONS_BAND), ...(g.style && { style: g.style }), ...(g.quote && { quote: g.quote }), src } as IRNode);
+        nodes.push({ id: gateOf(s.id), shape: 'checkpoint', ...gateText(m, g, { id: s.id, label: label.get(s.id)! }), ...place(s.id, ACTIONS_BAND), ...(g.style && { style: g.style }), ...(g.quote && { quote: g.quote }), src } as IRNode);
         // Bold when a main-path action enters the state; faded only when every way in is a faded action.
         const ins = [...m.states.flatMap((x) => (x.to ?? []).filter((a) => a.state === s.id)), ...(m.sharedActions ?? []).filter((a) => a.state === s.id)];
         const byWorkflow = transitions(m).some((t) => t.workflow && t.to === s.id);
         const style = ins.some((a) => a.main) ? edgeStyleOf(m, true, undefined) : ins.length && !byWorkflow ? edgeStyleOf(m, false, undefined) : over(m.edgeStyle, undefined);
         edges.push({ id: `${gateOf(s.id)}:link`, from: gateOf(s.id), to: pill(s.id), ...style, src });
       }
-      nodes.push({ id: pill(s.id), shape: 'state', label: label.get(s.id)!, ...(s.annotation && { note: s.annotation }), ...place(s.id, ACTIONS_BAND), ...(st && { style: st }), src: pointer('states', i) } as IRNode);
+      nodes.push({ id: pill(s.id), shape: 'state', label: label.get(s.id)!, ...noted(m.annotationTarget, s.annotation, s.id, label.get(s.id)!), ...place(s.id, ACTIONS_BAND), ...(st && { style: st }), src: pointer('states', i) } as IRNode);
       // Child records made in the state hang off its pill (URS-TYP-018).
       (s.records ?? []).forEach((r, j) => {
         const id = `${pill(s.id)}:record:${j}`;
         const src = pointer('states', i, 'records', j);
         const values = r.fields?.length ? r.fields.join('\n') : undefined;
-        const note = annotated(m, 'records', r.annotate) ? noteOf(values, r.annotation) : r.annotation;
+        const note = noted(m.annotationTarget, annotated(m, 'records', r.annotate) ? noteOf(values, r.annotation) : r.annotation, r.record, r.label ?? r.record);
         const sub = annotated(m, 'records', r.annotate) ? undefined : values;
-        nodes.push({ id, shape: 'record', label: r.label ?? r.record, ...(sub && { sub }), ...(note && { note }), ...place(s.id, ACTIONS_BAND), ...(r.style && { style: r.style }), ...(r.quote && { quote: r.quote }), src } as IRNode);
+        nodes.push({ id, shape: 'record', label: r.label ?? r.record, ...(sub && { sub }), ...note, ...place(s.id, ACTIONS_BAND), ...(r.style && { style: r.style }), ...(r.quote && { quote: r.quote }), src } as IRNode);
         edges.push({ id: `${id}:link`, from: pill(s.id), to: id, marker: 'none', ...over(m.edgeStyle, ATTACHED), src });
       });
       // Actions to unknown states are reported by the rules and left out here.
@@ -143,7 +142,7 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
       const id = a.id ?? `shared:${i}`;
       const from = a.from ? sharedFrom(m, a).map(stateLabel).join(', ') : `Any active state${a.except?.length ? ` except ${a.except.map(stateLabel).join(', ')}` : ''}`;
       const src = pointer('sharedActions', i);
-      nodes.push({ id: `${id}:from`, shape: 'state', label: from, ...(a.annotation && { note: a.annotation }), ...place(a.state, ACTIONS_BAND), style: { dash: 'dashed' }, src } as IRNode);
+      nodes.push({ id: `${id}:from`, shape: 'state', label: from, ...noted(m.annotationTarget, a.annotation, id, a.label ?? from), ...place(a.state, ACTIONS_BAND), style: { dash: 'dashed' }, src } as IRNode);
       edges.push({ id, from: `${id}:from`, to: entryOf(m, a.state), ...actionLabels(a), ...edgeStyleOf(m, a.main, a.style), ...(a.quote && { quote: a.quote }), src });
     });
     if (summary) {

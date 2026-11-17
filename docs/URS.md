@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.57 (draft) |
+| Version | 0.58 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -101,7 +101,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-DM-026 | S | Legend: a type lists what a chart uses (shape, icon or line sample plus text). It is drawn in a box under the diagram, in rows no wider than the diagram, independent of the layout engine. | Only used items; inside the drawing; can be switched off. | T | Verified |
 | URS-DM-027 | S | Title block: key–value pairs on one line under the title. | Rendered under the title; drawing grows for it. | T | Verified |
 | URS-DM-028 | S | Bar shape for parallel splits and joins. It lies across the flow in both directions and takes edges only on its long sides. | Turned for TB; polish never enters a short side. | T | Verified |
-| URS-DM-029 | S | Annotations, as on an engineering drawing: a node can carry an annotation, drawn as a numbered balloon on its top-left corner, with the text listed by number in a Notes box beside the diagram (top right). Numbers follow node order; nodes with the same text share a number. Hovering a balloon shows its note as a tooltip. Works with every layout engine. | Balloons in the node's group, each with its note as a tooltip; notes box right of the drawing, which grows to hold it; long text wraps; nothing drawn without annotations. | T | Verified |
+| URS-DM-029 | S | Annotations, as on an engineering drawing: a node can carry an annotation, drawn as a numbered balloon on its top-left corner, with the text listed by number in a Notes box beside the diagram (top right). Numbers follow node order; nodes with the same text share a number. Hovering a balloon shows its note as a tooltip. Optionally (`annotationTarget: id | label` on lifecycle and SAP charts) each note names, in bold above it, what it is attached to, by id or by label; a note shared by several shapes names each once. Works with every layout engine. | Balloons in the node's group, each with its note as a tooltip; attached-to names only when asked; notes box right of the drawing, which grows to hold it; long text wraps; nothing drawn without annotations. | T | Verified |
 | URS-DM-018 | C | Org charts: a top-level `lineStyle` for reporting lines, consistent with `edgeStyle` and `transitionStyle`, replacing `styles.lines`. | Default applied to every reporting line; `styles.lines` removed. | T | Proposed |
 | URS-DM-014 | S | Line thickness: `style.lineWidth` (px, 0.5–8) on nodes, edges, lanes, phases and containers. Arrowheads scale with thicker lines. Default output is unchanged. | Thickness applied per element; out-of-range values rejected; default output byte-identical. | T | Verified |
 | URS-DM-011 | W | Nested sub-lanes. | — | T | Proposed |
@@ -297,7 +297,7 @@ Updated with each change. `—` = not started.
 | DM-026 | layout/legend.ts, render/svg/legend.ts, render.ts | core/test/lifecycle-vault.test.ts (legend), core/test/orgchart-tags.test.ts | Shape samples honour the style's opacity (0.46). |
 | DM-027 | ir/types.ts (`meta`), render/svg/index.ts | core/test/lifecycle-vault.test.ts | |
 | DM-028 | shapes/library.ts (`bar`, `across`), layout/layered/build.ts, layout/polish.ts | core/test/lifecycle-vault.test.ts | |
-| DM-029 | ir/types.ts (`IRNode.note`), geometry.ts (`PlacedNotes`, `PlacedNode.note`), layout/notes.ts (`withNotes`), render.ts, render/svg/{notes,index}.ts, style.ts (`NOTE_*`); lifecycle `annotation` / `annotate` | core/test/notes.test.ts, lifecycle.test.ts | Balloons take no layout room, like badges. |
+| DM-029 | ir/types.ts (`IRNode.note`, `noteOn`), diagrams/annotations.ts (`noted`, `annotationTargetSchema`), geometry.ts (`PlacedNotes`, `PlacedNode.note`), layout/notes.ts (`withNotes`), render.ts, render/svg/{notes,index}.ts, style.ts (`NOTE_*`); lifecycle `annotation` / `annotate` | core/test/notes.test.ts, lifecycle.test.ts | Balloons take no layout room, like badges. |
 | LY-013 | layout/layered/place.ts (`straighten`), layout/layered/route.ts (tip hints, `clear`), layout/polish.ts | core/test/routing.test.ts, quality ratchet (bends), goldens | random-200 bends 3590 → 1842, crossings 2814 → 2387 (with the cheaper search on large graphs, 0.28; 1791 / 2319 with the full search). hints-notes now honours its S-side hints on a diamond (they had landed on the E/W tips): one more line through a label. |
 | DM-019, DM-020 | ir/types.ts (`BandGroup`, `Band.detail`), layout/layered/{headers,bands,index}.ts, render/svg/bands.ts, render/styles.ts, validate/common.ts | core/test/lifecycle.test.ts (band groups) | Group ids render as `lg-`/`pg-`; web click-to-source handles them. |
 | IN-009 | diagrams/flowchart/{model (`linksOf`),schema,to-ir,ai}.ts, diagrams/state/{model (`transitionsOf`),schema,to-ir,validate,ai}.ts, adapters/xml.ts | core/test/{flowchart,state,adapters,style-sections,sweep-c}.test.ts, all goldens (converted; drawings identical except one track swap in state-dark), ai/test/refine.test.ts | Generated ids `edge:<source>:<n>`. AI generation stays flat and is nested on the way in; generated edges from unknown sources are dropped. Random quality graphs re-baselined (input order changed, layout code unchanged). |
@@ -375,6 +375,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.58 | 2026-11-17 | Owner request: annotations can name the object they are attached to, by id or by label. DM-029 extended. |
 | 0.57 | 2026-11-17 | Owner request: annotation markers show their note as a tooltip. DM-029 extended. |
 | 0.56 | 2026-11-17 | Owner request: a chart designed for SAP. Added TYP-019 (statuses), TYP-020 (transaction control matrix, off by default), TYP-021 (flexible workflow), per the agreed proposal: two status rows, arrows from ranges by default. |
 | 0.55 | 2026-11-17 | Owner request: workflow start as a play button in a ring, end as an X in a ring. TYP-009 updated. |

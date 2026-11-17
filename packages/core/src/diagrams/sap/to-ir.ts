@@ -1,5 +1,6 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
+import { noted } from '../annotations.ts';
 import { merged, over, styled } from '../section-styles.ts';
 import { columnsOf } from './columns.ts';
 import { sapLegend } from './legend.ts';
@@ -38,13 +39,12 @@ export function sapToIR(m: Sap): GraphIR {
     nodes.push({ id: 'sys:start', shape: 'initial', label: '', ...place, phase: col(sys[0]!.code), src: '/systemStatuses/0' });
     edges.push({ id: 'sys:start>', from: 'sys:start', to: `sys:${sys[0]!.code}`, ...line, src: '/systemStatuses/0' });
     sys.forEach((s, i) => {
-      const note = s.annotation;
       nodes.push({
         id: `sys:${s.code}`,
         shape: 'state',
         label: s.code,
         ...(s.label && { sub: s.label }),
-        ...(note && { note }),
+        ...noted(m.annotationTarget, s.annotation, s.code, s.label ?? s.code),
         ...place,
         phase: col(s.code),
         ...styled(m.styles, 'systemStatuses', s.style),
@@ -72,7 +72,7 @@ export function sapToIR(m: Sap): GraphIR {
         shape: 'state',
         label: u.code,
         ...(range && { sub: range }),
-        ...(u.annotation && { note: u.annotation }),
+        ...noted(m.annotationTarget, u.annotation, u.code, u.label ?? u.code),
         lane: USER_LANE,
         phase: col(u.code),
         ...over(merged(m.styles?.userStatuses, u.number === undefined ? DASHED : undefined), u.style),
