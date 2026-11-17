@@ -7,7 +7,7 @@ const changeControl = {
   title: 'Change Control lifecycle',
   object: 'change_control__c',
   info: { Lifecycle: 'Change Control', Version: '3' },
-  annotate: ['gates'],
+  annotate: { gates: true },
   styleBy: { owner: { 'QA Reviewer': { fill: '#e0f2f1', stroke: '#00897b' }, 'Change Owner': { fill: '#fdecea', stroke: '#c62828' } } },
   stages: [
     { id: 'initiation', label: 'Initiation', states: ['draft', 'in_review'] },
@@ -85,8 +85,8 @@ export const examples: [Example, ...Example[]] = [
   {
     name: 'roles',
     title: 'Object lifecycle, workflows split by role',
-    description: '`roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System.',
-    source: { ...changeControl, roleLanes: true },
+    description: '`roleLanes: true`: each workflow is a group over one band per role, in the order owners appear; steps without an owner go in System. The bands name the owners, so `showOwners: false` leaves them off the steps, and `annotate` puts task fields into annotations.',
+    source: { ...changeControl, roleLanes: true, showOwners: false, annotate: { gates: true, task: true } },
   },
   {
     name: 'summary',

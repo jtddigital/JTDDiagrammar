@@ -131,6 +131,19 @@ const start: Shape = {
   port: round,
 };
 
+/** Workflow end: a stop, a square in a ring the size of the start (URS-TYP-009). */
+const end: Shape = {
+  id: 'end',
+  unlabelled: true,
+  size: fixed(22),
+  outline: (w) => circle(w / 2, w / 2, w / 2),
+  solid: (w) => {
+    const [c, s] = [w / 2, w / 2 - 6.5];
+    return circle(c, c, c) + ccw(c, c, c - 2.5) + `M${n(c - s)} ${n(c - s)}H${n(c + s)}V${n(c + s)}H${n(c - s)}Z`;
+  },
+  port: round,
+};
+
 /** Choice pseudostate: small diamond. */
 const choice: Shape = { ...decision, id: 'choice', unlabelled: true, size: fixed(26) };
 
@@ -284,7 +297,7 @@ const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, end, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

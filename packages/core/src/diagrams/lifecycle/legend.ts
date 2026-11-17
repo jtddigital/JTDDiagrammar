@@ -6,7 +6,7 @@ import { stateStyle } from './state-style.ts';
 
 const KIND: Record<StepKind, string> = {
   start: 'Workflow start',
-  end: 'End',
+  end: 'Workflow end',
   task: 'Task',
   decision: 'Decision',
   notification: 'Notification',
