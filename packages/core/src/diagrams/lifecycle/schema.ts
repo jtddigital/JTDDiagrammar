@@ -1,5 +1,6 @@
 import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { annotationSchema, tagsSchema } from '../annotations.ts';
+import { eventsSchema } from '../process/events.ts';
 import { ANNOTATED, COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -7,6 +8,7 @@ const text = (description: string) => ({ type: 'string', description }) as const
 const texts = (description: string) => ({ type: 'array', items: { type: 'string' }, description }) as const;
 const flag = (description: string) => ({ type: 'boolean', description }) as const;
 const map = (description: string) => ({ type: 'object', additionalProperties: { type: 'string' }, description }) as const;
+const rules = { type: 'array', items: ref('Rule id.'), description: 'Rules (from the chart’s `rules`) this depends on; shown with its text.' } as const;
 const quote = text('Supporting excerpt from the source material; shown as a tooltip.');
 const optionalId = { ...id, description: 'Optional; generated when absent.' };
 const main = flag('On the main path: drawn bold while other connections fade.');
@@ -55,6 +57,7 @@ const step = {
     state: ref('State the record is in during this step. Optional for a state change (defaults to its target).'),
     target: ref('For a state change: the state it moves the record to.'),
     fields: texts('Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label.'),
+    rules,
     verdicts: {
       type: 'array',
       description: 'Task outcomes, each leading to a next step; no decision diamond needed.',
@@ -151,6 +154,7 @@ export const lifecycleSchema = {
               label: text('Defaults to "Gate".'),
               fields: texts('Fields that must be complete; shown as "Required: …".'),
               criteria: texts('Entry criteria, one per line.'),
+              rules,
               annotation,
               tags: tagsSchema,
               annotate,
@@ -205,6 +209,7 @@ export const lifecycleSchema = {
         },
       },
     },
+    ...eventsSchema('State whose entry publishes it.'),
     workflows: {
       type: 'array',
       description: 'Workflows: one row (or column) each.',

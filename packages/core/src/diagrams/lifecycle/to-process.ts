@@ -1,4 +1,5 @@
 import { pointer } from '../../diagnostics.ts';
+import { eventsToProcess, ruleTexts } from '../process/events.ts';
 import { emptyModel, type Flow, type ProcessModel, type PState, type Transition, type WNode } from '../process/model.ts';
 import { KIND, sharedFrom, stateOf, type Lifecycle, type LcStep } from './model.ts';
 
@@ -34,7 +35,7 @@ export function lifecycleToProcess(m: Lifecycle): ProcessModel {
   }));
   const guard = new Map<string, string>();
   m.states.forEach((s, i) => {
-    const text = [...(s.entryCriteria ?? []), ...(s.gate?.criteria ?? []), ...(s.gate?.fields?.length ? [`Required: ${s.gate.fields.join(', ')}`] : [])];
+    const text = [...(s.entryCriteria ?? []), ...(s.gate?.criteria ?? []), ...(s.gate?.fields?.length ? [`Required: ${s.gate.fields.join(', ')}`] : []), ...ruleTexts(m, s.gate?.rules)];
     if (!text.length) return;
     p.rules.push({ id: `entry:${s.id}`, name: `entry into ${name.get(s.id)}`, text: text.join('; '), via: s.gate?.fields?.length ? 'required fields' : 'entry criteria', src: pointer('states', i, s.gate ? 'gate' : 'entryCriteria') });
     guard.set(s.id, `entry:${s.id}`);
@@ -98,6 +99,7 @@ export function lifecycleToProcess(m: Lifecycle): ProcessModel {
   }
 
   (m.workflows ?? []).forEach((w, wi) => p.workflows.push(workflow(m, w, wi, p)));
+  eventsToProcess(p, m, (state) => [state]);
   return p;
 }
 

@@ -1,5 +1,6 @@
 import { error, hasErrors, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
 import { processDiagnostics } from '../process/diagnose.ts';
+import { eventDiagnostics, ruleRefs } from '../process/events.ts';
 import { badStages, ends, nextOf, stateOf, stepsOf, transitions, type Lifecycle } from './model.ts';
 import { lifecycleToProcess } from './to-process.ts';
 
@@ -30,6 +31,17 @@ export function validateLifecycle(m: Lifecycle): Diagnostic[] {
   m.workflows?.forEach((w, i) => {
     if (w.start && !states.has(w.start.state)) out.push(error('ref.state', `workflow '${w.id}' starts in unknown state '${w.start.state}'`, pointer('workflows', i, 'start', 'state')));
   });
+  // Signals, subscribers and rules (URS-TYP-029).
+  out.push(
+    ...eventDiagnostics(m, {
+      states,
+      workflows: new Set((m.workflows ?? []).map((w) => w.id)),
+      ruleRefs: [
+        ...m.states.flatMap((s, i) => (s.gate ? ruleRefs([s.gate], () => pointer('states', i, 'gate')) : [])),
+        ...stepsOf(m).flatMap(({ step, src }) => ruleRefs([step], () => src)),
+      ],
+    }),
+  );
   m.stages?.forEach((g, i) => {
     const why = badStages(m).get(g.id);
     if (why) out.push(error('lifecycle.stage', why, pointer('stages', i)));

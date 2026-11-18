@@ -2,6 +2,7 @@ import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
 import { noted, noteOf } from '../annotations.ts';
 import { DOTTED, HANGING } from '../process/draw.ts';
+import { eventParts, ruleTexts } from '../process/events.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { over, ruled, styled } from '../section-styles.ts';
 import { lifecycleLegend } from './legend.ts';
@@ -19,11 +20,11 @@ const detail = (s: LcState) =>
     .filter(Boolean)
     .join('\n') || undefined;
 
-/** A gate's text: required fields, then entry criteria (URS-TYP-018). */
-const gateSub = (g: LcGate) => [...(g.fields?.length ? [`Required: ${g.fields.join(', ')}`] : []), ...(g.criteria ?? [])].join('\n') || undefined;
+/** A gate's text: required fields, then entry criteria and rules (URS-TYP-018, URS-TYP-029). */
+const gateSub = (m: Lifecycle, g: LcGate) => [...(g.fields?.length ? [`Required: ${g.fields.join(', ')}`] : []), ...(g.criteria ?? []), ...ruleTexts(m, g.rules)].join('\n') || undefined;
 /** A gate's label and text beside it, or (annotated) all of it in its annotation (URS-TYP-018, URS-DM-029). */
 const gateText = (m: Lifecycle, g: LcGate, state: { id: string; label: string }) => {
-  const sub = gateSub(g);
+  const sub = gateSub(m, g);
   // Named after the state it guards.
   const on = (note: string | undefined) => noted(m, note, { id: `${state.id} gate`, label: `${state.label} gate`, type: 'Gate', ...(g.tags && { tags: g.tags }) });
   if (annotated(m, 'gates', g.annotate)) return { label: '', ...on(noteOf(g.label, sub, g.annotation)) };
@@ -179,6 +180,21 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
         src: `${pointer('workflows', m.workflows!.indexOf(w))}/start`,
       });
     });
+
+  // Signals published on entry into a state, and who they are delivered to (URS-TYP-029).
+  if (actions) {
+    const drawn = new Set(nodes.map((n) => n.id));
+    const startOf = (id: string) => {
+      const w = workflows.find((x) => x.id === id);
+      const first = w && (w.steps.find((s) => s.kind === 'start') ?? w.steps[0]);
+      return first && drawn.has(first.id) ? first.id : undefined;
+    };
+    const ev = eventParts(m, { pill: (s) => (label.has(s) ? pill(s) : undefined), start: startOf, at: (s, band) => place(s, band) as { lane: string; phase: string } });
+    // Next to the actions band, before the workflows.
+    flowBands.splice(1, 0, ...ev.bands);
+    nodes.push(...ev.nodes);
+    edges.push(...ev.edges);
+  }
 
   const title = m.title ?? m.object;
   const meta: [string, string][] = [...(m.title && m.object ? [['Object', m.object] as [string, string]] : []), ...Object.entries(m.info ?? {})];

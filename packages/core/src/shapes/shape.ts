@@ -34,6 +34,8 @@ export interface Shape {
   inner?(w: number, h: number): { w: number; h: number };
   /** Vertical offset of the label centre from the box centre. */
   labelDy?(w: number, h: number): number;
+  /** Horizontal offset of the label centre from the box centre, e.g. past a glyph on the left. */
+  labelDx?(w: number, h: number): number;
   /** Boundary point on a side; t ∈ [-1, 1] spreads multiple edges along the side where the shape allows. */
   port(side: Side, w: number, h: number, t: number): Point;
 }

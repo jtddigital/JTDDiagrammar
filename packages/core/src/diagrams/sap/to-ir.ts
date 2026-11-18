@@ -6,7 +6,8 @@ import { columnsOf } from './columns.ts';
 import { documentColumns, documentParts } from './documents.ts';
 import { sapLegend } from './legend.ts';
 import { matrixParts } from './matrix.ts';
-import { nextOf, numbered, type Sap } from './model.ts';
+import { nextOf, numbered, withRules, type Sap } from './model.ts';
+import { eventParts } from '../process/events.ts';
 import { strategyParts } from './release.ts';
 import { DASHED, workflowParts } from './workflows.ts';
 
@@ -20,7 +21,8 @@ export const USER_LANE = 'sap:user';
  * flow (URS-TYP-023); one row per workflow and per release strategy (URS-TYP-022); and with `matrix`, one
  * row per business transaction.
  */
-export function sapToIR(m: Sap): GraphIR {
+export function sapToIR(source: Sap): GraphIR {
+  const m = withRules(source);
   const sys = m.systemStatuses ?? [];
   const users = m.userStatuses ?? [];
   const { columns, groups, at } = columnsOf(m);
@@ -102,6 +104,11 @@ export function sapToIR(m: Sap): GraphIR {
     edges.push(...part.edges);
   });
   (m.releaseStrategies ?? []).forEach((r, ri) => parts(strategyParts({ m, col, docCol: (id) => docCol.get(id) }, r, ri)));
+
+  const ev = eventParts(m, { pill, start: (id) => (m.workflows?.some((w) => w.id === id) ? `wf:${id}:start` : m.releaseStrategies?.some((r) => r.id === id) ? `rs:${id}:start` : undefined), at: (code, lane) => ({ lane, phase: col(code) }) });
+  lanes.push(...ev.bands);
+  nodes.push(...ev.nodes);
+  edges.push(...ev.edges);
 
   const laneGroups: BandGroup[] = [];
   if (m.matrix) {

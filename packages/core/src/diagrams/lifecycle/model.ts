@@ -1,6 +1,7 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Direction, EdgeLabel, Side, Style, Theme } from '../../ir/types.ts';
 import type { AnnotationOptions } from '../annotations.ts';
+import type { Events } from '../process/events.ts';
 import type { StyleBy } from '../section-styles.ts';
 
 export const STEP_KINDS = ['start', 'task', 'decision', 'notification', 'system', 'stateChange', 'parallel', 'join', 'end'] as const;
@@ -59,6 +60,8 @@ export interface LcGate {
   fields?: string[];
   /** Entry criteria, e.g. "All change actions closed". */
   criteria?: string[];
+  /** Rules (ids) that are entry criteria too (URS-TYP-029). */
+  rules?: string[];
   /** Annotation: a numbered marker on the shape, the text in the notes beside the chart (URS-DM-029). */
   annotation?: string;
   /** Tags, e.g. for grouping annotations (URS-DM-030). */
@@ -155,6 +158,8 @@ export interface LcStep {
   target?: string;
   /** Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". */
   fields?: string[];
+  /** Rules (ids) the step depends on, e.g. a decision's; shown as "If: …" (URS-TYP-029). */
+  rules?: string[];
   /** Task: outcomes, each leading on. */
   verdicts?: LcVerdict[];
   /** Task: an eSignature is required. */
@@ -186,7 +191,7 @@ export interface LcWorkflow {
   steps: LcStep[];
 }
 
-export interface Lifecycle extends AnnotationOptions {
+export interface Lifecycle extends AnnotationOptions, Events {
   version: string;
   type: 'lifecycle';
   title?: string;
@@ -248,8 +253,8 @@ export const stateOf = (s: LcStep) => s.state ?? (s.kind === 'stateChange' ? s.t
 /** Whether states map to phases (the flow axis) rather than lanes, for this direction and orientation. */
 export const statesArePhases = (m: Pick<Lifecycle, 'direction' | 'statesAs'>) => ((m.statesAs ?? 'columns') === 'columns') === ((m.direction ?? 'LR') === 'LR');
 
-export const showActions = (m: Pick<Lifecycle, 'actionsLane' | 'states' | 'sharedActions' | 'workflows' | 'view'>) =>
-  m.view === 'summary' || (m.actionsLane ?? (m.states.some((s) => (s.to?.length ?? 0) > 0 || !!s.gate || !!s.records?.length) || !!m.sharedActions?.length || !!m.workflows?.some((w) => w.start)));
+export const showActions = (m: Pick<Lifecycle, 'actionsLane' | 'states' | 'sharedActions' | 'workflows' | 'view' | 'signals'>) =>
+  m.view === 'summary' || (m.actionsLane ?? (!!m.signals?.length || (m.states.some((s) => (s.to?.length ?? 0) > 0 || !!s.gate || !!s.records?.length) || !!m.sharedActions?.length || !!m.workflows?.some((w) => w.start))));
 
 /** Where a step leads: plain connections, then verdicts. */
 export const nextOf = (s: LcStep): string[] => [...(s.to ?? []).map((l) => l.step), ...(s.verdicts ?? []).map((v) => v.step)];

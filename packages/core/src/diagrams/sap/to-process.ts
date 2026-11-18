@@ -1,6 +1,7 @@
 import { pointer } from '../../diagnostics.ts';
 import { emptyModel, type Flow, type ProcessModel, type Transition, type WNode } from '../process/model.ts';
-import { flags, nameOf, nextOf, numbered, type Sap, type SapReleaseStrategy, type SapWorkflow } from './model.ts';
+import { eventsToProcess } from '../process/events.ts';
+import { flags, nameOf, nextOf, numbered, withRules, type Sap, type SapReleaseStrategy, type SapWorkflow } from './model.ts';
 
 const SAP = 'sap';
 const st = (name: string, values?: Record<string, unknown>) => ({ profile: SAP, name, ...(values && { values }) });
@@ -17,7 +18,8 @@ const off = (code: string) => `${code}:off`;
  * system status, user status and one region per flag; business transactions as operations with transaction
  * control as permissions; flexible workflows and release strategies as activities; documents as objects.
  */
-export function sapToProcess(m: Sap): ProcessModel {
+export function sapToProcess(source: Sap): ProcessModel {
+  const m = withRules(source);
   const p = emptyModel(SAP);
   const sys = m.systemStatuses ?? [];
   const users = m.userStatuses ?? [];
@@ -93,6 +95,8 @@ export function sapToProcess(m: Sap): ProcessModel {
 
   (m.workflows ?? []).forEach((w, wi) => p.workflows.push(flexible(w, wi, p)));
   (m.releaseStrategies ?? []).forEach((r, ri) => p.workflows.push(release(r, ri, p)));
+  const isFlag = new Set(flags(m).map((f) => f.code));
+  eventsToProcess(p, m, (code) => [isFlag.has(code) ? on(code) : code]);
   return p;
 }
 

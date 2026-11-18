@@ -1,5 +1,6 @@
 import { envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
 import { annotationSchema, tagsSchema } from '../annotations.ts';
+import { eventsSchema } from '../process/events.ts';
 import { REWORK, RULES } from './model.ts';
 
 const text = (description: string) => ({ type: 'string', description }) as const;
@@ -13,6 +14,7 @@ const notes = {
   quote: text('Supporting excerpt from the source material; shown as a tooltip.'),
   style,
 } as const;
+const ruleIds = (description: string) => ({ type: 'array', items: ref('Rule id.'), description }) as const;
 const txRefs = (description: string) => ({ type: 'array', items: ref('Business transaction id.'), description }) as const;
 const obj = (required: string[], properties: Record<string, unknown>, description?: string) => ({ type: 'object', additionalProperties: false, required, properties, ...(description && { description }) }) as const;
 
@@ -21,6 +23,7 @@ const step = obj(['id'], {
   label: text('Defaults to "Approve".'),
   recipients: text('Who approves, e.g. a role found by agent determination; shown under the label.'),
   conditions: texts('Step conditions: the step runs only when they hold, else it is skipped. Shown as "If: …" under the label, or in its annotation with `annotate`.'),
+  rules: ruleIds('Rules (from `rules`) that are step conditions too; shown with them.'),
   deadline: text('Time allowed, e.g. "2d" (clock badge).'),
   optional: flag('Optional step (dashed).'),
   rework: { type: 'string', enum: REWORK, description: 'The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s.' },
@@ -87,6 +90,7 @@ export const sapSchema = {
         label: text('Workflow name.'),
         trigger: obj(['status'], { status: codeRef('Status whose setting raises the event that starts it.'), event: text('Event, e.g. "Order created"; default "<status> set".') }, 'What starts it: a dashed arrow from the status.'),
         conditions: texts('Start conditions: the workflow is used only when they hold. Drawn as a gate.'),
+        rules: ruleIds('Rules (from `rules`) that are start conditions too; shown with them.'),
         steps: { type: 'array', minItems: 1, items: step, description: 'Approval steps, in order: Release leads on, Reject cancels the workflow.' },
         released: codeRef('Status set when it is released.'),
         rejected: codeRef('Status set when it is rejected.'),
@@ -102,6 +106,7 @@ export const sapSchema = {
         document: ref('Document it releases: a dashed arrow from the document starts it.'),
         status: codeRef('Status the object is in while it runs, which places it; default the document’s.'),
         conditions: texts('Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate.'),
+        rules: ruleIds('Rules (from `rules`) that are release conditions too; shown with them.'),
         codes: {
           type: 'array',
           minItems: 1,
@@ -118,6 +123,7 @@ export const sapSchema = {
         ...notes,
       }),
     },
+    ...eventsSchema('Status code whose setting publishes it.'),
     documents: {
       type: 'array',
       description: 'The document flow: documents created as the object moves on, e.g. a purchase requisition on release. One row.',

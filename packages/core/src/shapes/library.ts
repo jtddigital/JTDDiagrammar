@@ -292,6 +292,26 @@ const record: Shape = {
 };
 
 /**
+ * Signal: a published fact (URS-PM-014), a box with BPMN's signal mark, a triangle in a circle, at its left.
+ */
+const GLYPH = 22;
+const signal: Shape = {
+  id: 'signal',
+  size: (tw, th) => {
+    const { w, h } = boxSize()(tw, th);
+    return { w: w + GLYPH, h };
+  },
+  inner: (w, h) => ({ w: w - GLYPH - 2 * PAD_X, h: h - 2 * PAD_Y }),
+  labelDx: () => GLYPH / 2,
+  outline: rect,
+  detail: (_w, h) => {
+    const [cx, cy, r] = [GLYPH / 2 + 3, h / 2, 8];
+    return `M${n(cx - r)} ${n(cy)}A${r} ${r} 0 1 1 ${n(cx + r)} ${n(cy)}A${r} ${r} 0 1 1 ${n(cx - r)} ${n(cy)}ZM${n(cx)} ${n(cy - 5)}L${n(cx + 4.5)} ${n(cy + 3)}H${n(cx - 4.5)}Z`;
+  },
+  port: boxPort(),
+};
+
+/**
  * Checkpoint: a small field gate, two posts with rails and a brace, that every way into a state passes
  * (URS-TYP-018). Its text goes beside it, or into an annotation.
  */
@@ -316,7 +336,7 @@ const card: Shape = { ...state, id: 'card' };
 
 /** Shared shape library (URS-DM-004). */
 export const SHAPES: ReadonlyMap<string, Shape> = new Map(
-  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, end, final, choice, note, card, chevron, hexagon, bar, record, checkpoint, task, summary, milestone, deliverable, gate, buffer, ...MARKS].map((s) => [s.id, s]),
+  [process, terminator, decision, document, data, subprocess, connector, state, initial, start, end, final, choice, note, card, chevron, hexagon, bar, record, signal, checkpoint, task, summary, milestone, deliverable, gate, buffer, ...MARKS].map((s) => [s.id, s]),
 );
 
 export const shape = (id: string): Shape => SHAPES.get(id) ?? process;

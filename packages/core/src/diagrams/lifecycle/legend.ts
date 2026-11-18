@@ -3,6 +3,7 @@ import { merged, ruled } from '../section-styles.ts';
 import { KIND, stepsOf, type Lifecycle, type StateType } from './model.ts';
 import { DASHED, hasMain, MAIN, SHAPE } from './steps.ts';
 import { stateStyle } from './state-style.ts';
+import { eventLegend } from '../process/events.ts';
 
 const TYPE: Record<StateType, string> = { initial: 'Initial state', steady: 'State', final: 'Final state', cancelled: 'Cancelled state' };
 const ICON_TEXT: Record<Icon, string> = {
@@ -50,5 +51,6 @@ export function lifecycleLegend(m: Lifecycle, nodes: readonly IRNode[], edges: r
   if (hasMain(m) && m.view !== 'summary') add({ label: 'Main path', line: MAIN });
   if (edges.some((e) => e.id.startsWith('start:'))) add({ label: 'Starts a workflow', line: DASHED });
   if (edges.some((e) => e.id.startsWith('flow:'))) add({ label: 'Workflow transition', line: DASHED });
+  eventLegend(nodes, edges).forEach(add);
   return out;
 }
