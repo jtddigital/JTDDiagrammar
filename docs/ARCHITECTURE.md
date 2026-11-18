@@ -165,6 +165,7 @@ Future types that don't fit a layered layout (sequence, ER) add a new engine and
 - **Edge labels (URS-DM-024).** An edge carries a list of labels. Pinned ones (`at`, percent of the polyline's length) sit exactly there; the router reserves gap room for all of an edge's labels side by side.
 - **Decorations (URS-DM-025..027).** Badges are drawn only: they straddle the node's top edge and take no layout room. Label icons widen the label box the router reserves. The legend is laid out after styles are attached (`layout/legend.ts`, called from `render.ts`), so it works with any engine. Annotations (URS-DM-029) work the same way: `layout/notes.ts` numbers the nodes with a `note` and places the Notes box right of the drawing before the legend; balloons, like badges, take no layout room. The title block is drawn by the SVG renderer from `GraphIR.meta`.
 - **SAP (URS-TYP-019..021).** Everything SAP-specific is in `diagrams/sap/`: columns from the status profile, arrows from number ranges, the transaction-control matrix as ordinary lanes with small mark nodes (`shapes/marks.ts`), workflow and release-strategy rows, and the document flow row. It produces only generic IR for the layered engine.
+- **Process model (URS-PM, Proposed).** Process-oriented types share one canonical model, a UML subset with profiles; see §13.
 - **Lifecycle (URS-TYP-009/010).** Everything Vault-specific is in `diagrams/lifecycle/`. It produces only generic IR: verdict edges, badges, `bar` nodes, dashed start edges, main-path styles, state tints, legend items and band groups for role lanes. Layout and render never branch on it.
 - **Labels.** `layout/labels.ts` is a generic pass over finished geometry, so both engines' output goes through it. Candidates are the router's spot, five points along each segment, and spots just beside the line; they're scored for collisions using a spatial grid (`layout/grid.ts`).
 - **Styling.** Styles live in the IR and are attached to geometry by id in `render/styles.ts`, after layout, so engines never see them. The renderer takes a `Palette` per theme and makes one arrowhead marker per edge colour. Colours must match `^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`.
@@ -278,3 +279,178 @@ Cross-functional (P2) was moved ahead of the API and web app (P3) at the user's 
 | The generation schema drifts from the authoring schema | A property test proves that every generated output converts to an authoring-valid source shape (URS-AI-004). |
 | Large documents cost money and are slow | `count_tokens` pre-check, a per-request token budget, prompt caching, and configurable effort. |
 | Prompt injection via documents | No tools; type and schema fixed by the server; output is data only and escaped. |
+
+## 13. Process model (URS-PM-001..021, D-002..D-005)
+Status: **Proposed** (2026-11-18). This section is the specification the PM requirements point to; nothing here is implemented yet.
+
+### 13.1 Shape
+```
+Platform types (lifecycle, sap, …)      generic `process` type (fallback)
+            │ map onto                          │ written in
+            ▼                                   ▼
+   Process model: UML subset + Process profile + platform profiles   ← diagrams/process/ (library)
+            │ drawn by shared helpers in each type's toIR
+            ▼
+   Graph IR → layout → render   (unchanged)
+```
+Authors never write UML. Platform types keep their own vocabulary (user status, release code, verdict) and describe how it maps onto the model. The model is a library today (D-005), not a pipeline stage: each type still produces Graph IR itself, using the library's helpers and checks.
+
+### 13.2 Glossary (one meaning each; URS-PM-003)
+| Term | Meaning | UML | Never call it |
+|------|---------|-----|---------------|
+| Object | A business thing with an identity, properties and behaviour (a maintenance order, a document, an incident). | Class / instance | Record (except as a profile term), entity |
+| Object relation | A link between objects: association, composition, or dependency «derive»/«create». | Association, Dependency | Flow |
+| Region | One independent dimension of an object's status; exactly one of its states is active. | Region | Lane, status type |
+| State | A condition an object is in, within one region. | State | Status (except as a profile term) |
+| Transition | A move between two states of one region, fired by a trigger, optionally guarded, with effects. | Transition | Action, step |
+| Trigger | What fires a transition: an operation call, a signal, a time, or a change. | Trigger + CallEvent / SignalEvent / TimeEvent / ChangeEvent | Event (on its own) |
+| Operation | Something invoked on an object (release, approve, resolve). The hub between layers. | Operation | Action, transaction |
+| Task | A workflow step that calls operations, needs a person (a role), or both. | Action (CallOperationAction, OpaqueAction) | Action (user-facing) |
+| Workflow | An ordered set of tasks, gateways and outcomes that drives objects through operations. | Activity | Process (on its own) |
+| Gateway | A split or merge in a workflow: exclusive (decision/merge) or parallel (fork/join). | DecisionNode, MergeNode, ForkNode, JoinNode | — |
+| Role | Who performs a task or holds a permission (owner, approver, authorization key holder). | ActivityPartition, Actor | Owner (except as a profile term) |
+| Signal | A published fact, named in the past tense (PR approved). | Signal, SignalEvent, SendSignalAction | Event (on its own), message |
+| Subscription | Delivery of a signal to one consumer (a workflow start, an operation call, a handler, an external system). | Process profile | Listener |
+| Channel | The route a subscription uses: local, an event broker, an integration service. | Process profile | Bus, queue |
+| Permission | State × Operation [× Role] → outcome. | Process profile «permits» | Rule, guard |
+| Rule | A named decision used as a guard, a condition, or a change trigger; records how it is evaluated (`via`). | Constraint | Permission |
+| Profile | A set of stereotypes and tagged values specialising the model for a platform. | Profile, Stereotype | Adapter |
+
+### 13.3 UML subset (allowlist; URS-PM-001, PM-002)
+| Area | Metaclasses |
+|------|-------------|
+| Structure | Class, Property, Association (incl. composition), Dependency (stereotypes «derive», «create») |
+| Behaviour | StateMachine, Region, State (with entry behaviour), Pseudostate (initial; fork and join within a region), Transition, Constraint (guards), Operation |
+| Triggers | Trigger, CallEvent, SignalEvent, TimeEvent, ChangeEvent, Signal |
+| Workflow | Activity, CallOperationAction, SendSignalAction, OpaqueAction, ControlFlow, DecisionNode, MergeNode, ForkNode, JoinNode, InitialNode, ActivityFinalNode, ActivityPartition |
+| Extension | Profile, Stereotype, tagged values |
+
+Excluded, and invalid in the model: interactions (sequence, communication, timing, interaction overview), use cases, components and ports, composite structures, deployment, information flows, templates. A metaclass is added only by a URS change.
+
+### 13.4 Triggers and the operation hub (URS-PM-006..009, PM-013)
+Two paths fire transitions:
+
+```
+Operation path:  caller (task, user, job) ─► operation call
+                     ─► permission check over every active state (State × Operation × Role)
+                     ─► refused: nothing happens
+                     ─► allowed: fire every transition waiting for the operation, in every region at once
+                     ─► run their effects ─► publish signals ─► subscriptions ─► next operation calls / workflow starts
+
+Direct path:     signal / time / change trigger ─► transitions ─► effects ─► signals ─► …   (no permission check)
+```
+- A call is all or nothing: either every waiting transition fires or none does.
+- Core permission combination over the active states: forbidden if any forbids; else allowed if any allows; else the profile's default (Process: allowed). Profiles may add outcomes and replace the combination (SAP: warning; at least one allows and none forbids).
+- Workflows and objects share no state. A workflow changes an object only by calling its operations; an object reaches a workflow only through a signal and a subscription.
+
+### 13.5 Worked examples (become tests; URS-PM-007, PM-013)
+1. **SAP maintenance order, Release.** Task or user calls `release()`. Transaction control over the active states CRTD and APPR: APPR allows release, nothing forbids it → allowed. In one call: system region CRTD → REL, user region APPR → INWK (`setBy: release`). Signal *Order released*. With the HOLD flag active (it forbids release), the call is refused and nothing changes.
+2. **SAP purchase requisition with flexible workflow (corrected order).** User saves the requisition → signal *PR created* → subscription starts the approval workflow → tasks run (start conditions and step conditions are rules, `via: workflow condition`) → outcome approved → final task calls `release()` on the requisition → release status changes → signal *PR approved*. Exactly one subscription and one operation call link the two state machines.
+3. **Veeva document, approval verdict.** Review task's verdict *Approve* → state-change task calls the lifecycle operation `approve()` → permission (atomic security: state In Review × approve × role Approver → allowed) → In Review → Approved; entry behaviour sets the approval date → signal *Document approved*.
+4. **Veeva, scheduled expiry.** Time trigger (after 2 years in Effective) → Effective → Expired directly; no permission check.
+5. **ServiceNow incident, Resolve.** UI action calls `resolve()`; the UI action's condition is a rule guard; In Progress → Resolved → signal *Incident resolved* → subscription sends the caller notification.
+
+### 13.6 Profiles (URS-PM-015)
+- **Process** (base): Permission «permits» (outcomes allowed, forbidden), Rule (`via`), Subscription, Channel, the workflow state machine (Started, Running, Completed with outcome, Cancelled, Error).
+- **Platform profiles** extend Process only; no profile extends another. They may add stereotypes and tagged values, add permission outcomes, replace the combination rule, add workflow states and add checks. They may not change what a core construct means. Two stereotypes from different profiles on one element are an error.
+
+### 13.7 Mappings (URS-PM-016)
+Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `showOwners`, `matrix`, `transitions`, `statesAs`, `direction`, `roleLanes`, `view`) are not part of the model.
+
+**Veeva profile ← lifecycle type**
+| Lifecycle construct | Canonical | Stereotype / tagged values |
+|---------------------|-----------|----------------------------|
+| `object` | Object | «Veeva Object» `apiName` |
+| `states[]` | State in one region *Lifecycle* | «Veeva State» `stateType` |
+| `stateType: initial` | Initial pseudostate → that state | — |
+| `stages[]` | (tagged value on states) | «Veeva State» `stage` |
+| `entryCriteria`, `gate.criteria` | Rule guarding every transition into the state | Rule `via: entry criteria` |
+| `gate.fields` | Rule guarding every transition into the state | Rule `via: required fields`, `fields` |
+| `entryActions` | State entry behaviour | — |
+| `security` | Permission State × read/edit × Role | «Veeva Atomic Security» |
+| `records[]` | Dependency «create» to the child Object; entry behaviour calls its create operation | «Veeva Child Record» `fields` |
+| `states[].to[]` (user action) | Operation + transition triggered by its call | «Veeva User Action» `label` |
+| `by: job`, `after` | Time trigger (direct path) | «Veeva Job» `after` |
+| `sharedActions[]` | One operation with transitions from each source state | «Veeva User Action» |
+| `workflows[]` | Workflow | «Veeva Workflow» |
+| `start` (user / entry / job) | Operation call / subscription to *entered state* / time trigger | — |
+| step `start`, `end` | Initial node, activity final node | — |
+| step `task` | Task in the owner's partition | «Veeva Task» `fields`, `due`, `completion`, `signature` |
+| `verdicts[]` | Task outcomes: control flows guarded by the outcome | «Veeva Verdict» `signature`, `reasons`, `comment` |
+| step `decision` | Decision node | — |
+| step `notification` | Send-signal task | «Veeva Notification» `recipients` |
+| step `system` | Task calling a field-update operation | «Veeva System Action» `fields` |
+| step `stateChange` | Task calling the lifecycle operation that moves to `target` | — |
+| step `parallel`, `join` | Fork node, join node | — |
+| `owner`, `roles` | Role (activity partition) | — |
+
+**SAP profile ← sap type**
+| SAP construct | Canonical | Stereotype / tagged values |
+|---------------|-----------|----------------------------|
+| `object`, `profile` | Object | «SAP Object» `objectType`, `statusProfile` |
+| `systemStatuses[]` | States of region *System status*, first one initial | «SAP System Status» `code` |
+| numbered `userStatuses[]` | States of region *User status* | «SAP User Status» `number`, `low`, `high` |
+| `initial` | Initial pseudostate → that state | — |
+| `low`..`high` | Transitions to each numbered status in range, triggered by calls to the set-status operation | — |
+| flags (no number) | One two-state region each (set / not set) | «SAP User Status» flag |
+| `system` | Tagged value constraining placement | `usedIn` |
+| `auth` | Permission (any state) × set-status(code) × Role (authorization key holders) | «SAP Authorization Key» |
+| `transactions[]` | Operation | «SAP Business Transaction» (`tcodes` with URS-TYP-026) |
+| `transactions[].sets` | Transitions in region *System status* triggered by the operation | — |
+| `control` | Permission State × Operation → allowed / warning / forbidden | «SAP Transaction Control»; combination: at least one allows, none forbids |
+| `setBy`, `deletedBy` | Transitions in the user-status or flag region triggered by the operation | — |
+| `workflows[]` | Workflow | «SAP Flexible Workflow» |
+| `trigger.status`, `event` | Subscription to the signal *status set* (channel: local event linkage) | — |
+| `conditions` (start, step) | Rules | Rule `via: workflow condition` |
+| steps | Tasks in the recipients' partition | «SAP Workflow Step» `deadline`, `optional` (agent determination as tagged value) |
+| `rework` | Rework task and control flow back per `repeat` / `continue` / `restart` | «SAP Rework» |
+| `released`, `rejected` | Final task calling the set-status operation | — |
+| `releaseStrategies[]` | Workflow | «SAP Release Strategy» |
+| release `conditions` | Rule | Rule `via: classification` |
+| release `codes[]`, `prerequisites` | Tasks; control flows and join nodes from prerequisites | «SAP Release Code» `code`, `indicator` |
+| `documents[]` | Objects | «SAP Document» `kind` |
+| `documents[].from` | Dependency «derive» from each preceding document | — |
+| `documents[].status` | Entry behaviour of that state calling the document's create operation | — |
+
+**ServiceNow profile** (no type yet; for the generic `process` type and a future type)
+| ServiceNow | Canonical | Stereotype |
+|------------|-----------|------------|
+| Table record (incident, change) | Object | «ServiceNow Record» |
+| `state` field values | States of one region | «ServiceNow State» |
+| UI action | Operation; its condition is a rule guard; role restrictions are permissions | «ServiceNow UI Action» |
+| Business rule | Rule; a change trigger when it reacts to field changes | Rule `via: business rule` |
+| Flow (Flow Designer) | Workflow | «ServiceNow Flow» |
+| Event (`gs.eventQueue`), notification | Signal; subscription with channel *local* | — |
+
+### 13.8 BPMN mapping (drawing and one-way export; D-003, URS-PM-018)
+| Canonical | BPMN 2.0 |
+|-----------|----------|
+| Activity (workflow) | Process |
+| ActivityPartition (role) | Lane |
+| Task calling an operation / needing a person | Service task / user task |
+| SendSignalAction | Intermediate throw signal event |
+| Subscription starting a workflow | Signal start event |
+| DecisionNode / MergeNode | Exclusive gateway |
+| ForkNode / JoinNode | Parallel gateway |
+| InitialNode / ActivityFinalNode | Start event / end event |
+| Time trigger on a step (deadline) | Boundary timer event |
+
+Export is one way: states, permissions and object relations have no BPMN equivalent and are left out; BPMN edited elsewhere is not read back.
+
+### 13.9 Validation semantics (URS-PM-017)
+Workflows are checked as token flows (BPMN 2.0 execution semantics), never shown to authors:
+- **Dead join**: a join some of whose incoming flows can never carry a token in the same run (e.g. behind an exclusive decision).
+- **Unreachable** task, state or final node: no token or trigger can reach it.
+- **No completion**: a workflow with no path from its initial node to a final node.
+- **Silent trigger**: a transition whose trigger is never raised (no caller of the operation, no publisher of the signal).
+- **Never permitted**: an operation forbidden, or not allowed, in every reachable combination of states.
+- **Orphan subscription**: a subscription to a signal nobody publishes.
+
+Diagnostics are reported in the platform's terms through the profile (e.g. "release code Q1 waits for F1, which can never release").
+
+### 13.10 Plan
+1. Library `core/src/diagrams/process/`: model types (the allowlist), profile registry, permission evaluation, token checks, shared drawing helpers (URS-PM-019).
+2. Move the lifecycle and sap types onto it; README images and the quality baseline must not change.
+3. Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029).
+4. SAP follow-ons (URS-TYP-025..028).
+5. Later: generic `process` type (PM-020), BPMN export (PM-018), pipeline stage (PM-021) when a second consumer appears.
