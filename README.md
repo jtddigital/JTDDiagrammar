@@ -2057,6 +2057,206 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Object lifecycle, signals and rules
+
+`type: lifecycle` · Signals published on entry into a state, in a Signals row: a dotted arrow from the state, a dashed arrow to each subscriber, labelled with its channel. One starts a workflow; external systems go in a Subscribers row. Named rules, with how each is evaluated, referenced by id from a gate and a task.
+
+![Object lifecycle, signals and rules](docs/img/lifecycle-events.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "lifecycle",
+  "title": "Controlled document events",
+  "rules": [
+    {
+      "id": "gxp",
+      "text": "Classification = GxP",
+      "via": "entry criteria"
+    },
+    {
+      "id": "trained",
+      "text": "Readers assigned to training",
+      "via": "script"
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "label": "Draft",
+      "stateType": "initial"
+    },
+    {
+      "id": "review",
+      "label": "In Review"
+    },
+    {
+      "id": "effective",
+      "label": "Effective",
+      "gate": {
+        "rules": [
+          "trained"
+        ]
+      },
+      "to": [
+        {
+          "state": "retired",
+          "label": "Retire",
+          "by": "job",
+          "after": "2 years"
+        }
+      ]
+    },
+    {
+      "id": "retired",
+      "label": "Retired",
+      "stateType": "final"
+    }
+  ],
+  "signals": [
+    {
+      "id": "published",
+      "label": "Document published",
+      "on": "effective",
+      "to": [
+        {
+          "workflow": "review"
+        },
+        {
+          "system": "Document portal",
+          "channel": "Vault API"
+        }
+      ]
+    },
+    {
+      "id": "withdrawn",
+      "label": "Document retired",
+      "on": "retired",
+      "to": [
+        {
+          "system": "Document portal",
+          "channel": "Vault API"
+        }
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Approval",
+      "start": {
+        "state": "draft",
+        "action": "Submit"
+      },
+      "steps": [
+        {
+          "id": "a_start",
+          "kind": "start",
+          "state": "draft",
+          "to": [
+            {
+              "step": "a_send"
+            }
+          ]
+        },
+        {
+          "id": "a_send",
+          "kind": "stateChange",
+          "target": "review",
+          "to": [
+            {
+              "step": "a_sign"
+            }
+          ]
+        },
+        {
+          "id": "a_sign",
+          "label": "QA sign-off",
+          "owner": "QA",
+          "state": "review",
+          "rules": [
+            "gxp"
+          ],
+          "verdicts": [
+            {
+              "name": "Approve",
+              "step": "a_go",
+              "signature": true
+            },
+            {
+              "name": "Reject",
+              "step": "a_back"
+            }
+          ]
+        },
+        {
+          "id": "a_go",
+          "kind": "stateChange",
+          "target": "effective"
+        },
+        {
+          "id": "a_back",
+          "kind": "stateChange",
+          "target": "draft"
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "label": "Periodic review",
+      "steps": [
+        {
+          "id": "p_start",
+          "kind": "start",
+          "state": "effective",
+          "to": [
+            {
+              "step": "p_review"
+            }
+          ]
+        },
+        {
+          "id": "p_review",
+          "label": "Review document",
+          "owner": "Document owner",
+          "state": "effective",
+          "due": "30d",
+          "verdicts": [
+            {
+              "name": "Keep",
+              "step": "p_end"
+            },
+            {
+              "name": "Retire",
+              "step": "p_retire"
+            }
+          ]
+        },
+        {
+          "id": "p_retire",
+          "kind": "stateChange",
+          "target": "retired",
+          "to": [
+            {
+              "step": "p_end"
+            }
+          ]
+        },
+        {
+          "id": "p_end",
+          "kind": "end",
+          "state": "retired"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 ### Object lifecycle, states as rows
 
 `type: lifecycle` · `statesAs: rows` with `direction: TB`: states run down the page and workflows across it. A scheduled job retires effective documents.
@@ -3080,6 +3280,208 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### SAP events and rules
+
+`type: sap` · Signals raised when a status is set, in a Signals row, each sent to subscribers in a Subscribers row: external systems over a channel (the arrow’s label) and a BAdI. A named rule, evaluated by BRF+, is the plant manager’s step condition.
+
+![SAP events and rules](docs/img/sap-events.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "sap",
+  "title": "Maintenance order events",
+  "object": "Maintenance order (PM01)",
+  "profile": "ZPMORD",
+  "systemStatuses": [
+    {
+      "code": "CRTD",
+      "label": "Created"
+    },
+    {
+      "code": "REL",
+      "label": "Released"
+    },
+    {
+      "code": "TECO",
+      "label": "Technically completed"
+    },
+    {
+      "code": "CLSD",
+      "label": "Closed",
+      "annotation": "No more postings, including costs; the order is locked for changes.",
+      "tags": [
+        "Compliance"
+      ]
+    }
+  ],
+  "userStatuses": [
+    {
+      "code": "INIT",
+      "label": "Initial",
+      "number": 10,
+      "low": 10,
+      "high": 20,
+      "initial": true,
+      "system": "CRTD",
+      "auth": "PLANNER",
+      "control": {
+        "release": "forbidden"
+      }
+    },
+    {
+      "code": "APPR",
+      "label": "Approved",
+      "number": 20,
+      "low": 10,
+      "high": 30,
+      "system": "CRTD",
+      "auth": "SUPERV",
+      "control": {
+        "release": "allowed"
+      }
+    },
+    {
+      "code": "INWK",
+      "label": "In work",
+      "number": 30,
+      "low": 30,
+      "high": 40,
+      "system": "REL",
+      "setBy": [
+        "release"
+      ],
+      "control": {
+        "confirm": "allowed",
+        "teco": "warning"
+      }
+    },
+    {
+      "code": "DONE",
+      "label": "Work done",
+      "number": 40,
+      "low": 40,
+      "high": 40,
+      "system": "REL",
+      "auth": "PLANNER",
+      "control": {
+        "confirm": "warning",
+        "teco": "allowed"
+      }
+    },
+    {
+      "code": "HOLD",
+      "label": "On hold",
+      "control": {
+        "release": "forbidden",
+        "confirm": "forbidden"
+      },
+      "deletedBy": [
+        "teco"
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "id": "release",
+      "label": "Release",
+      "sets": [
+        "REL"
+      ]
+    },
+    {
+      "id": "confirm",
+      "label": "Enter confirmation"
+    },
+    {
+      "id": "teco",
+      "label": "Complete technically",
+      "sets": [
+        "TECO"
+      ]
+    },
+    {
+      "id": "close",
+      "label": "Complete (business)",
+      "sets": [
+        "CLSD"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Order approval",
+      "trigger": {
+        "status": "INIT",
+        "event": "Order created"
+      },
+      "conditions": [
+        "Estimated costs > 10,000 EUR"
+      ],
+      "tags": [
+        "Cost control"
+      ],
+      "steps": [
+        {
+          "id": "planning",
+          "recipients": "Maintenance planning manager",
+          "deadline": "2d",
+          "rework": "repeat"
+        },
+        {
+          "id": "plant",
+          "recipients": "Plant manager",
+          "rules": [
+            "major"
+          ],
+          "deadline": "3d"
+        }
+      ],
+      "released": "APPR"
+    }
+  ],
+  "rules": [
+    {
+      "id": "major",
+      "text": "Estimated costs > 50,000 EUR",
+      "via": "BRF+"
+    }
+  ],
+  "signals": [
+    {
+      "id": "released",
+      "label": "Order released",
+      "on": "REL",
+      "to": [
+        {
+          "system": "Field service app",
+          "channel": "Event Mesh"
+        },
+        {
+          "handler": "Reservation BAdI"
+        }
+      ]
+    },
+    {
+      "id": "completed",
+      "label": "Order completed",
+      "on": "TECO",
+      "to": [
+        {
+          "system": "Asset analytics",
+          "channel": "IDoc"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -3274,6 +3676,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `states[].gate.label` | string |  | Defaults to "Gate". |
 | `states[].gate.fields` | list of string |  | Fields that must be complete; shown as "Required: …". |
 | `states[].gate.criteria` | list of string |  | Entry criteria, one per line. |
+| `states[].gate.rules` | list of string |  | Rules (from the chart’s `rules`) this depends on; shown with its text. |
 | `states[].gate.annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
 | `states[].gate.tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `states[].gate.annotate` | boolean |  | Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type. |
@@ -3320,6 +3723,24 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `sharedActions[].except` | list of string |  | States left out of the default. |
 | `sharedActions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing. |
 | `sharedActions[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `rules` | list of objects |  | Named rules (decisions), e.g. "Amount > 50,000 EUR". Gates, steps and conditions refer to them by id in `rules`. |
+| `rules[].id` | string | yes | Rule id. |
+| `rules[].text` | string | yes | What the rule says. |
+| `rules[].via` | `workflow condition` \| `classification` \| `BAdI` \| `BRF+` \| `script` \| `entry criteria` \| `other` |  | How it is evaluated. |
+| `signals` | list of objects |  | Signals: facts published when a state is entered, delivered to subscribers. Drawn in a Signals row, with subscribers that are not workflows in a Subscribers row. |
+| `signals[].id` | string | yes | Signal id. |
+| `signals[].label` | string |  | Named in the past tense, e.g. "Order released"; defaults to the id. |
+| `signals[].on` | string | yes | State whose entry publishes it. |
+| `signals[].to` | list of objects |  | Subscribers: each names exactly one of `workflow`, `operation`, `handler` or `system`. |
+| `signals[].to[].workflow` | string |  | Workflow it starts: a dashed arrow to its start. |
+| `signals[].to[].operation` | string |  | Operation it calls. |
+| `signals[].to[].handler` | string |  | Handler that receives it, e.g. a BAdI or a script. |
+| `signals[].to[].system` | string |  | External system it is sent to. |
+| `signals[].to[].channel` | string |  | How it is delivered, e.g. "event mesh", "IDoc"; the arrow’s label. |
+| `signals[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `signals[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `signals[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `signals[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `workflows` | list of objects |  | Workflows: one row (or column) each. |
 | `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].label` | string | yes | Workflow name. |
@@ -3337,6 +3758,7 @@ Object states (grouped into lifecycle stages) against the workflows that move a 
 | `workflows[].steps[].state` | string |  | State the record is in during this step. Optional for a state change (defaults to its target). |
 | `workflows[].steps[].target` | string |  | For a state change: the state it moves the record to. |
 | `workflows[].steps[].fields` | list of string |  | Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label. |
+| `workflows[].steps[].rules` | list of string |  | Rules (from the chart’s `rules`) this depends on; shown with its text. |
 | `workflows[].steps[].verdicts` | list of objects |  | Task outcomes, each leading to a next step; no decision diamond needed. |
 | `workflows[].steps[].verdicts[].name` | string | yes | Verdict, e.g. "Approve"; the connection’s label. |
 | `workflows[].steps[].verdicts[].signature` | boolean |  | Needs an eSignature (icon on the label). |
@@ -3461,11 +3883,13 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `workflows[].trigger.status` | string | yes | Status whose setting raises the event that starts it. |
 | `workflows[].trigger.event` | string |  | Event, e.g. "Order created"; default "<status> set". |
 | `workflows[].conditions` | list of string |  | Start conditions: the workflow is used only when they hold. Drawn as a gate. |
+| `workflows[].rules` | list of string |  | Rules (from `rules`) that are start conditions too; shown with them. |
 | `workflows[].steps` | list of objects | yes | Approval steps, in order: Release leads on, Reject cancels the workflow. |
 | `workflows[].steps[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `workflows[].steps[].label` | string |  | Defaults to "Approve". |
 | `workflows[].steps[].recipients` | string |  | Who approves, e.g. a role found by agent determination; shown under the label. |
 | `workflows[].steps[].conditions` | list of string |  | Step conditions: the step runs only when they hold, else it is skipped. Shown as "If: …" under the label, or in its annotation with `annotate`. |
+| `workflows[].steps[].rules` | list of string |  | Rules (from `rules`) that are step conditions too; shown with them. |
 | `workflows[].steps[].deadline` | string |  | Time allowed, e.g. "2d" (clock badge). |
 | `workflows[].steps[].optional` | boolean |  | Optional step (dashed). |
 | `workflows[].steps[].rework` | `repeat` \| `continue` \| `restart` |  | The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s. |
@@ -3486,6 +3910,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `releaseStrategies[].document` | string |  | Document it releases: a dashed arrow from the document starts it. |
 | `releaseStrategies[].status` | string |  | Status the object is in while it runs, which places it; default the document’s. |
 | `releaseStrategies[].conditions` | list of string |  | Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate. |
+| `releaseStrategies[].rules` | list of string |  | Rules (from `rules`) that are release conditions too; shown with them. |
 | `releaseStrategies[].codes` | list of objects | yes | Release codes (release points), at most eight. |
 | `releaseStrategies[].codes[].code` | string | yes | Two-character release code, e.g. `P1`. |
 | `releaseStrategies[].codes[].label` | string |  | Who releases, e.g. "Purchasing manager". |
@@ -3499,6 +3924,24 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `releaseStrategies[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `releaseStrategies[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `releaseStrategies[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `rules` | list of objects |  | Named rules (decisions), e.g. "Amount > 50,000 EUR". Gates, steps and conditions refer to them by id in `rules`. |
+| `rules[].id` | string | yes | Rule id. |
+| `rules[].text` | string | yes | What the rule says. |
+| `rules[].via` | `workflow condition` \| `classification` \| `BAdI` \| `BRF+` \| `script` \| `entry criteria` \| `other` |  | How it is evaluated. |
+| `signals` | list of objects |  | Signals: facts published when a state is entered, delivered to subscribers. Drawn in a Signals row, with subscribers that are not workflows in a Subscribers row. |
+| `signals[].id` | string | yes | Signal id. |
+| `signals[].label` | string |  | Named in the past tense, e.g. "Order released"; defaults to the id. |
+| `signals[].on` | string | yes | Status code whose setting publishes it. |
+| `signals[].to` | list of objects |  | Subscribers: each names exactly one of `workflow`, `operation`, `handler` or `system`. |
+| `signals[].to[].workflow` | string |  | Workflow it starts: a dashed arrow to its start. |
+| `signals[].to[].operation` | string |  | Operation it calls. |
+| `signals[].to[].handler` | string |  | Handler that receives it, e.g. a BAdI or a script. |
+| `signals[].to[].system` | string |  | External system it is sent to. |
+| `signals[].to[].channel` | string |  | How it is delivered, e.g. "event mesh", "IDoc"; the arrow’s label. |
+| `signals[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `signals[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `signals[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `signals[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
 | `documents` | list of objects |  | The document flow: documents created as the object moves on, e.g. a purchase requisition on release. One row. |
 | `documents[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `documents[].label` | string | yes | Document, e.g. "Purchase requisition". |

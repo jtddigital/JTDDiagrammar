@@ -1,5 +1,6 @@
 import type { Style, Theme } from '../../ir/types.ts';
 import type { AnnotationOptions } from '../annotations.ts';
+import { ruleTexts, type Events } from '../process/events.ts';
 
 /** How a business transaction stands in a user status (SAP transaction control, URS-TYP-020). */
 export const RULES = ['allowed', 'warning', 'forbidden'] as const;
@@ -61,6 +62,8 @@ export interface SapStep extends Annotated {
   recipients?: string;
   /** Step conditions: the step runs only when they hold, else it is skipped. */
   conditions?: string[];
+  /** Rules (ids) that are step conditions too (URS-TYP-029). */
+  rules?: string[];
   deadline?: string;
   optional?: boolean;
   /** The approver can send it back to the requester; what follows the resubmission. */
@@ -77,6 +80,8 @@ export interface SapWorkflow extends Annotated {
   trigger?: { status: string; event?: string };
   /** Start conditions: the workflow is used only when they hold. */
   conditions?: string[];
+  /** Rules (ids) that are start conditions too (URS-TYP-029). */
+  rules?: string[];
   steps: SapStep[];
   /** Status (code) set when it is released, or rejected. */
   released?: string;
@@ -104,6 +109,8 @@ export interface SapReleaseStrategy extends Annotated {
   status?: string;
   /** Release conditions (classification): the strategy applies only when they hold; else the document is released at once. */
   conditions?: string[];
+  /** Rules (ids) that are release conditions too (URS-TYP-029). */
+  rules?: string[];
   codes: SapReleaseCode[];
 }
 
@@ -119,7 +126,7 @@ export interface SapDocument extends Annotated {
   from?: string[];
 }
 
-export interface Sap extends AnnotationOptions {
+export interface Sap extends AnnotationOptions, Events {
   version: string;
   type: 'sap';
   title?: string;
@@ -144,6 +151,17 @@ export interface Sap extends AnnotationOptions {
   legend?: boolean;
   styles?: Partial<Record<'systemStatuses' | 'userStatuses' | 'steps', Style>>;
   edgeStyle?: Style;
+}
+
+/** The chart with each referenced rule's text added to the conditions that refer to it (URS-TYP-029). */
+export function withRules(m: Sap): Sap {
+  if (!m.rules?.length) return m;
+  const add = <T extends { conditions?: string[]; rules?: string[] }>(x: T): T => (x.rules?.length ? { ...x, conditions: [...(x.conditions ?? []), ...ruleTexts(m, x.rules)] } : x);
+  return {
+    ...m,
+    ...(m.workflows && { workflows: m.workflows.map((w) => ({ ...add(w), steps: w.steps.map(add) })) }),
+    ...(m.releaseStrategies && { releaseStrategies: m.releaseStrategies.map(add) }),
+  };
 }
 
 export const numbered = (m: Sap) => (m.userStatuses ?? []).filter((u) => u.number !== undefined).sort((a, b) => a.number! - b.number!);

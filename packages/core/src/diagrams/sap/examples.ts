@@ -68,6 +68,18 @@ const flow = {
   ],
 };
 
+/** The order's approval with a named rule, and signals sent to other systems (URS-TYP-029). */
+const events = {
+  ...order,
+  title: 'Maintenance order events',
+  rules: [{ id: 'major', text: 'Estimated costs > 50,000 EUR', via: 'BRF+' }],
+  workflows: [{ ...order.workflows[0]!, steps: [order.workflows[0]!.steps[0]!, { id: 'plant', recipients: 'Plant manager', rules: ['major'], deadline: '3d' }] }],
+  signals: [
+    { id: 'released', label: 'Order released', on: 'REL', to: [{ system: 'Field service app', channel: 'Event Mesh' }, { handler: 'Reservation BAdI' }] },
+    { id: 'completed', label: 'Order completed', on: 'TECO', to: [{ system: 'Asset analytics', channel: 'IDoc' }] },
+  ],
+};
+
 export const examples: [Example, ...Example[]] = [
   {
     name: 'maintenance-order',
@@ -88,5 +100,12 @@ export const examples: [Example, ...Example[]] = [
     description:
       'The documents the order creates, each in the status it is created in and joined to it by a dotted line, with arrows from preceding to subsequent documents. The purchase requisition’s release strategy: release conditions as a gate, release codes released after their prerequisites (two in parallel), release indicators, and release at once when the conditions do not hold.',
     source: flow,
+  },
+  {
+    name: 'events',
+    title: 'SAP events and rules',
+    description:
+      'Signals raised when a status is set, in a Signals row, each sent to subscribers in a Subscribers row: external systems over a channel (the arrow’s label) and a BAdI. A named rule, evaluated by BRF+, is the plant manager’s step condition.',
+    source: events,
   },
 ];

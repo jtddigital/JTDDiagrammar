@@ -269,6 +269,15 @@
     "edgeThroughLabel": 0,
     "bends": 8
   },
+  "lifecycle-events": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 12
+  },
   "lifecycle-states-as-rows": {
     "crossings": 0,
     "overlaps": 0,
@@ -331,6 +340,15 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
     "bends": 12
+  },
+  "sap-events": {
+    "crossings": 1,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 15
   },
   "random-30": {
     "crossings": 34,

@@ -63,7 +63,7 @@ function node(n: PlacedNode, P: Palette, notes?: ReadonlyMap<number, string>): s
   const textTop = n.h / 2 + (s.labelDy?.(n.w, n.h) ?? 0) - stackHeight(n.lines.length, n.sub?.length ?? 0, font) / 2;
   const detail = s.detail ? `<path d="${s.detail(n.w, n.h)}" fill="none" ${stroke(line, width)}/>` : '';
   const solid = s.solid ? `<path d="${s.solid(n.w, n.h)}" fill="${line}"/>` : '';
-  const text = s.unlabelled ? '' : stack(n.lines, n.sub, n.w / 2, textTop, font, attrs, innerOf(s, n.w, n.h).w, line);
+  const text = s.unlabelled ? '' : stack(n.lines, n.sub, n.w / 2 + (s.labelDx?.(n.w, n.h) ?? 0), textTop, font, attrs, innerOf(s, n.w, n.h).w, line);
   return (
     `<g id="n-${esc(n.id)}" class="jtd-node jtd-shape-${esc(n.shape)}" transform="translate(${num(n.x)} ${num(n.y)})"${opacity(n.style?.opacity)}>` +
     tooltip(n.quote) +

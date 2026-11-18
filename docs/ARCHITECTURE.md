@@ -383,6 +383,8 @@ Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `show
 | step `stateChange` | Task calling the lifecycle operation that moves to `target` | — |
 | step `parallel`, `join` | Fork node, join node | — |
 | `owner`, `roles` | Role (activity partition) | — |
+| `rules[]`, `rules` on gates and steps | Rule (`via` as authored); a gate's referenced rules join its entry guard | — |
+| `signals[]` (`on`, `to`, `channel`) | Signal published by the entry behaviour of state `on`; one subscription per subscriber, consumer workflow, operation, handler or system | — |
 
 **SAP profile ← sap type**
 | SAP construct | Canonical | Stereotype / tagged values |
@@ -411,6 +413,8 @@ Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `show
 | `documents[]` | Objects | «SAP Document» `kind` |
 | `documents[].from` | Dependency «derive» from each preceding document | — |
 | `documents[].status` | Entry behaviour of that state calling the document's create operation | — |
+| `rules[]`, `rules` on workflows, steps and release strategies | Rule (`via` as authored); joins the conditions that reference it | — |
+| `signals[]` (`on`, `to`, `channel`) | Signal published by the entry behaviour of status `on` (a flag's *set* state); one subscription per subscriber | — |
 
 **ServiceNow profile** (no type yet; for the generic `process` type and a future type)
 | ServiceNow | Canonical | Stereotype |
@@ -451,6 +455,6 @@ Diagnostics are reported in the platform's terms through the profile (e.g. "rele
 ### 13.10 Plan
 1. ✔ Library `core/src/diagrams/process/`: model types (the allowlist), profile registry, permission evaluation, token checks, shared drawing helpers (URS-PM-019).
 2. ✔ Map the lifecycle and sap types onto it and run its checks; README images and the quality baseline unchanged.
-3. Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029).
+3. ✔ Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029), from one helper, `process/events.ts`.
 4. SAP follow-ons (URS-TYP-025..028).
 5. Later: generic `process` type (PM-020), BPMN export (PM-018), pipeline stage (PM-021) when a second consumer appears.

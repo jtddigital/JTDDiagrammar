@@ -1,5 +1,6 @@
 import { error, hasErrors, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
 import { processDiagnostics } from '../process/diagnose.ts';
+import { eventDiagnostics, ruleRefs } from '../process/events.ts';
 import { nextOf, numbered, type Sap } from './model.ts';
 import { sapToProcess } from './to-process.ts';
 
@@ -94,6 +95,18 @@ export function validateSap(m: Sap): Diagnostic[] {
     const order = cycle(new Map(r.codes.map((c) => [c.code, c.prerequisites ?? []])));
     if (order) out.push(error('sap.releaseOrder', `release codes wait for each other in a loop: ${order.join(' → ')}`, pointer('releaseStrategies', i, 'codes')));
   });
+  // Signals, subscribers and rules (URS-TYP-029).
+  out.push(
+    ...eventDiagnostics(m, {
+      states: known,
+      workflows: new Set([...(m.workflows ?? []).map((w) => w.id), ...(m.releaseStrategies ?? []).map((r) => r.id)]),
+      ruleRefs: [
+        ...ruleRefs(m.workflows, (i) => pointer('workflows', i)),
+        ...(m.workflows ?? []).flatMap((w, i) => ruleRefs(w.steps, (j) => pointer('workflows', i, 'steps', j))),
+        ...ruleRefs(m.releaseStrategies, (i) => pointer('releaseStrategies', i)),
+      ],
+    }),
+  );
   // The process model's checks (URS-PM-017): dead joins, never-permitted transactions, orphan subscriptions…
   return hasErrors(out) ? out : [...out, ...processDiagnostics(sapToProcess(m))];
 }

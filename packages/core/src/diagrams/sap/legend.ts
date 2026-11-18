@@ -1,6 +1,7 @@
 import type { IREdge, IRNode, LegendItem } from '../../ir/types.ts';
 import { MARK_SHAPE, MARK_STYLE, MARK_TEXT } from './matrix.ts';
 import type { Sap } from './model.ts';
+import { eventLegend } from '../process/events.ts';
 import { DASHED } from './workflows.ts';
 
 /** The legend of an SAP chart (URS-DM-026): only what it uses. */
@@ -20,7 +21,8 @@ export function sapLegend(m: Sap, nodes: readonly IRNode[], edges: readonly IREd
   add(has((n) => n.shape === 'end'), { label: 'Workflow end, released', shape: 'end' });
   add(has((n) => n.shape === 'document'), { label: 'Document', shape: 'document' });
   add(edges.some((e) => e.marker === 'none' && e.style?.dash === 'dotted'), { label: 'Created in status', line: { dash: 'dotted' } });
-  add(edges.some((e) => e.style?.dash === 'dashed'), { label: 'Starts a workflow or strategy, rework', line: DASHED });
+  add(edges.some((e) => e.style?.dash === 'dashed' && !e.from.startsWith('signal:')), { label: 'Starts a workflow or strategy, rework', line: DASHED });
+  for (const it of eventLegend(nodes, edges)) add(true, it);
   for (const k of ['allowed', 'warning', 'forbidden', 'set', 'delete'] as const) add(has((n) => n.shape === MARK_SHAPE[k]), { label: MARK_TEXT[k], shape: MARK_SHAPE[k], style: MARK_STYLE[k] });
   return out;
 }

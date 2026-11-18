@@ -74,6 +74,51 @@ const changeControl = {
   ],
 };
 
+/** A controlled document that publishes signals on entry and refers to named rules (URS-TYP-029). */
+const events = {
+  version: '1',
+  type: 'lifecycle',
+  title: 'Controlled document events',
+  rules: [
+    { id: 'gxp', text: 'Classification = GxP', via: 'entry criteria' },
+    { id: 'trained', text: 'Readers assigned to training', via: 'script' },
+  ],
+  states: [
+    { id: 'draft', label: 'Draft', stateType: 'initial' },
+    { id: 'review', label: 'In Review' },
+    { id: 'effective', label: 'Effective', gate: { rules: ['trained'] }, to: [{ state: 'retired', label: 'Retire', by: 'job', after: '2 years' }] },
+    { id: 'retired', label: 'Retired', stateType: 'final' },
+  ],
+  signals: [
+    { id: 'published', label: 'Document published', on: 'effective', to: [{ workflow: 'review' }, { system: 'Document portal', channel: 'Vault API' }] },
+    { id: 'withdrawn', label: 'Document retired', on: 'retired', to: [{ system: 'Document portal', channel: 'Vault API' }] },
+  ],
+  workflows: [
+    {
+      id: 'approval',
+      label: 'Approval',
+      start: { state: 'draft', action: 'Submit' },
+      steps: [
+        { id: 'a_start', kind: 'start', state: 'draft', to: [{ step: 'a_send' }] },
+        { id: 'a_send', kind: 'stateChange', target: 'review', to: [{ step: 'a_sign' }] },
+        { id: 'a_sign', label: 'QA sign-off', owner: 'QA', state: 'review', rules: ['gxp'], verdicts: [{ name: 'Approve', step: 'a_go', signature: true }, { name: 'Reject', step: 'a_back' }] },
+        { id: 'a_go', kind: 'stateChange', target: 'effective' },
+        { id: 'a_back', kind: 'stateChange', target: 'draft' },
+      ],
+    },
+    {
+      id: 'review',
+      label: 'Periodic review',
+      steps: [
+        { id: 'p_start', kind: 'start', state: 'effective', to: [{ step: 'p_review' }] },
+        { id: 'p_review', label: 'Review document', owner: 'Document owner', state: 'effective', due: '30d', verdicts: [{ name: 'Keep', step: 'p_end' }, { name: 'Retire', step: 'p_retire' }] },
+        { id: 'p_retire', kind: 'stateChange', target: 'retired', to: [{ step: 'p_end' }] },
+        { id: 'p_end', kind: 'end', state: 'retired' },
+      ],
+    },
+  ],
+};
+
 export const examples: [Example, ...Example[]] = [
   {
     name: 'change-control',
@@ -93,6 +138,13 @@ export const examples: [Example, ...Example[]] = [
     title: 'Object lifecycle, summary view',
     description: '`view: summary`: the states and every transition between them; each workflow collapses into dashed arrows.',
     source: { ...changeControl, view: 'summary' },
+  },
+  {
+    name: 'events',
+    title: 'Object lifecycle, signals and rules',
+    description:
+      'Signals published on entry into a state, in a Signals row: a dotted arrow from the state, a dashed arrow to each subscriber, labelled with its channel. One starts a workflow; external systems go in a Subscribers row. Named rules, with how each is evaluated, referenced by id from a gate and a task.',
+    source: events,
   },
   {
     name: 'states-as-rows',
