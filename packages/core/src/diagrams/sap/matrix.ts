@@ -27,7 +27,7 @@ export const MARK_TEXT: Record<Rule | 'set' | 'delete', string> = {
  */
 export function matrixParts(m: Sap, col: (code: string) => string): { lanes: Band[]; group?: BandGroup; nodes: IRNode[] } {
   const txs = m.transactions ?? [];
-  const lanes: Band[] = txs.map((t, i) => ({ id: `tx:${t.id}`, label: t.label ?? t.id, ...(t.label && { detail: t.id }), src: pointer('transactions', i) }));
+  const lanes: Band[] = txs.map((t, i) => ({ id: `tx:${t.id}`, label: t.label ?? t.id, ...((t.label || t.tcodes?.length) && { detail: [t.label && t.id, t.tcodes?.join(', ')].filter(Boolean).join('\n') }), src: pointer('transactions', i) }));
   const nodes: IRNode[] = [];
   (m.userStatuses ?? []).forEach((u, ui) => {
     const marks = (kind: Rule | 'set' | 'delete', t: string, at: string) => {

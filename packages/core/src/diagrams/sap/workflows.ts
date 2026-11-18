@@ -71,7 +71,7 @@ export function workflowParts(c: Ctx, w: SapWorkflow, wi: number): { lane: Band;
       ...(s.recipients && { owner: s.recipients }),
       ...(s.tags && { tags: s.tags }),
     });
-    const sub = [s.recipients, m.annotate ? undefined : ifs(s.conditions)].filter(Boolean).join('\n');
+    const sub = [s.recipients, s.tcodes?.join(', '), m.annotate ? undefined : ifs(s.conditions)].filter(Boolean).join('\n');
     nodes.push({
       id: id(s),
       shape: 'process',

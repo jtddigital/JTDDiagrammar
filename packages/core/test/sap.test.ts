@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compile, createRegistry, render } from '../src/index.ts';
+import type { Sap } from '../src/diagrams/sap/model.ts';
 
 const reg = createRegistry();
 const ex = reg.type('sap')!.examples[0]!.source as Record<string, unknown>;
@@ -249,5 +250,45 @@ describe('SAP release strategy (URS-TYP-022)', () => {
     expect(rs(Array.from({ length: 9 }, (_, i) => ({ code: `C${i}` })))).toContainEqual(['schema.maxItems', '/releaseStrategies/0/codes']);
     expect(rs([{ code: 'A1' }], { document: 'nope' })).toContainEqual(['ref.document', '/releaseStrategies/0/document']);
     expect(rs([{ code: 'TOO' }])).toContainEqual(['schema.pattern', '/releaseStrategies/0/codes/0/code']);
+  });
+});
+
+describe('SAP follow-ons (URS-TYP-025..027)', () => {
+  const example = (name: string) => structuredClone(reg.type('sap')!.examples.find((e) => e.name === name)!.source) as Sap;
+
+  it('TYP-025: a release code that can reject leads to the requester, who resubmits to the start', () => {
+    const g = ir(example('purchase-requisition'));
+    const by = (from: string, to: string) => g.edges.find((e) => e.from === from && e.to === to);
+    expect(g.nodes.find((n) => n.id === 'rs:s1:rejected')).toMatchObject({ shape: 'process', label: 'Rejected', sub: 'Requester changes and resubmits' });
+    expect(by('rs:s1:code:10', 'rs:s1:rejected')!.labels).toEqual([{ text: 'Reject' }]);
+    expect(by('rs:s1:code:20', 'rs:s1:rejected')!.labels).toEqual([{ text: 'Reject' }]);
+    expect(by('rs:s1:rejected', 'rs:s1:start')).toMatchObject({ labels: [{ text: 'Resubmit' }], style: { dash: 'dashed' } });
+    // Without `reject`, no rejection is drawn.
+    const plain = example('purchase-requisition');
+    for (const c of plain.releaseStrategies![0]!.codes) delete c.reject;
+    expect(ir(plain).nodes.some((n) => n.id === 'rs:s1:rejected')).toBe(false);
+  });
+
+  it('TYP-026: transaction codes follow the transaction on arrows and in the matrix, and sit under a step', () => {
+    const g = ir(example('transaction-control'));
+    expect(g.edges.find((e) => e.id === 'sys:CRTD>REL')!.labels).toEqual([{ text: 'Release (IW32)' }]);
+    expect(g.partitions!.lanes.find((l) => l.id === 'tx:confirm')!.detail).toBe('confirm\nIW41, F1606');
+    expect(g.nodes.find((n) => n.id === 'wf:approval:step:planning')!.sub).toBe('Maintenance planning manager\nMy Inbox');
+    const plain = ir({ ...base, transactions: [{ id: 'rel', tcodes: ['IW32'], sets: ['REL'] }], matrix: true });
+    expect(plain.partitions!.lanes.find((l) => l.id === 'tx:rel')!.detail).toBe('IW32');
+  });
+
+  it('TYP-027: without statuses, each document is a column and the chart has no diagnostics', () => {
+    const r = compile(example('purchase-requisition'), reg);
+    expect(r.diagnostics).toEqual([]);
+    expect(r.ir!.partitions!.phases!.map((p) => [p.id, p.label])).toEqual([
+      ['col:doc:pr', 'Purchase requisition'],
+      ['col:doc:po', 'Purchase order'],
+      ['col:doc:gr', 'Goods receipt'],
+      ['col:doc:iv', 'Supplier invoice'],
+    ]);
+    expect(r.ir!.nodes.filter((n) => n.lane?.startsWith('rs:')).every((n) => n.phase === 'col:doc:pr')).toBe(true);
+    // Statuses or documents: a chart needs one or the other.
+    expect(codes({ version: '1', type: 'sap', releaseStrategies: [] })).toContainEqual(['sap.statuses', '']);
   });
 });

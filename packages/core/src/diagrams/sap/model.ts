@@ -51,6 +51,8 @@ export interface SapUserStatus extends Annotated {
 export interface SapTransaction extends Annotated {
   id: string;
   label?: string;
+  /** Transaction codes or apps that run it, e.g. IW32 (URS-TYP-026). */
+  tcodes?: string[];
   sets?: string[];
 }
 
@@ -66,6 +68,8 @@ export interface SapStep extends Annotated {
   rules?: string[];
   deadline?: string;
   optional?: boolean;
+  /** Transaction codes or apps the approver works in, e.g. "My Inbox" (URS-TYP-026). */
+  tcodes?: string[];
   /** The approver can send it back to the requester; what follows the resubmission. */
   rework?: (typeof REWORK)[number];
   /** Status (code) the object is in during the step; default the workflow's trigger. */
@@ -97,6 +101,8 @@ export interface SapReleaseCode extends Annotated {
   prerequisites?: string[];
   /** Release indicator once released, e.g. "2 – Released, changeable". */
   indicator?: string;
+  /** The holder can reject: the requester changes the document and resubmits, which starts the strategy again (URS-TYP-025). */
+  reject?: boolean;
 }
 
 /** A classic release strategy, e.g. for purchase requisitions (URS-TYP-022). */
@@ -163,6 +169,11 @@ export function withRules(m: Sap): Sap {
     ...(m.releaseStrategies && { releaseStrategies: m.releaseStrategies.map(add) }),
   };
 }
+
+/** A business transaction's name, with the transaction codes that run it (URS-TYP-026). */
+export const txLabel = (t: SapTransaction) => `${t.label ?? t.id}${t.tcodes?.length ? ` (${t.tcodes.join(', ')})` : ''}`;
+/** Whether the chart has statuses; without, its columns are its documents (URS-TYP-027). */
+export const hasStatuses = (m: Sap) => !!(m.systemStatuses?.length || m.userStatuses?.length);
 
 export const numbered = (m: Sap) => (m.userStatuses ?? []).filter((u) => u.number !== undefined).sort((a, b) => a.number! - b.number!);
 export const flags = (m: Sap) => (m.userStatuses ?? []).filter((u) => u.number === undefined);

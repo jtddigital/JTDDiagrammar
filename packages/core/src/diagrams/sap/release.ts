@@ -58,6 +58,14 @@ export function strategyParts(c: Ctx, r: SapReleaseStrategy, ri: number): { lane
   // The last codes: those no other code waits for.
   const needed = new Set(r.codes.flatMap((x) => x.prerequisites ?? []));
   for (const x of r.codes) if (!needed.has(x.code)) link(id(x), p('end'), 'Release');
+  // Rejection (URS-TYP-025): the requester changes the document and resubmits, and the strategy starts again.
+  const rejecting = r.codes.filter((x) => x.reject);
+  if (rejecting.length) {
+    const back = p('rejected');
+    nodes.push({ id: back, shape: 'process', label: 'Rejected', sub: 'Requester changes and resubmits', ...at, src: src('codes', r.codes.indexOf(rejecting[0]!), 'reject') });
+    for (const x of rejecting) link(id(x), back, 'Reject', undefined, src('codes', r.codes.indexOf(x), 'reject'));
+    link(back, p('start'), 'Resubmit', DASHED, src('codes', r.codes.indexOf(rejecting[0]!), 'reject'));
+  }
   if (r.conditions?.length) link(entry, p('end'), 'Conditions not met', DASHED);
   return { lane: { id: lane, label: r.label, src: src() }, nodes, edges };
 }

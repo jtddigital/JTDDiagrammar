@@ -1,7 +1,7 @@
 import { error, hasErrors, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
 import { processDiagnostics } from '../process/diagnose.ts';
 import { eventDiagnostics, ruleRefs } from '../process/events.ts';
-import { nextOf, numbered, type Sap } from './model.ts';
+import { hasStatuses, nextOf, numbered, type Sap } from './model.ts';
 import { sapToProcess } from './to-process.ts';
 
 /**
@@ -17,7 +17,8 @@ export function validateSap(m: Sap): Diagnostic[] {
   const unique = (code: string, at: string) => (codes.has(code) ? out.push(error('sap.code', `status code '${code}' is used twice`, at)) : codes.add(code));
   sys.forEach((s, i) => unique(s.code, pointer('systemStatuses', i, 'code')));
   users.forEach((u, i) => unique(u.code, pointer('userStatuses', i, 'code')));
-  if (!sys.length && !users.length) out.push(error('sap.statuses', 'an SAP chart needs system or user statuses', ''));
+  // Without statuses, a chart is its documents and their release (URS-TYP-027).
+  if (!hasStatuses(m) && !m.documents?.length) out.push(error('sap.statuses', 'an SAP chart needs statuses, or documents to chart instead', ''));
   const sysCodes = new Set(sys.map((s) => s.code));
   const txRef = (id: string, at: string, what: string) => tx.has(id) || out.push(error('ref.transaction', `${what} references unknown business transaction '${id}'`, at));
 

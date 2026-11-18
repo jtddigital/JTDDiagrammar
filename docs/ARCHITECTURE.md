@@ -397,22 +397,24 @@ Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `show
 | flags (no number) | One two-state region each (set / not set) | «SAP User Status» flag |
 | `system` | Tagged value constraining placement | `usedIn` |
 | `auth` | Permission (any state) × set-status(code) × Role (authorization key holders) | «SAP Authorization Key» |
-| `transactions[]` | Operation | «SAP Business Transaction» (`tcodes` with URS-TYP-026) |
+| `transactions[]` | Operation | «SAP Business Transaction» `tcodes` |
 | `transactions[].sets` | Transitions in region *System status* triggered by the operation | — |
 | `control` | Permission State × Operation → allowed / warning / forbidden | «SAP Transaction Control»; combination: at least one allows, none forbids |
 | `setBy`, `deletedBy` | Transitions in the user-status or flag region triggered by the operation | — |
 | `workflows[]` | Workflow | «SAP Flexible Workflow» |
 | `trigger.status`, `event` | Subscription to the signal *status set* (channel: local event linkage) | — |
 | `conditions` (start, step) | Rules | Rule `via: workflow condition` |
-| steps | Tasks in the recipients' partition | «SAP Workflow Step» `deadline`, `optional` (agent determination as tagged value) |
+| steps | Tasks in the recipients' partition | «SAP Workflow Step» `deadline`, `optional`, `tcodes` (agent determination as tagged value) |
 | `rework` | Rework task and control flow back per `repeat` / `continue` / `restart` | «SAP Rework» |
 | `released`, `rejected` | Final task calling the set-status operation | — |
 | `releaseStrategies[]` | Workflow | «SAP Release Strategy» |
 | release `conditions` | Rule | Rule `via: classification` |
-| release `codes[]`, `prerequisites` | Tasks; control flows and join nodes from prerequisites | «SAP Release Code» `code`, `indicator` |
+| release `codes[]`, `prerequisites` | Tasks; control flows and join nodes from prerequisites | «SAP Release Code» `code`, `indicator`, `reject` |
+| `reject` on a code | Flow guarded Reject to a Requester rework task, back to a merge after the start | «SAP Rework» |
 | `documents[]` | Objects | «SAP Document» `kind` |
 | `documents[].from` | Dependency «derive» from each preceding document | — |
 | `documents[].status` | Entry behaviour of that state calling the document's create operation | — |
+| leading document without `status` | Its own state machine: a user's save operation moves it to *saved*, whose entry publishes *created* | — |
 | `rules[]`, `rules` on workflows, steps and release strategies | Rule (`via` as authored); joins the conditions that reference it | — |
 | `signals[]` (`on`, `to`, `channel`) | Signal published by the entry behaviour of status `on` (a flag's *set* state); one subscription per subscriber | — |
 
@@ -456,5 +458,5 @@ Diagnostics are reported in the platform's terms through the profile (e.g. "rele
 1. ✔ Library `core/src/diagrams/process/`: model types (the allowlist), profile registry, permission evaluation, token checks, shared drawing helpers (URS-PM-019).
 2. ✔ Map the lifecycle and sap types onto it and run its checks; README images and the quality baseline unchanged.
 3. ✔ Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029), from one helper, `process/events.ts`.
-4. SAP follow-ons (URS-TYP-025..028).
+4. SAP follow-ons: ✔ rejection (URS-TYP-025), ✔ transaction codes (URS-TYP-026), ✔ charts without a status profile (URS-TYP-027); MDG (URS-TYP-028) with step 5.
 5. Later: generic `process` type (PM-020), BPMN export (PM-018), pipeline stage (PM-021) when a second consumer appears.

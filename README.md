@@ -2903,7 +2903,7 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 ### SAP transaction control
 
-`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).
+`type: sap` · `matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. Each transaction lists the transaction codes or apps that run it (`tcodes`), as do the approval steps. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).
 
 ![SAP transaction control](docs/img/sap-transaction-control.svg)
 
@@ -3010,17 +3010,27 @@ The examples and images below are generated from the registered types (`pnpm doc
       "label": "Release",
       "sets": [
         "REL"
+      ],
+      "tcodes": [
+        "IW32"
       ]
     },
     {
       "id": "confirm",
-      "label": "Enter confirmation"
+      "label": "Enter confirmation",
+      "tcodes": [
+        "IW41",
+        "F1606"
+      ]
     },
     {
       "id": "teco",
       "label": "Complete technically",
       "sets": [
         "TECO"
+      ],
+      "tcodes": [
+        "IW32"
       ]
     },
     {
@@ -3028,6 +3038,9 @@ The examples and images below are generated from the registered types (`pnpm doc
       "label": "Complete (business)",
       "sets": [
         "CLSD"
+      ],
+      "tcodes": [
+        "IW32"
       ]
     }
   ],
@@ -3050,7 +3063,10 @@ The examples and images below are generated from the registered types (`pnpm doc
           "id": "planning",
           "recipients": "Maintenance planning manager",
           "deadline": "2d",
-          "rework": "repeat"
+          "rework": "repeat",
+          "tcodes": [
+            "My Inbox"
+          ]
         },
         {
           "id": "plant",
@@ -3062,6 +3078,9 @@ The examples and images below are generated from the registered types (`pnpm doc
           "tags": [
             "Cost control",
             "Compliance"
+          ],
+          "tcodes": [
+            "My Inbox"
           ]
         }
       ],
@@ -3271,6 +3290,81 @@ The examples and images below are generated from the registered types (`pnpm doc
             "P1"
           ],
           "indicator": "Released"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### SAP release without a status profile
+
+`type: sap` · An object with no status profile, charted from its documents and release strategy: one column per document. Both release codes can reject (`reject: true`): the requester changes the requisition and resubmits, which starts the strategy again.
+
+![SAP release without a status profile](docs/img/sap-purchase-requisition.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "sap",
+  "title": "Purchase requisition release",
+  "object": "Purchase requisition (NB)",
+  "documents": [
+    {
+      "id": "pr",
+      "label": "Purchase requisition",
+      "kind": "NB"
+    },
+    {
+      "id": "po",
+      "label": "Purchase order",
+      "kind": "NB",
+      "from": [
+        "pr"
+      ]
+    },
+    {
+      "id": "gr",
+      "label": "Goods receipt",
+      "from": [
+        "po"
+      ]
+    },
+    {
+      "id": "iv",
+      "label": "Supplier invoice",
+      "from": [
+        "gr"
+      ]
+    }
+  ],
+  "releaseStrategies": [
+    {
+      "id": "s1",
+      "label": "Requisition release (S1)",
+      "document": "pr",
+      "conditions": [
+        "Total value > 5,000 EUR"
+      ],
+      "codes": [
+        {
+          "code": "10",
+          "label": "Cost center manager",
+          "indicator": "Blocked",
+          "reject": true
+        },
+        {
+          "code": "20",
+          "label": "Purchasing manager",
+          "prerequisites": [
+            "10"
+          ],
+          "indicator": "Released for order",
+          "reject": true
         }
       ]
     }
@@ -3871,6 +3965,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `transactions` | list of objects |  | Business transactions, e.g. Release or Complete technically. |
 | `transactions[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
 | `transactions[].label` | string |  | Defaults to the id. |
+| `transactions[].tcodes` | list of string |  | Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix. |
 | `transactions[].sets` | list of string |  | System statuses it sets; labels the arrow into each. |
 | `transactions[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
 | `transactions[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
@@ -3891,6 +3986,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `workflows[].steps[].conditions` | list of string |  | Step conditions: the step runs only when they hold, else it is skipped. Shown as "If: …" under the label, or in its annotation with `annotate`. |
 | `workflows[].steps[].rules` | list of string |  | Rules (from `rules`) that are step conditions too; shown with them. |
 | `workflows[].steps[].deadline` | string |  | Time allowed, e.g. "2d" (clock badge). |
+| `workflows[].steps[].tcodes` | list of string |  | Transaction codes or apps the approver works in, e.g. "My Inbox"; shown under the recipients. |
 | `workflows[].steps[].optional` | boolean |  | Optional step (dashed). |
 | `workflows[].steps[].rework` | `repeat` \| `continue` \| `restart` |  | The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s. |
 | `workflows[].steps[].status` | string |  | Status the object is in during the step, which places it; default the workflow’s trigger status. |
@@ -3916,6 +4012,7 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `releaseStrategies[].codes[].label` | string |  | Who releases, e.g. "Purchasing manager". |
 | `releaseStrategies[].codes[].prerequisites` | list of string |  | Codes that must release first; none: released straight away. |
 | `releaseStrategies[].codes[].indicator` | string |  | Release indicator once released, e.g. "2 – Released, changeable". |
+| `releaseStrategies[].codes[].reject` | boolean |  | The holder can reject: the requester changes the document and resubmits, which starts the strategy again. |
 | `releaseStrategies[].codes[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
 | `releaseStrategies[].codes[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `releaseStrategies[].codes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |

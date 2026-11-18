@@ -1,9 +1,11 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup } from '../../ir/types.ts';
-import { flags, nameOf, numbered, type Sap, type SapUserStatus } from './model.ts';
+import { flags, hasStatuses, nameOf, numbered, type Sap, type SapUserStatus } from './model.ts';
 
 export const FLAGS_GROUP = 'sap:flags';
 const col = (kind: string, code: string) => `col:${kind}:${code}`;
+/** Without statuses, each document is a column (URS-TYP-027). */
+export const docColumn = (id: string) => col('doc', id);
 
 /** Each numbered user status's system status: its own, else the one before it, else the first (URS-TYP-019). */
 export function systemOf(m: Sap): Map<string, string | undefined> {
@@ -31,6 +33,10 @@ function detail(m: Sap, u: SapUserStatus): string {
  * its own, a system status to the first of its columns.
  */
 export function columnsOf(m: Sap) {
+  if (!hasStatuses(m)) {
+    const columns: Band[] = (m.documents ?? []).map((d, i) => ({ id: docColumn(d.id), label: d.label, ...(d.kind && { detail: d.kind }), src: pointer('documents', i) }));
+    return { columns, groups: [] as BandGroup[], at: new Map<string, string>() };
+  }
   const sys = m.systemStatuses ?? [];
   const of = systemOf(m);
   const known = new Set(sys.map((s) => s.code));

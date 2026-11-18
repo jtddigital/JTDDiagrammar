@@ -330,7 +330,7 @@
     "labelOnNode": 0,
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
-    "bends": 11
+    "bends": 10
   },
   "sap-document-flow": {
     "crossings": 1,
@@ -340,6 +340,15 @@
     "labelOnLabel": 0,
     "edgeThroughLabel": 0,
     "bends": 12
+  },
+  "sap-purchase-requisition": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 13
   },
   "sap-events": {
     "crossings": 1,

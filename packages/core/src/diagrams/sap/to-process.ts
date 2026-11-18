@@ -28,7 +28,7 @@ export function sapToProcess(source: Sap): ProcessModel {
   const t: Transition[] = [];
   
   // Business transactions, run by users; the system statuses each one sets, from the one before.
-  (m.transactions ?? []).forEach((x, i) => p.operations.push({ id: x.id, name: x.label ?? x.id, object: OBJECT, callers: ['user'], stereotype: st('SAP Business Transaction'), src: pointer('transactions', i) }));
+  (m.transactions ?? []).forEach((x, i) => p.operations.push({ id: x.id, name: x.label ?? x.id, object: OBJECT, callers: ['user'], stereotype: st('SAP Business Transaction', x.tcodes?.length ? { tcodes: x.tcodes } : undefined), src: pointer('transactions', i) }));
   sys.forEach((s, i) => {
     if (!i) return;
     for (const x of (m.transactions ?? []).filter((y) => y.sets?.includes(s.code)))
@@ -67,6 +67,16 @@ export function sapToProcess(source: Sap): ProcessModel {
     p.operations.push({ id: `create:${d.id}`, name: `create ${d.label}`, object: `doc:${d.id}` }, { id: `release:${d.id}`, name: `release ${d.label}`, object: `doc:${d.id}` });
     p.signals.push({ id: `${d.id} created`, name: `${d.label} created` });
     (d.from ?? []).forEach((f, j) => p.relations.push({ id: `rel:${f}>${d.id}`, name: `${f} → ${d.id}`, kind: 'derive', from: `doc:${f}`, to: `doc:${d.id}`, src: pointer('documents', i, 'from', j) }));
+    // A leading document, made in no status, is saved by a user, which publishes that it was created (URS-TYP-027).
+    if (d.status === undefined && !d.from?.length) {
+      const [made, none] = [`${d.id}:created`, `${d.id}:new`];
+      p.operations.push({ id: `save:${d.id}`, name: `save ${d.label}`, object: `doc:${d.id}`, callers: ['user'], src: pointer('documents', i) });
+      p.machines.push({
+        object: `doc:${d.id}`,
+        regions: [{ id: `doc:${d.id}`, name: d.label, initial: none, states: [{ id: none, name: `${d.label} not saved` }, { id: made, name: `${d.label} saved`, entry: [{ kind: 'signal', signal: `${d.id} created` }] }] }],
+        transitions: [{ id: `save:${d.id}`, name: `save ${d.label}`, region: `doc:${d.id}`, from: none, to: made, trigger: { kind: 'call', operation: `save:${d.id}` }, src: pointer('documents', i) }],
+      });
+    }
   });
   const creates = (code: string) =>
     (m.documents ?? []).filter((d) => d.status === code).flatMap((d) => [{ kind: 'call' as const, operation: `create:${d.id}`, object: `doc:${d.id}` }, { kind: 'signal' as const, signal: `${d.id} created` }]);
@@ -127,7 +137,7 @@ function flexible(w: SapWorkflow, wi: number, p: ProcessModel) {
   const gateOf = w.steps.map((s, i) => (s.conditions?.length || s.optional ? `skip:${s.id}` : ids[i]!));
   const next = (i: number) => (i + 1 < w.steps.length ? gateOf[i + 1]! : released);
   w.steps.forEach((s, i) => {
-    nodes.push({ id: ids[i]!, kind: 'task', name: `${s.label ?? 'Approve'}${s.recipients ? ` (${s.recipients})` : ''}`, ...(s.recipients && { role: s.recipients }), stereotype: st('SAP Workflow Step', { ...(s.deadline && { deadline: s.deadline }), ...(s.optional && { optional: true }) }), src: src('steps', i) });
+    nodes.push({ id: ids[i]!, kind: 'task', name: `${s.label ?? 'Approve'}${s.recipients ? ` (${s.recipients})` : ''}`, ...(s.recipients && { role: s.recipients }), stereotype: st('SAP Workflow Step', { ...(s.deadline && { deadline: s.deadline }), ...(s.optional && { optional: true }), ...(s.tcodes?.length && { tcodes: s.tcodes }) }), src: src('steps', i) });
     if (gateOf[i] !== ids[i]) {
       nodes.push({ id: gateOf[i]!, kind: 'decision', name: `${s.label ?? 'Approve'}: condition`, src: src('steps', i, 'conditions') });
       if (s.conditions?.length) p.rules.push({ id: `${w.id}:${s.id}`, name: `${s.label ?? 'Approve'} step conditions`, text: s.conditions.join('; '), via: 'workflow condition', src: src('steps', i, 'conditions') });
@@ -157,11 +167,17 @@ function release(r: SapReleaseStrategy, ri: number, p: ProcessModel) {
   if (r.document) p.subscriptions.push({ id: `start:${r.id}`, name: `${r.label} on ${r.document}`, signal: `${r.document} created`, consumer: { kind: 'workflow', workflow: r.id }, channel: 'local', src: src('document') });
   nodes.push({ id: 'released', kind: 'task', name: `release ${r.document ?? 'document'}`, ...(r.document && { calls: [{ operation: `release:${r.document}` }] }), src: src() });
   flow('released', 'end');
-  let entry = 'start';
+  // With rejection, a merge after the start takes resubmissions back in (URS-TYP-025).
+  const rejects = r.codes.some((c) => c.reject);
+  if (rejects) {
+    nodes.push({ id: 'resubmit', kind: 'merge', name: 'submitted', src: src() });
+    flow('start', 'resubmit');
+  }
+  let entry = rejects ? 'resubmit' : 'start';
   if (r.conditions?.length) {
     p.rules.push({ id: `${r.id}:conditions`, name: `${r.label} release conditions`, text: r.conditions.join('; '), via: 'classification', src: src('conditions') });
     nodes.push({ id: 'if', kind: 'decision', name: 'release conditions', src: src('conditions') });
-    flow('start', 'if');
+    flow(entry, 'if');
     flow('if', 'released', 'not met');
     entry = 'if';
   }
@@ -169,7 +185,7 @@ function release(r: SapReleaseStrategy, ri: number, p: ProcessModel) {
   const known = new Set(r.codes.map((c) => c.code));
   const before = new Map(r.codes.map((c) => [c.code, (c.prerequisites ?? []).filter((q) => known.has(q) && q !== c.code)]));
   const after = new Map(r.codes.map((c) => [c.code, r.codes.filter((x) => before.get(x.code)!.includes(c.code)).map((x) => x.code)]));
-  r.codes.forEach((c, i) => nodes.push({ id: code(c.code), kind: 'task', name: `release code ${c.code}${c.label ? ` (${c.label})` : ''}`, ...(c.label && { role: c.label }), stereotype: st('SAP Release Code', { code: c.code, ...(c.indicator && { indicator: c.indicator }) }), src: src('codes', i) }));
+  r.codes.forEach((c, i) => nodes.push({ id: code(c.code), kind: 'task', name: `release code ${c.code}${c.label ? ` (${c.label})` : ''}`, ...(c.label && { role: c.label }), stereotype: st('SAP Release Code', { code: c.code, ...(c.indicator && { indicator: c.indicator }), ...(c.reject && { reject: true }) }), src: src('codes', i) }));
   // Out of a node into several: a fork. Into a node from several: a join.
   const fan = (from: string, targets: string[], at: string) => {
     if (targets.length < 2) return targets.forEach((x) => flow(from, x, from === 'if' ? `${r.id}:conditions` : undefined));
@@ -190,5 +206,11 @@ function release(r: SapReleaseStrategy, ri: number, p: ProcessModel) {
   const last = r.codes.filter((c) => !after.get(c.code)!.length).map((c) => code(c.code));
   for (const [s, x] of into('released', last)) add(s, x);
   for (const [s, xs] of outs) fan(s, xs, s);
+  // Rejection (URS-TYP-025): the requester reworks the document and resubmits; the strategy runs again.
+  if (rejects) {
+    nodes.push({ id: 'rejected', kind: 'task', name: 'change and resubmit', role: 'Requester', stereotype: st('SAP Rework'), src: src() });
+    for (const c of r.codes) if (c.reject) flow(code(c.code), 'rejected', 'Reject');
+    flow('rejected', 'resubmit');
+  }
   return { id: r.id, name: r.label, stereotype: st('SAP Release Strategy'), nodes, flows, src: pointer('releaseStrategies', ri) };
 }
