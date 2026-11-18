@@ -80,6 +80,45 @@ const events = {
   ],
 };
 
+/** Transaction codes on business transactions and the apps approvers work in (URS-TYP-026). */
+const TCODES: Record<string, string[]> = { release: ['IW32'], confirm: ['IW41', 'F1606'], teco: ['IW32'], close: ['IW32'] };
+const control = {
+  ...order,
+  title: 'Maintenance order transaction control',
+  transactions: order.transactions.map((t) => ({ ...t, tcodes: TCODES[t.id] })),
+  workflows: order.workflows.map((w) => ({ ...w, steps: w.steps.map((s) => ({ ...s, tcodes: ['My Inbox'] })) })),
+  matrix: true,
+  annotate: true,
+  annotationTarget: 'label',
+  annotationGroups: ['tag'],
+};
+
+/** A purchase requisition: no status profile, only its release and the documents that follow (URS-TYP-025, URS-TYP-027). */
+const requisition = {
+  version: '1',
+  type: 'sap',
+  title: 'Purchase requisition release',
+  object: 'Purchase requisition (NB)',
+  documents: [
+    { id: 'pr', label: 'Purchase requisition', kind: 'NB' },
+    { id: 'po', label: 'Purchase order', kind: 'NB', from: ['pr'] },
+    { id: 'gr', label: 'Goods receipt', from: ['po'] },
+    { id: 'iv', label: 'Supplier invoice', from: ['gr'] },
+  ],
+  releaseStrategies: [
+    {
+      id: 's1',
+      label: 'Requisition release (S1)',
+      document: 'pr',
+      conditions: ['Total value > 5,000 EUR'],
+      codes: [
+        { code: '10', label: 'Cost center manager', indicator: 'Blocked', reject: true },
+        { code: '20', label: 'Purchasing manager', prerequisites: ['10'], indicator: 'Released for order', reject: true },
+      ],
+    },
+  ],
+};
+
 export const examples: [Example, ...Example[]] = [
   {
     name: 'maintenance-order',
@@ -91,8 +130,8 @@ export const examples: [Example, ...Example[]] = [
   {
     name: 'transaction-control',
     title: 'SAP transaction control',
-    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).',
-    source: { ...order, title: 'Maintenance order transaction control', matrix: true, annotate: true, annotationTarget: 'label', annotationGroups: ['tag'] },
+    description: '`matrix: true`: one row per business transaction, with a mark per user status: allowed, allowed with a warning, forbidden, sets or deletes the status. Each transaction lists the transaction codes or apps that run it (`tcodes`), as do the approval steps. `annotate: true` puts the conditions into annotations, `annotationTarget: label` names what each is attached to, and `annotationGroups: [tag]` lists the notes by tag (one with two tags under both).',
+    source: control,
   },
   {
     name: 'document-flow',
@@ -100,6 +139,12 @@ export const examples: [Example, ...Example[]] = [
     description:
       'The documents the order creates, each in the status it is created in and joined to it by a dotted line, with arrows from preceding to subsequent documents. The purchase requisition’s release strategy: release conditions as a gate, release codes released after their prerequisites (two in parallel), release indicators, and release at once when the conditions do not hold.',
     source: flow,
+  },
+  {
+    name: 'purchase-requisition',
+    title: 'SAP release without a status profile',
+    description: 'An object with no status profile, charted from its documents and release strategy: one column per document. Both release codes can reject (`reject: true`): the requester changes the requisition and resubmits, which starts the strategy again.',
+    source: requisition,
   },
   {
     name: 'events',

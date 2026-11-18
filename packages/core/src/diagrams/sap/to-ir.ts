@@ -6,7 +6,7 @@ import { columnsOf } from './columns.ts';
 import { documentColumns, documentParts } from './documents.ts';
 import { sapLegend } from './legend.ts';
 import { matrixParts } from './matrix.ts';
-import { nextOf, numbered, withRules, type Sap } from './model.ts';
+import { nextOf, numbered, txLabel, withRules, type Sap } from './model.ts';
 import { eventParts } from '../process/events.ts';
 import { strategyParts } from './release.ts';
 import { DASHED, workflowParts } from './workflows.ts';
@@ -57,7 +57,7 @@ export function sapToIR(source: Sap): GraphIR {
         src: pointer('systemStatuses', i),
       });
       if (!i) return;
-      const by = (m.transactions ?? []).filter((t) => t.sets?.includes(s.code)).map((t) => t.label ?? t.id);
+      const by = (m.transactions ?? []).filter((t) => t.sets?.includes(s.code)).map(txLabel);
       edges.push({ id: `sys:${sys[i - 1]!.code}>${s.code}`, from: `sys:${sys[i - 1]!.code}`, to: `sys:${s.code}`, ...(by.length && { labels: [{ text: by.join(', ') }] }), ...line, src: pointer('systemStatuses', i) });
     });
   }

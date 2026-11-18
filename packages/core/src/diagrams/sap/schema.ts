@@ -25,6 +25,7 @@ const step = obj(['id'], {
   conditions: texts('Step conditions: the step runs only when they hold, else it is skipped. Shown as "If: …" under the label, or in its annotation with `annotate`.'),
   rules: ruleIds('Rules (from `rules`) that are step conditions too; shown with them.'),
   deadline: text('Time allowed, e.g. "2d" (clock badge).'),
+  tcodes: texts('Transaction codes or apps the approver works in, e.g. "My Inbox"; shown under the recipients.'),
   optional: flag('Optional step (dashed).'),
   rework: { type: 'string', enum: REWORK, description: 'The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s.' },
   status: codeRef('Status the object is in during the step, which places it; default the workflow’s trigger status.'),
@@ -80,7 +81,7 @@ export const sapSchema = {
     transactions: {
       type: 'array',
       description: 'Business transactions, e.g. Release or Complete technically.',
-      items: obj(['id'], { id, label: text('Defaults to the id.'), sets: { type: 'array', items: codeRef('System status code.'), description: 'System statuses it sets; labels the arrow into each.' }, ...notes }),
+      items: obj(['id'], { id, label: text('Defaults to the id.'), tcodes: texts('Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix.'), sets: { type: 'array', items: codeRef('System status code.'), description: 'System statuses it sets; labels the arrow into each.' }, ...notes }),
     },
     workflows: {
       type: 'array',
@@ -117,6 +118,7 @@ export const sapSchema = {
             label: text('Who releases, e.g. "Purchasing manager".'),
             prerequisites: { type: 'array', items: text('Release code.'), description: 'Codes that must release first; none: released straight away.' },
             indicator: text('Release indicator once released, e.g. "2 – Released, changeable".'),
+            reject: flag('The holder can reject: the requester changes the document and resubmits, which starts the strategy again.'),
             ...notes,
           }),
         },

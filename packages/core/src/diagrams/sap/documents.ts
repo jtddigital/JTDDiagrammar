@@ -3,7 +3,8 @@ import type { Band, IREdge, IRNode } from '../../ir/types.ts';
 import { noted } from '../annotations.ts';
 import { DOTTED, HANGING } from '../process/draw.ts';
 import { over } from '../section-styles.ts';
-import type { Sap } from './model.ts';
+import { hasStatuses, type Sap } from './model.ts';
+import { docColumn } from './columns.ts';
 import { docNode } from './release.ts';
 
 export const DOCS_LANE = 'sap:documents';
@@ -12,6 +13,7 @@ export const DOCS_LANE = 'sap:documents';
 export function documentColumns(m: Sap, col: (code: string | undefined) => string): Map<string, string> {
   const docs = m.documents ?? [];
   const out = new Map<string, string>();
+  if (!hasStatuses(m)) return new Map(docs.map((d) => [d.id, docColumn(d.id)]));
   const byId = new Map(docs.map((d) => [d.id, d]));
   const place = (id: string, seen: Set<string>): string => {
     if (out.has(id)) return out.get(id)!;
