@@ -24,6 +24,16 @@ export interface AiAssets<M = unknown> {
   examples: readonly { input: string; output: unknown }[];
 }
 
+/** A text export a type offers besides SVG, e.g. BPMN 2.0 XML (URS-PM-018). */
+export interface Exporter<M = unknown> {
+  /** Button and menu label, e.g. "BPMN". */
+  label: string;
+  mediaType: string;
+  /** File extension, without the dot. */
+  extension: string;
+  run(model: M, title?: string): string;
+}
+
 /** A diagram type plugin (URS-EXT-001). */
 export interface DiagramType<M = unknown> {
   id: string;
@@ -39,4 +49,6 @@ export interface DiagramType<M = unknown> {
   /** At least one; all are shown in the README (URS-EXT-010, URS-DOC-002). */
   examples: readonly [Example, ...Example[]];
   ai: AiAssets<M>;
+  /** Exports by format id, e.g. `bpmn`; run only on sources without errors. */
+  exports?: Readonly<Record<string, Exporter<M>>>;
 }

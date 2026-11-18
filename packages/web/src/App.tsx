@@ -1,6 +1,7 @@
+import { exportDiagram, exportFormats } from '@jtd/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatPane } from './chat/ChatPane.tsx';
-import { downloadPng, downloadSvg } from './download.ts';
+import { downloadPng, downloadSvg, downloadText } from './download.ts';
 import { SourcePane } from './editor/SourcePane.tsx';
 import { locate, type Range } from './editor/locate.ts';
 import { openFile, saveFile, toEditorText, type DiagramFile } from './files.ts';
@@ -103,6 +104,11 @@ export function App() {
         canExport={Boolean(ready)}
         onSvg={() => downloadSvg(d.svg!, d.title)}
         onPng={() => void downloadPng(d.svg!, d.title)}
+        formats={ready ? exportFormats(d.value, registry) : []}
+        onExport={(format) => {
+          const out = exportDiagram(d.value, format, registry);
+          if (out.text !== undefined) downloadText(out.text, out.mediaType!, out.extension!, d.title);
+        }}
       />
       <Panes
         layout={layout}

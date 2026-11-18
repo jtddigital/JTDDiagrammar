@@ -112,6 +112,20 @@ test('edits, validates and exports a second diagram type with the same UI (URS-W
   expect(exported).toContain('class="jtd jtd-state"');
 });
 
+test('offers the formats a type exports, e.g. BPMN, matching the API (URS-PM-018)', async ({ page, request }) => {
+  await open(page);
+  await setSource(page, flow('A'));
+  await expect(status(page)).toHaveText('Valid');
+  await expect(page.getByRole('button', { name: 'Export BPMN' })).toHaveCount(0);
+  const doc = createRegistry().type('process')!.examples[0]!.source;
+  await setSource(page, doc);
+  await expect(status(page)).toHaveText('Valid');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export BPMN' }).click()]);
+  expect(download.suggestedFilename()).toBe('work-order.bpmn');
+  const exported = Buffer.concat(await (await download.createReadStream()).toArray()).toString('utf8');
+  expect(exported).toBe(await (await request.post('/v1/export/bpmn', { data: doc })).text());
+});
+
 test('a colour swatch before each hex value opens a picker that rewrites it (URS-WEB-021)', async ({ page }) => {
   await open(page);
   await setSource(page, flow('A', { nodes: [{ id: 'a', label: 'A', style: { fill: '#f80' }, to: [{ node: 'b' }] }, { id: 'b' }] }));

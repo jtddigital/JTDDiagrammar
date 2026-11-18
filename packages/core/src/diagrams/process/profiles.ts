@@ -56,6 +56,12 @@ export const SAP: Profile = {
     st('SAP Release Strategy', ['Activity']),
     st('SAP Release Code', TASK, ['code', 'indicator', 'reject']),
     st('SAP Document', ['Class'], ['kind']),
+    // Master Data Governance (URS-TYP-028): change requests, their statuses and actions, rule-based workflow.
+    st('SAP MDG Change Request', ['Class'], ['crType', 'entity']),
+    st('SAP MDG Status', ['State'], ['code']),
+    st('SAP MDG Action', ['Operation'], ['code']),
+    st('SAP MDG Workflow', ['Activity'], ['template']),
+    st('SAP MDG Step', TASK, ['step', 'agent']),
   ],
   outcomes: ['warning'],
   // At least one active status must allow it and none may forbid it; a warning still lets it run.

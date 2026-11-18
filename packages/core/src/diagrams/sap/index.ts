@@ -1,5 +1,7 @@
 import type { DiagramType } from '../../registry/diagram-type.ts';
+import { bpmnExport } from '../process/bpmn.ts';
 import { sapAi } from './ai.ts';
+import { sapToProcess } from './to-process.ts';
 import { examples } from './examples.ts';
 import type { Sap } from './model.ts';
 import { sapSchema } from './schema.ts';
@@ -17,4 +19,5 @@ export const sap: DiagramType<Sap> = {
   toIR: sapToIR,
   examples,
   ai: sapAi,
+  exports: { bpmn: bpmnExport(sapToProcess) },
 };

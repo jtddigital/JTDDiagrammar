@@ -124,8 +124,22 @@ describe('other endpoints', () => {
 
   it('GET /v1/types lists registered types (URS-API-011)', async () => {
     const types = (await app.inject('/v1/types')).json();
-    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'state', 'orgchart', 'lifecycle', 'gantt', 'sap', 'checklist']);
+    expect(types.map((t: { id: string }) => t.id)).toEqual(['flowchart', 'state', 'orgchart', 'lifecycle', 'gantt', 'sap', 'process', 'checklist']);
     expect(types[0]).toMatchObject({ schema: '/v1/schema/flowchart', examples: [{ name: 'basic' }, { name: 'cross-functional' }, { name: 'styled-callouts' }] });
+  });
+
+  it('POST /v1/export/{format} exports in a format the type offers (URS-PM-018)', async () => {
+    const lc = createRegistry().type('lifecycle')!.examples[0]!.source as { title: string };
+    const res = await post(app, '/v1/export/bpmn', lc);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/xml; charset=utf-8');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="change-control-lifecycle.bpmn"');
+    expect(res.body).toContain('<bpmn:definitions');
+    const no = await post(app, '/v1/export/bpmn', flow);
+    expect(no.statusCode).toBe(400);
+    expect(no.json().diagnostics.map((d: { code: string }) => d.code)).toEqual(['export.format']);
+    const types = (await app.inject('/v1/types')).json() as { id: string; exports: string[] }[];
+    expect(types.filter((t) => t.exports.length).map((t) => [t.id, t.exports])).toEqual([['lifecycle', ['bpmn']], ['sap', ['bpmn']], ['process', ['bpmn']]]);
   });
 
   it('GET /v1/schema[/{type}] (URS-API-004)', async () => {
@@ -146,6 +160,7 @@ describe('other endpoints', () => {
       '/v1/ai',
       '/v1/auth/microsoft/device',
       '/v1/auth/microsoft/token',
+      '/v1/export/{format}',
       '/v1/generate',
       '/v1/openapi.json',
       '/v1/refine',

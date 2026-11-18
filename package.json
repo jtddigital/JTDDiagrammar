@@ -33,6 +33,7 @@
     "@playwright/test": "1.63.0",
     "@types/node": "^22.20.5",
     "@vitest/coverage-v8": "5.1.0",
+    "bpmn-moddle": "^10.3.1",
     "eslint": "^10.14.0",
     "fast-xml-parser": "^5.12.0",
     "license-checker-rseidelsohn": "^5.0.1",

@@ -19,7 +19,7 @@ export const metaRoutes = ({ reg }: Ctx): Route[] => [
     method: 'GET',
     url: '/v1/types',
     summary: 'Registered diagram types (URS-API-011).',
-    responses: { 200: 'Array of { id, title, description, schema, examples }' },
+    responses: { 200: 'Array of { id, title, description, schema, examples, exports }' },
     handler: async () =>
       reg.types().map((t) => ({
         id: t.id,
@@ -27,6 +27,7 @@ export const metaRoutes = ({ reg }: Ctx): Route[] => [
         description: t.description,
         schema: `/v1/schema/${t.id}`,
         examples: t.examples.map((e) => ({ name: e.name, title: e.title })),
+        exports: Object.keys(t.exports ?? {}),
       })),
   },
   {

@@ -8,6 +8,7 @@ import { requestError } from './errors.ts';
 import { registerSourceParsers } from './input.ts';
 import { openapi } from './openapi.ts';
 import { RenderPool } from './pool.ts';
+import { exportRoutes } from './routes/export.ts';
 import { generateRoutes } from './routes/generate.ts';
 import { metaRoutes } from './routes/meta.ts';
 import { microsoftRoutes } from './routes/microsoft.ts';
@@ -42,7 +43,7 @@ export async function buildApp(cfg: Config, opts: { logger?: FastifyServerOption
   const cp = cfg.ai.copilot;
   const copilot = cp && (opts.copilot ?? ((token: string, timeZone?: string) => copilotClient({ token, baseUrl: cp.graphUrl, ...(timeZone && { timeZone }) })));
   const ctx = { reg, pool, ai: cfg.ai, ...(claude && { claude }), ...(copilot && { copilot }) };
-  const routes: Route[] = [...metaRoutes(ctx), ...validateRoutes(ctx), ...renderRoutes(ctx), ...generateRoutes(ctx), ...microsoftRoutes(cfg.ai.copilot, opts.signInFetch), ...updateRoutes({ env: process.env, root: APP_ROOT, version: VERSION, fetch, ...opts.update })];
+  const routes: Route[] = [...metaRoutes(ctx), ...validateRoutes(ctx), ...renderRoutes(ctx), ...exportRoutes(ctx), ...generateRoutes(ctx), ...microsoftRoutes(cfg.ai.copilot, opts.signInFetch), ...updateRoutes({ env: process.env, root: APP_ROOT, version: VERSION, fetch, ...opts.update })];
   let doc: object | undefined;
   routes.push({ method: 'GET', url: '/v1/openapi.json', summary: 'This document.', responses: { 200: 'OpenAPI 3.1' }, handler: async () => (doc ??= openapi(routes, reg)) });
   for (const r of routes) app.route({ method: r.method, url: r.url, handler: r.handler });
