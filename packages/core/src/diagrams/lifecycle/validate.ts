@@ -1,5 +1,7 @@
-import { error, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
+import { error, hasErrors, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
+import { processDiagnostics } from '../process/diagnose.ts';
 import { badStages, ends, nextOf, stateOf, stepsOf, transitions, type Lifecycle } from './model.ts';
+import { lifecycleToProcess } from './to-process.ts';
 
 /**
  * Lifecycle rules (URS-TYP-008), worded in lifecycle terms. References that toIR cannot place
@@ -65,7 +67,9 @@ export function validateLifecycle(m: Lifecycle): Diagnostic[] {
       if (s.verdicts?.length && s.kind !== undefined && s.kind !== 'task') out.push(warning('lifecycle.verdicts', `only tasks have verdicts; '${s.id}' is a ${s.kind}`, pointer('workflows', wi, 'steps', si, 'verdicts')));
     });
   });
-  return [...out, ...lint(m)];
+  // The process model's checks (URS-PM-017); unreachable steps are already `lifecycle.reach`.
+  const own = [...out, ...lint(m)];
+  return hasErrors(own) ? own : [...own, ...processDiagnostics(lifecycleToProcess(m), ['unreachable'])];
 }
 
 /**

@@ -1,13 +1,12 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, IREdge, IRNode } from '../../ir/types.ts';
 import { noted } from '../annotations.ts';
+import { DOTTED, HANGING } from '../process/draw.ts';
 import { over } from '../section-styles.ts';
 import type { Sap } from './model.ts';
 import { docNode } from './release.ts';
 
 export const DOCS_LANE = 'sap:documents';
-/** A document hangs off the status it is created in by a dotted line, without an arrowhead. */
-const CREATED = { dash: 'dotted' } as const;
 
 /** Each document's column: the status it is created in, else its first known preceding document's, else the first. */
 export function documentColumns(m: Sap, col: (code: string | undefined) => string): Map<string, string> {
@@ -51,7 +50,8 @@ export function documentParts(m: Sap, docCol: Map<string, string>, pill: (code: 
       src,
     });
     const from = d.status !== undefined ? pill(d.status) : undefined;
-    if (from) edges.push({ id: `${from}>${docNode(d.id)}`, from, to: docNode(d.id), marker: 'none', ...over(m.edgeStyle, CREATED), src: `${src}/status` });
+    // A document hangs off the status it is created in by a dotted line, without an arrowhead.
+    if (from) edges.push({ id: `${from}>${docNode(d.id)}`, from, to: docNode(d.id), ...HANGING, ...over(m.edgeStyle, DOTTED), src: `${src}/status` });
     (d.from ?? []).forEach((f, j) => ids.has(f) && edges.push({ id: `${docNode(f)}>${docNode(d.id)}`, from: docNode(f), to: docNode(d.id), ...over(m.edgeStyle, undefined), src: pointer('documents', i, 'from', j) }));
   });
   return { lane: { id: DOCS_LANE, label: 'Document flow', src: pointer('documents', 0) }, nodes, edges };

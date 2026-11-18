@@ -3,6 +3,7 @@ import { edgeLabels } from '../edge-labels.ts';
 import { merged, over, ruled } from '../section-styles.ts';
 import { noted, noteOf } from '../annotations.ts';
 import { annotated, KIND, stepsOf, type LcLink, type LcStep, type LcVerdict, type Lifecycle, type StepKind } from './model.ts';
+import { DASHED } from '../process/draw.ts';
 
 export const SHAPE: Record<StepKind, string> = {
   start: 'start',
@@ -19,8 +20,8 @@ export const SHAPE: Record<StepKind, string> = {
 /** Emphasis for the main path, and fading for the rest, when any connection is marked `main` (URS-TYP-009). */
 export const MAIN: Style = { lineWidth: 2.5 };
 const FADED: Style = { opacity: 0.45 };
-/** Workflow starts and summary transitions are dashed. */
-export const DASHED: Style = { dash: 'dashed' };
+/** Workflow starts and summary transitions are dashed (shared convention, URS-PM-019). */
+export { DASHED };
 
 /** Whether anything is marked as the main path. */
 export const hasMain = (m: Lifecycle) =>

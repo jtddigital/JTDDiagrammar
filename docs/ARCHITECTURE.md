@@ -281,7 +281,7 @@ Cross-functional (P2) was moved ahead of the API and web app (P3) at the user's 
 | Prompt injection via documents | No tools; type and schema fixed by the server; output is data only and escaped. |
 
 ## 13. Process model (URS-PM-001..021, D-002..D-005)
-Status: **Proposed** (2026-11-18). This section is the specification the PM requirements point to; nothing here is implemented yet.
+Status: library **implemented** (2026-11-18) in `core/src/diagrams/process/`: `model.ts` (the allowlist), `profiles.ts` (Process, SAP, Veeva, ServiceNow), `semantics.ts` (permission, operation calls, direct triggers, delivery), `checks.ts` (token flow and state machine checks, profile conformance), `diagnose.ts` (findings as `process.*` diagnostics), `draw.ts` (shared drawing conventions). `lifecycle/to-process.ts` and `sap/to-process.ts` map each type onto it, and both validators run its checks. The generic `process` type, BPMN export and the pipeline stage are still to come.
 
 ### 13.1 Shape
 ```
@@ -449,8 +449,8 @@ Workflows are checked as token flows (BPMN 2.0 execution semantics), never shown
 Diagnostics are reported in the platform's terms through the profile (e.g. "release code Q1 waits for F1, which can never release").
 
 ### 13.10 Plan
-1. Library `core/src/diagrams/process/`: model types (the allowlist), profile registry, permission evaluation, token checks, shared drawing helpers (URS-PM-019).
-2. Move the lifecycle and sap types onto it; README images and the quality baseline must not change.
+1. ✔ Library `core/src/diagrams/process/`: model types (the allowlist), profile registry, permission evaluation, token checks, shared drawing helpers (URS-PM-019).
+2. ✔ Map the lifecycle and sap types onto it and run its checks; README images and the quality baseline unchanged.
 3. Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029).
 4. SAP follow-ons (URS-TYP-025..028).
 5. Later: generic `process` type (PM-020), BPMN export (PM-018), pipeline stage (PM-021) when a second consumer appears.

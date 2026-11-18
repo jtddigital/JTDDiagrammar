@@ -109,7 +109,7 @@ describe('Vault lifecycle features (URS-TYP-009)', () => {
     expect(render(cc, reg).svg).toMatch(/class="jtd-meta">Object: change_control__c · Lifecycle: Change Control · Version: 3</);
   });
 
-  it('checks the lifecycle: unreachable states, dead ends, workflows that never change state, decisions and verdicts', () => {
+  it('checks the lifecycle: unreachable states, dead ends, workflows that never change state or never complete, decisions and verdicts', () => {
     const d = {
       version: '1',
       type: 'lifecycle',
@@ -134,6 +134,8 @@ describe('Vault lifecycle features (URS-TYP-009)', () => {
       ['lifecycle.unreachable', '/states/1'],
       ['lifecycle.deadEnd', '/states/1'],
       ['lifecycle.unreachable', '/states/2'],
+      // The process model's token check: start → decision → notification → start never ends (URS-PM-017).
+      ['process.noCompletion', '/workflows/0'],
     ]);
     for (const e of reg.type('lifecycle')!.examples) expect(warnings(e.source), e.name).toEqual([]);
   });
