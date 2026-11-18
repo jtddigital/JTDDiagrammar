@@ -1,5 +1,7 @@
-import { error, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
+import { error, hasErrors, pointer, warning, type Diagnostic } from '../../diagnostics.ts';
+import { processDiagnostics } from '../process/diagnose.ts';
 import { nextOf, numbered, type Sap } from './model.ts';
+import { sapToProcess } from './to-process.ts';
 
 /**
  * SAP rules (URS-TYP-019..021), in SAP terms. Unknown references are reported here and kept out of
@@ -92,7 +94,8 @@ export function validateSap(m: Sap): Diagnostic[] {
     const order = cycle(new Map(r.codes.map((c) => [c.code, c.prerequisites ?? []])));
     if (order) out.push(error('sap.releaseOrder', `release codes wait for each other in a loop: ${order.join(' → ')}`, pointer('releaseStrategies', i, 'codes')));
   });
-  return out;
+  // The process model's checks (URS-PM-017): dead joins, never-permitted transactions, orphan subscriptions…
+  return hasErrors(out) ? out : [...out, ...processDiagnostics(sapToProcess(m))];
 }
 
 /** A loop in a graph given as node → predecessors, as the nodes along it; undefined when there is none. */

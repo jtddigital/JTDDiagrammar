@@ -1,6 +1,7 @@
 import { pointer } from '../../diagnostics.ts';
 import type { Band, BandGroup, GraphIR, IREdge, IRNode } from '../../ir/types.ts';
 import { noted, noteOf } from '../annotations.ts';
+import { DOTTED, HANGING } from '../process/draw.ts';
 import { edgeLabels } from '../edge-labels.ts';
 import { over, ruled, styled } from '../section-styles.ts';
 import { lifecycleLegend } from './legend.ts';
@@ -28,8 +29,6 @@ const gateText = (m: Lifecycle, g: LcGate, state: { id: string; label: string })
   if (annotated(m, 'gates', g.annotate)) return { label: '', ...on(noteOf(g.label, sub, g.annotation)) };
   return { label: g.label ?? 'Gate', ...(sub && { sub }), ...on(g.annotation) };
 };
-/** Child records hang off their state by a dotted line, without an arrowhead. */
-const ATTACHED = { dash: 'dotted' } as const;
 
 /** Band for steps without an owner when workflows are split by role. */
 export const SYSTEM_ROLE = 'System';
@@ -120,7 +119,8 @@ export function lifecycleToIR(m: Lifecycle): GraphIR {
         const note = noted(m, annotated(m, 'records', r.annotate) ? noteOf(values, r.annotation) : r.annotation, { id: r.record, label: r.label ?? r.record, type: 'Child record', ...(r.tags && { tags: r.tags }) });
         const sub = annotated(m, 'records', r.annotate) ? undefined : values;
         nodes.push({ id, shape: 'record', label: r.label ?? r.record, ...(sub && { sub }), ...note, ...place(s.id, ACTIONS_BAND), ...(r.style && { style: r.style }), ...(r.quote && { quote: r.quote }), src } as IRNode);
-        edges.push({ id: `${id}:link`, from: pill(s.id), to: id, marker: 'none', ...over(m.edgeStyle, ATTACHED), src });
+        // Child records hang off their state by a dotted line, without an arrowhead.
+        edges.push({ id: `${id}:link`, from: pill(s.id), to: id, ...HANGING, ...over(m.edgeStyle, DOTTED), src });
       });
       // Actions to unknown states are reported by the rules and left out here.
       (s.to ?? []).forEach((a, j) =>

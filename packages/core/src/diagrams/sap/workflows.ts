@@ -3,8 +3,9 @@ import type { Band, IREdge, IRNode, Style } from '../../ir/types.ts';
 import { noted, noteOf } from '../annotations.ts';
 import { merged, over } from '../section-styles.ts';
 import type { Sap, SapStep, SapWorkflow } from './model.ts';
+import { DASHED } from '../process/draw.ts';
 
-export const DASHED: Style = { dash: 'dashed' };
+export { DASHED };
 export const workflowLane = (w: SapWorkflow) => `wf:${w.id}`;
 
 interface Ctx {
