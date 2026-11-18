@@ -3576,6 +3576,544 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### Process (generic)
+
+`type: process` · A platform without a type of its own (IBM Maximo), written in the canonical terms with free stereotypes. Two regions (status and hold, each one row with exactly one active state); transitions fired by operation calls and by time; permissions under each state; operations called on entry. A workflow with a decision on a named rule, a merge and a send node, started by the signal published when the order is created.
+
+![Process (generic)](docs/img/process-work-order.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "process",
+  "title": "Work order",
+  "object": {
+    "label": "Work order",
+    "stereotype": "Maximo Object",
+    "values": {
+      "table": "WORKORDER"
+    }
+  },
+  "info": {
+    "Platform": "IBM Maximo"
+  },
+  "rules": [
+    {
+      "id": "large",
+      "text": "Estimated cost > 25,000",
+      "via": "script"
+    }
+  ],
+  "regions": [
+    {
+      "id": "status",
+      "label": "Status",
+      "states": [
+        {
+          "id": "WAPPR",
+          "label": "Waiting on approval",
+          "initial": true
+        },
+        {
+          "id": "APPR",
+          "label": "Approved"
+        },
+        {
+          "id": "INPRG",
+          "label": "In progress"
+        },
+        {
+          "id": "COMP",
+          "label": "Completed",
+          "entry": [
+            "charge"
+          ]
+        },
+        {
+          "id": "CLOSE",
+          "label": "Closed",
+          "final": true,
+          "annotation": "Closed work orders cannot be changed; history is kept for audit."
+        },
+        {
+          "id": "CAN",
+          "label": "Cancelled",
+          "final": true
+        }
+      ]
+    },
+    {
+      "id": "hold",
+      "label": "Hold",
+      "states": [
+        {
+          "id": "free",
+          "label": "Not on hold",
+          "initial": true
+        },
+        {
+          "id": "held",
+          "label": "On hold"
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "approve",
+      "label": "Approve"
+    },
+    {
+      "id": "start",
+      "label": "Start work",
+      "callers": [
+        "user"
+      ]
+    },
+    {
+      "id": "complete",
+      "label": "Complete",
+      "callers": [
+        "user"
+      ]
+    },
+    {
+      "id": "cancel",
+      "label": "Cancel",
+      "callers": [
+        "user"
+      ]
+    },
+    {
+      "id": "hold",
+      "label": "Put on hold",
+      "callers": [
+        "user"
+      ]
+    },
+    {
+      "id": "resume",
+      "label": "Resume",
+      "callers": [
+        "user"
+      ]
+    },
+    {
+      "id": "charge",
+      "label": "Post actual costs"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "WAPPR",
+      "to": "APPR",
+      "trigger": {
+        "call": "approve"
+      }
+    },
+    {
+      "from": "APPR",
+      "to": "INPRG",
+      "trigger": {
+        "call": "start"
+      }
+    },
+    {
+      "from": "INPRG",
+      "to": "COMP",
+      "trigger": {
+        "call": "complete"
+      }
+    },
+    {
+      "from": "COMP",
+      "to": "CLOSE",
+      "trigger": {
+        "after": "30d"
+      }
+    },
+    {
+      "from": "WAPPR",
+      "to": "CAN",
+      "trigger": {
+        "call": "cancel"
+      }
+    },
+    {
+      "from": "free",
+      "to": "held",
+      "trigger": {
+        "call": "hold"
+      }
+    },
+    {
+      "from": "held",
+      "to": "free",
+      "trigger": {
+        "call": "resume"
+      }
+    }
+  ],
+  "permissions": [
+    {
+      "state": "held",
+      "operation": "complete",
+      "outcome": "forbidden"
+    },
+    {
+      "state": "WAPPR",
+      "operation": "start",
+      "outcome": "forbidden"
+    },
+    {
+      "state": "APPR",
+      "operation": "cancel",
+      "role": "Supervisor",
+      "outcome": "allowed"
+    }
+  ],
+  "signals": [
+    {
+      "id": "created",
+      "label": "Work order created",
+      "on": "WAPPR",
+      "to": [
+        {
+          "workflow": "approval"
+        }
+      ]
+    },
+    {
+      "id": "approved",
+      "label": "Work order approved",
+      "to": [
+        {
+          "system": "Scheduling",
+          "channel": "MIF"
+        }
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "approval",
+      "label": "Approval",
+      "stereotype": "Maximo Workflow",
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "initial"
+        },
+        {
+          "id": "size",
+          "kind": "decision",
+          "label": "Cost?"
+        },
+        {
+          "id": "manager",
+          "kind": "task",
+          "label": "Approve",
+          "role": "Maintenance manager",
+          "calls": [
+            "approve"
+          ]
+        },
+        {
+          "id": "auto",
+          "kind": "task",
+          "label": "Approve automatically",
+          "role": "System",
+          "calls": [
+            "approve"
+          ]
+        },
+        {
+          "id": "merge",
+          "kind": "merge"
+        },
+        {
+          "id": "tell",
+          "kind": "send",
+          "signal": "approved"
+        },
+        {
+          "id": "end",
+          "kind": "final"
+        }
+      ],
+      "flows": [
+        {
+          "from": "start",
+          "to": "size"
+        },
+        {
+          "from": "size",
+          "to": "manager",
+          "guard": "large"
+        },
+        {
+          "from": "size",
+          "to": "auto",
+          "guard": "Otherwise"
+        },
+        {
+          "from": "manager",
+          "to": "merge"
+        },
+        {
+          "from": "auto",
+          "to": "merge"
+        },
+        {
+          "from": "merge",
+          "to": "tell"
+        },
+        {
+          "from": "tell",
+          "to": "end"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
+### Process in a platform profile
+
+`type: process` · `profile: servicenow`: the stereotypes come from the ServiceNow profile and are checked against it. UI actions as operations with role permissions, a guard rule on Resolve, automatic closing after 7 days, and a signal that starts a flow and notifies a portal.
+
+![Process in a platform profile](docs/img/process-incident.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "process",
+  "title": "Incident",
+  "profile": "servicenow",
+  "object": {
+    "label": "Incident",
+    "stereotype": "ServiceNow Record",
+    "values": {
+      "table": "incident"
+    }
+  },
+  "rules": [
+    {
+      "id": "notes",
+      "text": "Resolution notes filled in",
+      "via": "script"
+    }
+  ],
+  "regions": [
+    {
+      "id": "state",
+      "label": "State",
+      "states": [
+        {
+          "id": "new",
+          "label": "New",
+          "initial": true,
+          "stereotype": "ServiceNow State",
+          "values": {
+            "value": "1"
+          }
+        },
+        {
+          "id": "progress",
+          "label": "In Progress",
+          "stereotype": "ServiceNow State",
+          "values": {
+            "value": "2"
+          }
+        },
+        {
+          "id": "hold",
+          "label": "On Hold",
+          "stereotype": "ServiceNow State",
+          "values": {
+            "value": "3"
+          }
+        },
+        {
+          "id": "resolved",
+          "label": "Resolved",
+          "stereotype": "ServiceNow State",
+          "values": {
+            "value": "6"
+          }
+        },
+        {
+          "id": "closed",
+          "label": "Closed",
+          "final": true,
+          "stereotype": "ServiceNow State",
+          "values": {
+            "value": "7"
+          }
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "assign",
+      "label": "Assign to me",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "ServiceNow UI Action"
+    },
+    {
+      "id": "pause",
+      "label": "On hold",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "ServiceNow UI Action"
+    },
+    {
+      "id": "resume",
+      "label": "Resume",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "ServiceNow UI Action"
+    },
+    {
+      "id": "resolve",
+      "label": "Resolve",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "ServiceNow UI Action"
+    },
+    {
+      "id": "reopen",
+      "label": "Reopen",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "ServiceNow UI Action"
+    }
+  ],
+  "transitions": [
+    {
+      "from": "new",
+      "to": "progress",
+      "trigger": {
+        "call": "assign"
+      }
+    },
+    {
+      "from": "progress",
+      "to": "hold",
+      "trigger": {
+        "call": "pause"
+      }
+    },
+    {
+      "from": "hold",
+      "to": "progress",
+      "trigger": {
+        "call": "resume"
+      }
+    },
+    {
+      "from": "progress",
+      "to": "resolved",
+      "trigger": {
+        "call": "resolve"
+      },
+      "guard": "notes"
+    },
+    {
+      "from": "resolved",
+      "to": "progress",
+      "trigger": {
+        "call": "reopen"
+      }
+    },
+    {
+      "from": "resolved",
+      "to": "closed",
+      "trigger": {
+        "after": "7d"
+      }
+    }
+  ],
+  "permissions": [
+    {
+      "state": "progress",
+      "operation": "resolve",
+      "role": "itil",
+      "outcome": "allowed"
+    },
+    {
+      "state": "hold",
+      "operation": "resolve",
+      "outcome": "forbidden"
+    }
+  ],
+  "signals": [
+    {
+      "id": "resolved",
+      "label": "Incident resolved",
+      "on": "resolved",
+      "to": [
+        {
+          "workflow": "survey"
+        },
+        {
+          "system": "Customer portal",
+          "channel": "REST"
+        }
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "survey",
+      "label": "Satisfaction survey",
+      "stereotype": "ServiceNow Flow",
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "initial"
+        },
+        {
+          "id": "send",
+          "kind": "task",
+          "label": "Send survey",
+          "role": "System"
+        },
+        {
+          "id": "end",
+          "kind": "final"
+        }
+      ],
+      "flows": [
+        {
+          "from": "start",
+          "to": "send"
+        },
+        {
+          "from": "send",
+          "to": "end"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language
@@ -3608,7 +4146,7 @@ Fields every diagram has:
 |-------|------|----------|-------------|
 | `$schema` | string |  | Optional schema URL for editor tooling. |
 | `version` | string | yes | Schema version; major 1 (e.g. "1", "1.2"). |
-| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` \| `gantt` \| `sap` | yes | Diagram type. |
+| `type` | `flowchart` \| `state` \| `orgchart` \| `lifecycle` \| `gantt` \| `sap` \| `process` | yes | Diagram type. |
 | `title` | string |  | Title shown above the diagram. |
 | `theme` | `default` \| `dark` |  | Colour theme; element styles override it. |
 
@@ -4049,6 +4587,112 @@ An SAP object’s system and user statuses, the business transactions each allow
 | `documents[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
 | `documents[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
 | `documents[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+
+### `process`
+
+An object’s states (in one or more regions), the operations, signals and rules that move it, what each state permits, and its workflows, written in the canonical process terms. For platforms without a type of their own, e.g. IBM Maximo, PTC Windchill, ServiceNow.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `profile` | string |  | A registered platform profile (`sap`, `veeva`, `servicenow`) whose stereotypes and permission outcomes the chart uses. Without one, stereotypes are free text. |
+| `object` | object |  | The object whose behaviour the chart shows. |
+| `object.label` | string | yes | The object, e.g. "Work order"; the title when there is none. |
+| `object.stereotype` | string |  | Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it. |
+| `object.values` | object |  | Tagged values of the stereotype, e.g. `{ "table": "wo" }`. |
+| `info` | object |  | Title block, e.g. `{ "Platform": "Maximo" }`. |
+| `annotationTarget` | `none` \| `id` \| `label` |  | Name what each annotation is attached to, in bold above its note: by `id` or by `label`; `none` (default) leaves it out. |
+| `annotationGroups` | list of `type` \| `owner` \| `tag` |  | Group the notes under headings, level after level: by `type` (kind of shape, e.g. Task, Gate), `owner` or `tag`. E.g. `["type", "owner"]`: by type, then by owner within each. A note with several tags is listed under each. |
+| `legend` | boolean |  | Draw a legend of the shapes and lines used. |
+| `styles` | styles by key |  | Default style per section (`states`, `tasks`); each item’s own `style` overrides it field by field. |
+| `edgeStyle` | style |  | Default style for every arrow. |
+| `regions` | list of objects | yes | Regions: independent dimensions of the object’s status, one row each; exactly one state of each is active. |
+| `regions[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `regions[].label` | string |  | Row label; defaults to the id. |
+| `regions[].states` | list of objects | yes |  |
+| `regions[].states[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `regions[].states[].label` | string |  | Defaults to the id. |
+| `regions[].states[].stereotype` | string |  | Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it. |
+| `regions[].states[].values` | object |  | Tagged values of the stereotype, e.g. `{ "table": "wo" }`. |
+| `regions[].states[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `regions[].states[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `regions[].states[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `regions[].states[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `regions[].states[].initial` | boolean |  | The region starts here. |
+| `regions[].states[].final` | boolean |  | Entering it ends the region. |
+| `regions[].states[].entry` | list of string |  | Operations called on entry. |
+| `operations` | list of objects |  | Operations: what can be invoked on the object; transitions wait for them and workflow tasks call them. |
+| `operations[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `operations[].label` | string |  | Defaults to the id. |
+| `operations[].stereotype` | string |  | Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it. |
+| `operations[].values` | object |  | Tagged values of the stereotype, e.g. `{ "table": "wo" }`. |
+| `operations[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `operations[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `operations[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `operations[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `operations[].callers` | list of `user` \| `job` |  | Who calls it directly, outside workflows. |
+| `transitions` | list of objects |  | Moves between two states of one region. |
+| `transitions[].id` | string |  | Optional; generated when absent. |
+| `transitions[].from` | string | yes | State id. |
+| `transitions[].to` | string | yes | State id, in the same region. |
+| `transitions[].trigger` | object |  | Exactly one of `call`, `signal`, `after`, `at` or `when`. Without a trigger, the transition is reported. |
+| `transitions[].trigger.call` | string |  | Operation it waits for. |
+| `transitions[].trigger.signal` | string |  | Signal it waits for. |
+| `transitions[].trigger.after` | string |  | Time after entering the state, e.g. "30d". |
+| `transitions[].trigger.at` | string |  | A point in time, e.g. "Year end". |
+| `transitions[].trigger.when` | string |  | Rule whose becoming true fires it. |
+| `transitions[].guard` | string |  | Rule that must hold. |
+| `transitions[].label` | string |  | Arrow label; defaults to the trigger. |
+| `transitions[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `transitions[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `permissions` | list of objects |  | What each state allows: state × operation [× role] → outcome. Forbidden wins over allowed across the active states. |
+| `permissions[].state` | string | yes | State id. |
+| `permissions[].operation` | string | yes | Operation id. |
+| `permissions[].role` | string |  | Role it applies to; any when absent. |
+| `permissions[].outcome` | string | yes | `allowed`, `forbidden`, or an outcome the profile adds (e.g. `warning` for `sap`). |
+| `rules` | list of objects |  | Named rules (decisions), e.g. "Amount > 50,000 EUR". Gates, steps and conditions refer to them by id in `rules`. |
+| `rules[].id` | string | yes | Rule id. |
+| `rules[].text` | string | yes | What the rule says. |
+| `rules[].via` | `workflow condition` \| `classification` \| `BAdI` \| `BRF+` \| `script` \| `entry criteria` \| `other` |  | How it is evaluated. |
+| `signals` | list of objects |  | Signals: facts published when a state is entered, delivered to subscribers. Drawn in a Signals row, with subscribers that are not workflows in a Subscribers row. |
+| `signals[].id` | string | yes | Signal id. |
+| `signals[].label` | string |  | Named in the past tense, e.g. "Order released"; defaults to the id. |
+| `signals[].on` | string |  | State whose entry publishes it; or leave it out when only workflows send it. |
+| `signals[].to` | list of objects |  | Subscribers: each names exactly one of `workflow`, `operation`, `handler` or `system`. |
+| `signals[].to[].workflow` | string |  | Workflow it starts: a dashed arrow to its start. |
+| `signals[].to[].operation` | string |  | Operation it calls. |
+| `signals[].to[].handler` | string |  | Handler that receives it, e.g. a BAdI or a script. |
+| `signals[].to[].system` | string |  | External system it is sent to. |
+| `signals[].to[].channel` | string |  | How it is delivered, e.g. "event mesh", "IDoc"; the arrow’s label. |
+| `signals[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `signals[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `signals[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `signals[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows` | list of objects |  | Workflows (activities): one row each. |
+| `workflows[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].label` | string | yes | Workflow name. |
+| `workflows[].stereotype` | string |  | Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it. |
+| `workflows[].values` | object |  | Tagged values of the stereotype, e.g. `{ "table": "wo" }`. |
+| `workflows[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `workflows[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].nodes` | list of objects | yes |  |
+| `workflows[].nodes[].id` | string | yes | Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`. |
+| `workflows[].nodes[].label` | string |  | Defaults to the id. |
+| `workflows[].nodes[].stereotype` | string |  | Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it. |
+| `workflows[].nodes[].values` | object |  | Tagged values of the stereotype, e.g. `{ "table": "wo" }`. |
+| `workflows[].nodes[].annotation` | string |  | Annotation: a numbered marker on the shape, with the text in the notes beside the chart. |
+| `workflows[].nodes[].tags` | list of string |  | Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`. |
+| `workflows[].nodes[].quote` | string |  | Supporting excerpt from the source material; shown as a tooltip. |
+| `workflows[].nodes[].style` | style |  | Colours, lines, text and node sizing (see Styling). |
+| `workflows[].nodes[].kind` | `initial` \| `final` \| `task` \| `decision` \| `merge` \| `fork` \| `join` \| `send` | yes | `initial`, `final`, `task`, `decision` and `merge` (exclusive), `fork` and `join` (parallel), or `send` (publishes a signal). |
+| `workflows[].nodes[].role` | string |  | Who performs it; shown under the label. |
+| `workflows[].nodes[].calls` | list of string |  | Operations it calls. |
+| `workflows[].nodes[].signal` | string |  | For `send`: the signal it publishes. |
+| `workflows[].flows` | list of objects | yes |  |
+| `workflows[].flows[].from` | string | yes | Node id. |
+| `workflows[].flows[].to` | string | yes | Node id. |
+| `workflows[].flows[].guard` | string |  | Outcome or rule id it is taken on; the arrow label. |
 
 <!-- END GENERATED: reference -->
 

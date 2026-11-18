@@ -359,6 +359,24 @@
     "edgeThroughLabel": 0,
     "bends": 15
   },
+  "process-work-order": {
+    "crossings": 2,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 12
+  },
+  "process-incident": {
+    "crossings": 0,
+    "overlaps": 0,
+    "edgeThroughNode": 0,
+    "labelOnNode": 0,
+    "labelOnLabel": 0,
+    "edgeThroughLabel": 0,
+    "bends": 6
+  },
   "random-30": {
     "crossings": 34,
     "overlaps": 0,

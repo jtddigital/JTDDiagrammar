@@ -36,8 +36,8 @@ export interface EvSubscriber {
 export interface EvSignal {
   id: string;
   label?: string;
-  /** The state (or status) whose entry publishes it. */
-  on: string;
+  /** The state (or status) whose entry publishes it; optional where workflows send it. */
+  on?: string;
   to?: EvSubscriber[];
   annotation?: string;
   tags?: string[];
@@ -62,7 +62,7 @@ const text = (description: string) => ({ type: 'string', description }) as const
 const obj = (required: string[], properties: Record<string, unknown>, description?: string) => ({ type: 'object', additionalProperties: false, required, properties, ...(description && { description }) }) as const;
 
 /** Schema properties for a type's top level. */
-export const eventsSchema = (on: string) =>
+export const eventsSchema = (on: string, onRequired = true) =>
   ({
     rules: {
       type: 'array',
@@ -72,7 +72,7 @@ export const eventsSchema = (on: string) =>
     signals: {
       type: 'array',
       description: 'Signals: facts published when a state is entered, delivered to subscribers. Drawn in a Signals row, with subscribers that are not workflows in a Subscribers row.',
-      items: obj(['id', 'on'], {
+      items: obj(onRequired ? ['id', 'on'] : ['id'], {
         id: ref('Signal id.'),
         label: text('Named in the past tense, e.g. "Order released"; defaults to the id.'),
         on: text(on),
@@ -122,7 +122,7 @@ export function eventDiagnostics(m: Events, k: Known): Diagnostic[] {
   const rules = unique(m.rules, 'rules', 'rule');
   unique(m.signals, 'signals', 'signal');
   m.signals?.forEach((s, i) => {
-    if (!k.states.has(s.on)) out.push(error('ref.state', `signal '${s.id}' is published on unknown state '${s.on}'`, pointer('signals', i, 'on')));
+    if (s.on !== undefined && !k.states.has(s.on)) out.push(error('ref.state', `signal '${s.id}' is published on unknown state '${s.on}'`, pointer('signals', i, 'on')));
     s.to?.forEach((t, j) => {
       const at = pointer('signals', i, 'to', j);
       if (kindOf(t).length !== 1) out.push(error('events.subscriber', `a subscriber of signal '${s.id}' must name exactly one of workflow, operation, handler or system`, at));
@@ -143,7 +143,9 @@ interface Place {
   /** The start node of a workflow. */
   start: (workflow: string) => string | undefined;
   /** Where a node goes: the state's column (or row) in a band. */
-  at: (on: string, band: string) => { lane: string; phase: string };
+  at: (on: string | undefined, band: string) => { lane: string; phase?: string };
+  /** Other nodes that publish a signal, e.g. a workflow's send nodes. */
+  publishers?: (signal: string) => string[];
 }
 
 /**
@@ -152,7 +154,8 @@ interface Place {
  * other subscribers go in a Subscribers row, one node per name.
  */
 export function eventParts(m: Events, c: Place): { bands: Band[]; nodes: IRNode[]; edges: IREdge[] } {
-  const signals = (m.signals ?? []).filter((s) => c.pill(s.on));
+  const from = (s: EvSignal) => [...(s.on !== undefined && c.pill(s.on) ? [c.pill(s.on)!] : []), ...(c.publishers?.(s.id) ?? [])];
+  const signals = (m.signals ?? []).filter((s) => from(s).length);
   if (!signals.length) return { bands: [], nodes: [], edges: [] };
   const nodes: IRNode[] = [];
   const edges: IREdge[] = [];
@@ -171,7 +174,7 @@ export function eventParts(m: Events, c: Place): { bands: Band[]; nodes: IRNode[
       ...(s.quote && { quote: s.quote }),
       src: pointer('signals', i),
     });
-    edges.push({ id: `${id}:on`, from: c.pill(s.on)!, to: id, ...over(m.edgeStyle, DOTTED), src: pointer('signals', i, 'on') });
+    from(s).forEach((f, k) => edges.push({ id: k ? `${id}:on:${f}` : `${id}:on`, from: f, to: id, ...over(m.edgeStyle, DOTTED), src: pointer('signals', i, ...(s.on !== undefined && !k ? ['on'] : [])) }));
     s.to?.forEach((t, j) => {
       const [kind] = kindOf(t);
       if (!kind || kindOf(t).length > 1) return;
@@ -213,7 +216,7 @@ export function eventsToProcess(p: ProcessModel, m: Events, states: (on: string)
   const byId = new Map(p.machines.flatMap((mc) => mc.regions.flatMap((r) => r.states.map((s) => [s.id, s] as const))));
   m.signals?.forEach((s, i) => {
     p.signals.push({ id: s.id, name: s.label ?? s.id, src: pointer('signals', i) });
-    for (const id of states(s.on)) {
+    for (const id of s.on === undefined ? [] : states(s.on)) {
       const st = byId.get(id);
       if (st) st.entry = [...(st.entry ?? []), { kind: 'signal', signal: s.id }];
     }

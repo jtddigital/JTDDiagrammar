@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.64 (draft) |
+| Version | 0.65 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -282,7 +282,7 @@ Terms are defined in the glossary (ARCHITECTURE §13.2) and used with that meani
 | URS-PM-017 | S | **Validation by token semantics.** Workflows are checked with token-flow semantics, without exposing them to authors: joins that can never complete, tasks and states that can never be reached, workflows with no path to a final node, transitions whose trigger is never raised, operations permitted in no reachable state. | One failing and one passing fixture per check; diagnostics name the elements in platform terms. | T | Verified |
 | URS-PM-018 | C | **BPMN export, one way.** Workflows export as BPMN 2.0 XML for documentation and hand-off. States, permissions and object relations are not exported. BPMN edited in other tools is not read back; the export says so in its documentation. | Exported files validate against the BPMN 2.0 schema and open in a BPMN modeller. | T | Proposed |
 | URS-PM-019 | S | **Shared process library.** The model, profiles, permission evaluation, token checks and shared drawing helpers live in one library used by the lifecycle and sap types. Moving the types onto it changes no drawing. | Library in core; README images and quality baseline unchanged by the move. | T | Verified |
-| URS-PM-020 | C | **Generic `process` type.** A diagram type written directly in the canonical terms, with free stereotypes and tagged values, for platforms without a type of their own (e.g. Maximo, Windchill). | Example renders; maps onto the model like the platform types. | T | Proposed |
+| URS-PM-020 | C | **Generic `process` type.** A diagram type written directly in the canonical terms, with free stereotypes and tagged values, for platforms without a type of their own (e.g. Maximo, Windchill). One row per region with its states (initial and final marks, permissions and entry operations under each), transitions labelled with their trigger (a timer for time) and guard, the Signals and Subscribers rows (URS-TYP-029), and one row per workflow in BPMN-style notation. With `profile` naming a registered profile, stereotypes and permission outcomes are checked against it; without, stereotypes are free text. | Example renders; maps onto the model like the platform types. | T | Verified |
 | URS-PM-021 | W | **Process-model pipeline stage.** A separate stage (platform source → process model → Graph IR), built when a consumer other than drawing needs the model (a chart spanning platforms, BPMN export). | — | T | Proposed |
 
 ## 4. Traceability Matrix
@@ -403,7 +403,8 @@ Updated with each change. `—` = not started.
 | NF-014 | .github/workflows/release.yml (`version` job), CLAUDE.md (PR flow) | Version picking checked locally on sample tags (numeric order, already tagged, skip, no tags). Verified on the first merge after 0.30. | Claude opens and merges its own PRs once CI is green, under the owner's standing approval. |
 | NF-012 | scripts/release/pack.ts, .github/workflows/release.yml | via NF-010 (same pack script) | Attaches to an existing release (made on the releases page) or creates one; `workflow_dispatch` re-attaches for an existing tag, or creates a missing tag on the selected branch's commit (tag format checked first). Verified on the first tagged release. |
 | PM-001..017, PM-019 | core/src/diagrams/process/{model,profiles,permission in semantics,semantics,checks,diagnose,draw}.ts; lifecycle/to-process.ts; sap/to-process.ts; lifecycle/validate.ts and sap/validate.ts run the checks | core/test/process.test.ts (allowlist, profiles, permission, the five worked examples of ARCHITECTURE §13.5, token checks, state machine checks, mappings, diagnostics), lifecycle-vault.test.ts (`process.noCompletion`) | PM-006 Partial: workflows started by a signal are authorable (TYP-029); state transitions fired by a signal or a change of a rule are not yet. PM-010 Verified with TYP-029. Checks run only on sources without errors; lifecycle leaves out `unreachable` (already `lifecycle.reach`); a dead join suppresses the workflow's `noCompletion`. |
-| PM-018, PM-020, PM-021 | — | — | Proposed. |
+| PM-020 | core/src/diagrams/process/type/{model,schema,to-model,to-ir,validate,ai,examples,index}.ts, builtins.ts; process/events.ts (`on` optional, `publishers` for send nodes) | core/test/process-type.test.ts, registry, envelope, api (types list), ai-assets (round trip and fuzz), quality baseline, README examples `work-order` and `incident` | The type lives beside the library in `diagrams/process/`, in `type/`. Rows only (no columns): the layered engine orders states by their transitions. Duplicates are reported by the rules and drawn once, so the common rules never repeat them. |
+| PM-018, PM-021 | — | — | Proposed. |
 | TYP-024, TYP-028 | — | — | Proposed 2026-11-18; follow-ons from the process-model review. |
 | TYP-025..027 | sap/{model,schema,columns,documents,release,matrix,workflows,to-ir,to-process,validate,ai,examples}.ts (`reject`, `tcodes`, `txLabel`, `hasStatuses`, `docColumn`); process/profiles.ts (tags `tcodes` on steps, `reject` on release codes) | core/test/sap.test.ts (follow-ons), process.test.ts (mappings of every example), ai-assets (round trip), quality baseline, README examples `purchase-requisition` and `transaction-control` | `sap.statuses` now asks for statuses or documents. sap-transaction-control bends 11 → 10 after its transaction labels grew. |
 | TYP-029, PM-010 | core/src/diagrams/process/events.ts (`eventsSchema`, `eventDiagnostics`, `eventParts`, `eventLegend`, `eventsToProcess`, `ruleTexts`), shapes/{shape,library}.ts (`signal`, `labelDx`), render/svg/index.ts; lifecycle and sap model, schema, to-ir, legend, validate, to-process, examples; sap/model.ts (`withRules`) | core/test/events.test.ts, process.test.ts (mappings of the new examples), quality baseline, README examples | One helper draws both types. A referenced rule's text joins the conditions it is referenced from, so the existing gates and "If: …" lines show it; the process model keeps the rule by id too. Lifecycle shows the actions band whenever there are signals. AI extraction of signals and rules is not part of this requirement. |
@@ -421,6 +422,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.65 | 2026-11-18 | Generic `process` type built (PM-020). |
 | 0.64 | 2026-11-18 | SAP follow-ons built: release-code rejection and resubmission (TYP-025), transaction codes and apps (TYP-026), charts without a status profile (TYP-027). |
 | 0.63 | 2026-11-18 | TYP-029 built: signals, subscribers, channels and rules authored and drawn in the lifecycle and sap types; PM-010 Verified. |
 | 0.62 | 2026-11-18 | Process model accepted by the owner and built as a shared library (D-005): PM-001..017 and PM-019 implemented; PM-006 and PM-010 Partial until TYP-029. |
