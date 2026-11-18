@@ -19,6 +19,9 @@ interface Props {
   canExport: boolean;
   onSvg(): void;
   onPng(): void;
+  /** Other formats the current type exports, e.g. BPMN (URS-PM-018). */
+  formats: { id: string; label: string }[];
+  onExport(format: string): void;
 }
 
 /** App toolbar: file, examples, pane visibility (URS-WEB-015), status, share and export. */
@@ -74,6 +77,11 @@ export function Toolbar(p: Props) {
       <button type="button" className="btn" aria-label="Export PNG" disabled={!p.canExport} onClick={p.onPng}>
         <Download /> PNG
       </button>
+      {p.formats.map((f) => (
+        <button key={f.id} type="button" className="btn" aria-label={`Export ${f.label}`} onClick={() => p.onExport(f.id)}>
+          <Download /> {f.label}
+        </button>
+      ))}
     </header>
   );
 }

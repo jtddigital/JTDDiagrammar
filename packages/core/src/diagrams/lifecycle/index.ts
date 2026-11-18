@@ -1,5 +1,7 @@
 import type { DiagramType } from '../../registry/diagram-type.ts';
+import { bpmnExport } from '../process/bpmn.ts';
 import { lifecycleAi } from './ai.ts';
+import { lifecycleToProcess } from './to-process.ts';
 import { examples } from './examples.ts';
 import type { Lifecycle } from './model.ts';
 import { lifecycleSchema } from './schema.ts';
@@ -17,4 +19,5 @@ export const lifecycle: DiagramType<Lifecycle> = {
   toIR: lifecycleToIR,
   examples,
   ai: lifecycleAi,
+  exports: { bpmn: bpmnExport(lifecycleToProcess) },
 };

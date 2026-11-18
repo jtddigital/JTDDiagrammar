@@ -9,6 +9,9 @@ function save(blob: Blob, name: string): void {
   setTimeout(() => URL.revokeObjectURL(a.href), 0);
 }
 
+/** Save a type's text export, e.g. BPMN 2.0 XML (URS-PM-018). */
+export const downloadText = (text: string, mediaType: string, extension: string, title?: string) => save(new Blob([text], { type: mediaType }), `${fileName(title)}.${extension}`);
+
 /** Save the exact SVG string the renderer produced (URS-WEB-003). */
 export const downloadSvg = (svg: string, title?: string) => save(new Blob([svg], { type: 'image/svg+xml' }), `${fileName(title)}.svg`);
 

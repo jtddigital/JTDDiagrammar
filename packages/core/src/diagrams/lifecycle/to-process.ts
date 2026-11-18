@@ -133,7 +133,7 @@ function workflow(m: Lifecycle, w: NonNullable<Lifecycle['workflows']>[number], 
             : undefined;
     const signal = kind === 'notification' ? `notified:${w.id}:${s.id}` : undefined;
     if (signal) p.signals.push({ id: signal, name: `${s.label ?? KIND[kind]} sent` });
-    return { id: s.id, kind: NODE[kind], name: s.label ?? (kind === 'stateChange' ? `to ${s.target}` : s.id), ...(s.owner && { role: s.owner }), ...(calls && { calls }), ...(signal && { signal }), ...(stereotype && { stereotype }), src };
+    return { id: s.id, kind: NODE[kind], name: s.label ?? (kind === 'stateChange' ? `to ${m.states.find((x) => x.id === s.target)?.label ?? s.target}` : s.id), ...(s.owner && { role: s.owner }), ...(calls && { calls }), ...(signal && { signal }), ...(stereotype && { stereotype }), src };
   });
   const flows: Flow[] = w.steps.flatMap((s, si) => [
     ...(s.to ?? []).map((l, j) => ({ id: `${s.id}>${l.step}:${j}`, name: l.label ?? '', from: s.id, to: l.step, src: pointer('workflows', wi, 'steps', si, 'to', j) })),

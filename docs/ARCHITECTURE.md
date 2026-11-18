@@ -444,6 +444,8 @@ Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `show
 
 Export is one way: states, permissions and object relations have no BPMN equivalent and are left out; BPMN edited elsewhere is not read back.
 
+**As built.** `process/bpmn.ts` writes one pool per workflow, a lane per role (plus one for nodes without a role), and diagram interchange so modellers can draw it: column by longest path from the start, row by lane, flows that go back routed under the nodes. A type offers it through `exports.bpmn` (URS-EXT-011); `exportDiagram` runs it only on sources without errors, and the API (`POST /v1/export/bpmn`) and the web toolbar call the same function.
+
 ### 13.9 Validation semantics (URS-PM-017)
 Workflows are checked as token flows (BPMN 2.0 execution semantics), never shown to authors:
 - **Dead join**: a join some of whose incoming flows can never carry a token in the same run (e.g. behind an exclusive decision).
@@ -460,4 +462,4 @@ Diagnostics are reported in the platform's terms through the profile (e.g. "rele
 2. ✔ Map the lifecycle and sap types onto it and run its checks; README images and the quality baseline unchanged.
 3. ✔ Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029), from one helper, `process/events.ts`.
 4. SAP follow-ons: ✔ rejection (URS-TYP-025), ✔ transaction codes (URS-TYP-026), ✔ charts without a status profile (URS-TYP-027); MDG (URS-TYP-028) with step 5.
-5. ✔ Generic `process` type (PM-020), in `diagrams/process/type/`; BPMN export (PM-018); MDG (TYP-028); pipeline stage (PM-021) when a second consumer appears.
+5. ✔ Generic `process` type (PM-020), in `diagrams/process/type/`; ✔ BPMN export (PM-018); MDG (TYP-028); pipeline stage (PM-021) when a second consumer appears.

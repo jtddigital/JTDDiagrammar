@@ -1,5 +1,7 @@
 import type { DiagramType } from '../../../registry/diagram-type.ts';
+import { bpmnExport } from '../bpmn.ts';
 import { processAi } from './ai.ts';
+import { processToModel } from './to-model.ts';
 import { examples } from './examples.ts';
 import type { ProcessDoc } from './model.ts';
 import { processSchema } from './schema.ts';
@@ -17,4 +19,5 @@ export const processType: DiagramType<ProcessDoc> = {
   toIR: processToIR,
   examples,
   ai: processAi,
+  exports: { bpmn: bpmnExport(processToModel) },
 };
