@@ -4114,6 +4114,403 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 </details>
 
+### SAP MDG change request
+
+`type: process` · `profile: sap` with the MDG stereotypes: a material change request’s statuses (01 to 06, two of them final), its actions as operations, and the rule-based workflow whose BRF+ decision tables (named rules) choose the next step and status from the previous step and action, and the agents. Activation publishes a signal for data replication.
+
+![SAP MDG change request](docs/img/process-mdg-change-request.svg)
+
+<details><summary>Source</summary>
+
+```json
+{
+  "version": "1",
+  "type": "process",
+  "title": "MDG material change request",
+  "profile": "sap",
+  "object": {
+    "label": "Change request (MAT01)",
+    "stereotype": "SAP MDG Change Request",
+    "values": {
+      "crType": "MAT01",
+      "entity": "MATERIAL"
+    }
+  },
+  "info": {
+    "Workflow": "Rule-based (WS60800086)"
+  },
+  "rules": [
+    {
+      "id": "route",
+      "text": "Single value decision table",
+      "via": "BRF+"
+    },
+    {
+      "id": "agents",
+      "text": "User agent decision table",
+      "via": "BRF+"
+    }
+  ],
+  "regions": [
+    {
+      "id": "status",
+      "label": "Change request status",
+      "states": [
+        {
+          "id": "s01",
+          "label": "To be considered and approved",
+          "initial": true,
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "01"
+          }
+        },
+        {
+          "id": "s02",
+          "label": "Changes to be executed",
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "02"
+          }
+        },
+        {
+          "id": "s03",
+          "label": "To be revised",
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "03"
+          }
+        },
+        {
+          "id": "s04",
+          "label": "Final check to be performed",
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "04"
+          }
+        },
+        {
+          "id": "s05",
+          "label": "Final check approved",
+          "final": true,
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "05"
+          }
+        },
+        {
+          "id": "s06",
+          "label": "Final check rejected",
+          "final": true,
+          "stereotype": "SAP MDG Status",
+          "values": {
+            "code": "06"
+          }
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "approve",
+      "label": "Approve",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "01"
+      }
+    },
+    {
+      "id": "reject",
+      "label": "Reject",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "02"
+      }
+    },
+    {
+      "id": "revise",
+      "label": "Send for revision",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "03"
+      }
+    },
+    {
+      "id": "submit",
+      "label": "Submit",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "04"
+      }
+    },
+    {
+      "id": "resubmit",
+      "label": "Resubmit",
+      "callers": [
+        "user"
+      ],
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "05"
+      }
+    },
+    {
+      "id": "activate",
+      "label": "Activate",
+      "stereotype": "SAP MDG Action",
+      "values": {
+        "code": "06"
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "from": "s01",
+      "to": "s02",
+      "trigger": {
+        "call": "approve"
+      },
+      "guard": "route"
+    },
+    {
+      "from": "s01",
+      "to": "s06",
+      "trigger": {
+        "call": "reject"
+      }
+    },
+    {
+      "from": "s02",
+      "to": "s04",
+      "trigger": {
+        "call": "submit"
+      },
+      "guard": "route"
+    },
+    {
+      "from": "s04",
+      "to": "s03",
+      "trigger": {
+        "call": "revise"
+      }
+    },
+    {
+      "from": "s03",
+      "to": "s04",
+      "trigger": {
+        "call": "resubmit"
+      }
+    },
+    {
+      "from": "s04",
+      "to": "s05",
+      "trigger": {
+        "call": "activate"
+      }
+    },
+    {
+      "from": "s04",
+      "to": "s06",
+      "trigger": {
+        "call": "reject"
+      }
+    }
+  ],
+  "permissions": [
+    {
+      "state": "s04",
+      "operation": "submit",
+      "outcome": "forbidden"
+    },
+    {
+      "state": "s03",
+      "operation": "approve",
+      "outcome": "forbidden"
+    }
+  ],
+  "signals": [
+    {
+      "id": "activated",
+      "label": "Material activated",
+      "on": "s05",
+      "to": [
+        {
+          "system": "Data replication (DRF)",
+          "channel": "SOA / IDoc"
+        }
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "rbwf",
+      "label": "Rule-based workflow",
+      "stereotype": "SAP MDG Workflow",
+      "values": {
+        "template": "WS60800086"
+      },
+      "nodes": [
+        {
+          "id": "start",
+          "kind": "initial"
+        },
+        {
+          "id": "approval",
+          "kind": "task",
+          "label": "Approve request",
+          "role": "Data steward",
+          "calls": [
+            "approve"
+          ],
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "00",
+            "agent": "agents"
+          }
+        },
+        {
+          "id": "process",
+          "kind": "task",
+          "label": "Process material",
+          "role": "Material specialist",
+          "calls": [
+            "submit"
+          ],
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "01",
+            "agent": "agents"
+          }
+        },
+        {
+          "id": "check",
+          "kind": "task",
+          "label": "Final check",
+          "role": "Data steward",
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "90",
+            "agent": "agents"
+          }
+        },
+        {
+          "id": "verdict",
+          "kind": "decision",
+          "label": "Action?"
+        },
+        {
+          "id": "revision",
+          "kind": "task",
+          "label": "Revise",
+          "role": "Material specialist",
+          "calls": [
+            "revise",
+            "resubmit"
+          ],
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "95",
+            "agent": "agents"
+          }
+        },
+        {
+          "id": "activation",
+          "kind": "task",
+          "label": "Activate",
+          "role": "System",
+          "calls": [
+            "activate"
+          ],
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "91",
+            "agent": "non-user agent"
+          }
+        },
+        {
+          "id": "rejection",
+          "kind": "task",
+          "label": "Reject",
+          "role": "Data steward",
+          "calls": [
+            "reject"
+          ],
+          "stereotype": "SAP MDG Step",
+          "values": {
+            "step": "92",
+            "agent": "agents"
+          }
+        },
+        {
+          "id": "end",
+          "kind": "final"
+        }
+      ],
+      "flows": [
+        {
+          "from": "start",
+          "to": "approval"
+        },
+        {
+          "from": "approval",
+          "to": "process",
+          "guard": "route"
+        },
+        {
+          "from": "process",
+          "to": "check"
+        },
+        {
+          "from": "check",
+          "to": "verdict"
+        },
+        {
+          "from": "verdict",
+          "to": "activation",
+          "guard": "Approve"
+        },
+        {
+          "from": "verdict",
+          "to": "revision",
+          "guard": "Send for revision"
+        },
+        {
+          "from": "verdict",
+          "to": "rejection",
+          "guard": "Reject"
+        },
+        {
+          "from": "revision",
+          "to": "check"
+        },
+        {
+          "from": "activation",
+          "to": "end"
+        },
+        {
+          "from": "rejection",
+          "to": "end"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</details>
+
 <!-- END GENERATED: examples -->
 
 ## Language

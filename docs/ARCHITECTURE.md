@@ -416,6 +416,7 @@ Presentation settings (styles, `styleBy`, legend, annotations, `annotate`, `show
 | `documents[].from` | Dependency «derive» from each preceding document | — |
 | `documents[].status` | Entry behaviour of that state calling the document's create operation | — |
 | leading document without `status` | Its own state machine: a user's save operation moves it to *saved*, whose entry publishes *created* | — |
+| MDG change request (process type, `profile: sap`; URS-TYP-028) | Object, its statuses one region, its actions operations, the rule-based workflow an activity, BRF+ decision tables rules | «SAP MDG Change Request» `crType`, `entity`; «SAP MDG Status» `code`; «SAP MDG Action» `code`; «SAP MDG Workflow» `template`; «SAP MDG Step» `step`, `agent` |
 | `rules[]`, `rules` on workflows, steps and release strategies | Rule (`via` as authored); joins the conditions that reference it | — |
 | `signals[]` (`on`, `to`, `channel`) | Signal published by the entry behaviour of status `on` (a flag's *set* state); one subscription per subscriber | — |
 
@@ -462,4 +463,4 @@ Diagnostics are reported in the platform's terms through the profile (e.g. "rele
 2. ✔ Map the lifecycle and sap types onto it and run its checks; README images and the quality baseline unchanged.
 3. ✔ Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029), from one helper, `process/events.ts`.
 4. SAP follow-ons: ✔ rejection (URS-TYP-025), ✔ transaction codes (URS-TYP-026), ✔ charts without a status profile (URS-TYP-027); MDG (URS-TYP-028) with step 5.
-5. ✔ Generic `process` type (PM-020), in `diagrams/process/type/`; ✔ BPMN export (PM-018); MDG (TYP-028); pipeline stage (PM-021) when a second consumer appears.
+5. ✔ Generic `process` type (PM-020), in `diagrams/process/type/`; ✔ BPMN export (PM-018); ✔ MDG (TYP-028) as a `process` example in the `sap` profile; pipeline stage (PM-021) when a second consumer appears.

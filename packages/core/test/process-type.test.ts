@@ -40,7 +40,7 @@ describe('generic process type (URS-PM-020)', () => {
   });
 
   it('maps onto the canonical model with nothing to report', () => {
-    for (const name of ['work-order', 'incident']) {
+    for (const name of ['work-order', 'incident', 'mdg-change-request']) {
       const doc = example(name);
       const m = processToModel(doc);
       expect(m.machines[0]!.regions.map((r) => r.initial), name).toEqual(doc.regions.map((r) => r.states.find((s) => s.initial)?.id));
@@ -73,6 +73,19 @@ describe('generic process type (URS-PM-020)', () => {
     ]);
     expect(codes({ ...example('incident'), profile: 'maximo' })).toContainEqual(['process.profileUnknown', '/profile']);
     expect(codes({ ...example('work-order'), regions: [] })).toContainEqual(['process.regions', '/regions']);
+  });
+
+  it('charts an SAP MDG change request in the sap profile (URS-TYP-028)', () => {
+    const doc = example('mdg-change-request');
+    const m = processToModel(doc);
+    expect(m.profile).toBe('sap');
+    expect(m.objects[0]!.stereotype).toEqual({ profile: 'sap', name: 'SAP MDG Change Request', values: { crType: 'MAT01', entity: 'MATERIAL' } });
+    expect(m.machines[0]!.regions[0]!.states.map((s) => (s.stereotype!.values as { code: string }).code)).toEqual(['01', '02', '03', '04', '05', '06']);
+    expect(m.rules.find((r) => r.id === 'route')).toMatchObject({ via: 'BRF+' });
+    expect(m.workflows[0]!.nodes.filter((n) => n.stereotype?.name === 'SAP MDG Step').map((n) => (n.stereotype!.values as { step: string }).step)).toEqual(['00', '01', '90', '95', '91', '92']);
+    // An SAP stereotype applied to the wrong kind of element is reported.
+    doc.regions[0]!.states[0]!.stereotype = 'SAP MDG Step';
+    expect(codes(doc)).toEqual([['process.profile', '/regions/0/states/0']]);
   });
 
   it('runs the model checks: a named profile checks stereotypes; free ones are not', () => {

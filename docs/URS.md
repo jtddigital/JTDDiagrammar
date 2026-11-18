@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.66 (draft) |
+| Version | 0.67 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -70,7 +70,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-TYP-025 | S | SAP release strategy rejection: a release code may reject; the requester cancels the rejection to resubmit (SAP Help, Releasing Purchase Requisitions). A code marked `reject` leads, labelled Reject, to one "Rejected" step per strategy (the requester changes the document), and a dashed Resubmit arrow returns to the strategy's start. | Reject path and resubmit loop drawn; the process model maps it without findings (a merge after the start takes the resubmission). | T | Verified |
 | URS-TYP-026 | S | SAP transaction codes and apps: business transactions and workflow steps list the transaction codes or Fiori apps that run them (e.g. Release by IW32), separate from the business transaction itself. Shown after the transaction's name on system status arrows ("Release (IW32)"), under it in the transaction-control matrix, and under a step's recipients. | Shown as described; schema and AI assets. | T | Verified |
 | URS-TYP-027 | S | SAP charts without a status profile: an object whose progress is only a release status (e.g. a purchase requisition) can be charted from its release strategy and documents. Without statuses, each document is a column; a leading document is saved by a user, which publishes that it was created. | Purchase requisition example free of diagnostics. | T | Verified |
-| URS-TYP-028 | C | SAP MDG change requests: change request steps, change request statuses and rule-based workflow with BRF+ decision tables. | Example; maps onto the process model (URS-PM-016). | T | Proposed |
+| URS-TYP-028 | C | SAP MDG change requests: change request steps, change request statuses and rule-based workflow with BRF+ decision tables. Charted with the `process` type in the `sap` profile, which adds the MDG stereotypes (change request, status, action, workflow, step); decision tables are named rules evaluated by BRF+. | Example; maps onto the process model (URS-PM-016). | T | Verified |
 | URS-TYP-029 | S | Signals, subscriptions, channels and rules drawn in the lifecycle and sap types (URS-PM-010, URS-PM-014): a Signals row (each signal in the column of the state or status whose entry publishes it, a dotted arrow from it) and a Subscribers row (external systems, handlers, operations, one node per name), with dashed arrows to subscribers labelled with the channel, and to a workflow's or release strategy's start; top-level rules with text and `via`, referenced by id from gates, steps, workflow start conditions and release conditions, shown with their text. | Examples; legend entries; checks: unique ids, known states, workflows and rules, one target per subscriber. | T | Verified |
 | URS-TYP-007 | W | Sequence and ER diagram types. | — | T | Proposed |
 
@@ -409,7 +409,8 @@ Updated with each change. `—` = not started.
 | PM-020 | core/src/diagrams/process/type/{model,schema,to-model,to-ir,validate,ai,examples,index}.ts, builtins.ts; process/events.ts (`on` optional, `publishers` for send nodes) | core/test/process-type.test.ts, registry, envelope, api (types list), ai-assets (round trip and fuzz), quality baseline, README examples `work-order` and `incident` | The type lives beside the library in `diagrams/process/`, in `type/`. Rows only (no columns): the layered engine orders states by their transitions. Duplicates are reported by the rules and drawn once, so the common rules never repeat them. |
 | PM-018, EXT-011, API-019, WEB-023 | core/src/diagrams/process/bpmn.ts (`toBpmn`, `bpmnExport`), core/src/export.ts (`exportDiagram`, `exportFormats`), registry/diagram-type.ts (`Exporter`, `exports`); lifecycle, sap and process `index.ts`; api/src/routes/export.ts, routes/meta.ts (`exports`); web/src/{App.tsx,download.ts,workspace/Toolbar.tsx} | core/test/bpmn.test.ts (every example through bpmn-moddle, notation, signals, lanes, loops, empty model, errors), api.test.ts (route, OpenAPI, types list), e2e app.spec.ts (BPMN button and download) | bpmn-moddle is a dev dependency (tests only). Placement is a simple grid: column by longest path from the start (loops ignored), row by lane; flows that go back run under the nodes. Lifecycle state-change tasks are named after the state's label. |
 | PM-021 | — | — | Won't (this release). |
-| TYP-024, TYP-028 | — | — | Proposed 2026-11-18; follow-ons from the process-model review. |
+| TYP-024 | — | — | Won't (this release); follow-on from the process-model review. |
+| TYP-028 | core/src/diagrams/process/profiles.ts (MDG stereotypes in `SAP`), process/type/examples.ts (`mdg-change-request`) | core/test/process-type.test.ts (MDG), bpmn.test.ts (exports), quality baseline, README example | Researched from SAP Help (rule-based workflow, change request statuses 01–06, single value decision table). A process-type example rather than more sap-type fields: MDG's change request is its own object with its own statuses. |
 | TYP-025..027 | sap/{model,schema,columns,documents,release,matrix,workflows,to-ir,to-process,validate,ai,examples}.ts (`reject`, `tcodes`, `txLabel`, `hasStatuses`, `docColumn`); process/profiles.ts (tags `tcodes` on steps, `reject` on release codes) | core/test/sap.test.ts (follow-ons), process.test.ts (mappings of every example), ai-assets (round trip), quality baseline, README examples `purchase-requisition` and `transaction-control` | `sap.statuses` now asks for statuses or documents. sap-transaction-control bends 11 → 10 after its transaction labels grew. |
 | TYP-029, PM-010 | core/src/diagrams/process/events.ts (`eventsSchema`, `eventDiagnostics`, `eventParts`, `eventLegend`, `eventsToProcess`, `ruleTexts`), shapes/{shape,library}.ts (`signal`, `labelDx`), render/svg/index.ts; lifecycle and sap model, schema, to-ir, legend, validate, to-process, examples; sap/model.ts (`withRules`) | core/test/events.test.ts, process.test.ts (mappings of the new examples), quality baseline, README examples | One helper draws both types. A referenced rule's text joins the conditions it is referenced from, so the existing gates and "If: …" lines show it; the process model keeps the rule by id too. Lifecycle shows the actions band whenever there are signals. AI extraction of signals and rules is not part of this requirement. |
 
@@ -426,6 +427,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.67 | 2026-11-18 | SAP MDG change requests charted with the process type in the sap profile (TYP-028). |
 | 0.66 | 2026-11-18 | BPMN 2.0 export built (PM-018), with the type export hook (EXT-011), API route (API-019) and web buttons (WEB-023). |
 | 0.65 | 2026-11-18 | Generic `process` type built (PM-020). |
 | 0.64 | 2026-11-18 | SAP follow-ons built: release-code rejection and resubmission (TYP-025), transaction codes and apps (TYP-026), charts without a status profile (TYP-027). |
