@@ -178,3 +178,31 @@
   font-size: var(--step--1);
   white-space: pre-wrap;
 }
+
+.files__history {
+  max-height: 40%;
+  overflow: auto;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.files__versions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.files__versions li {
+  font-size: var(--step--1);
+}
+
+.files__versions li[data-current] {
+  background: var(--color-accent-soft);
+}
+
+.source__banner {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  border-bottom: 1px solid var(--color-border);
+}

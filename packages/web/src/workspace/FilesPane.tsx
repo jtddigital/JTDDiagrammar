@@ -5,6 +5,7 @@ import { Chevron, FileIcon, Folder, Trash } from '../ui/icons.tsx';
 import { ContextMenu, type MenuItem } from './ContextMenu.tsx';
 import { STARTERS } from './kinds.ts';
 import { children, nameProblem, trash, type WsNode } from './tree.ts';
+import type { Version } from './store.ts';
 import type { Workspace } from './useWorkspace.ts';
 
 const NODE = 'application/x-jtd-node';
@@ -29,7 +30,8 @@ interface Row {
  * follows the ARIA tree pattern: ↑ ↓ move, → opens or enters a folder, ← closes it or goes up, Enter opens,
  * F2 renames, Delete moves to the trash, Shift+F10 or the menu key opens the menu.
  */
-export function FilesPane({ ws }: { ws: Workspace }) {
+export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file: WsNode, v: Version): void; viewing?: Version | undefined }) {
+  const [historyOf, setHistoryOf] = useState<string>();
   const [expanded, setExpanded] = useState(loadExpanded);
   const [focus, setFocus] = useState<string>();
   const [renaming, setRenaming] = useState<string>();
@@ -111,7 +113,8 @@ export function FilesPane({ ws }: { ws: Workspace }) {
     ];
     if (n)
       items.push(
-        { label: 'Rename', hint: 'F2', separator: true, onSelect: () => setRenaming(n.id) },
+        ...(n.kind === 'file' ? [{ label: 'History', separator: true, onSelect: () => setHistoryOf(n.id) }] : []),
+        { label: 'Rename', hint: 'F2', ...(n.kind === 'folder' && { separator: true }), onSelect: () => setRenaming(n.id) },
         { label: 'Duplicate', onSelect: () => void ws.duplicate(n.id) },
         { label: 'Delete', hint: 'Del', onSelect: () => void ws.trash(n.id) },
       );
@@ -286,6 +289,9 @@ export function FilesPane({ ws }: { ws: Workspace }) {
           </div>
         )}
       </div>
+      {historyOf && ws.nodes.some((n) => n.id === historyOf) && (
+        <History ws={ws} file={ws.nodes.find((n) => n.id === historyOf)!} onView={onView} viewing={viewing} onClose={() => setHistoryOf(undefined)} />
+      )}
       {ws.note && (
         <p className="files__note text-small" role="status">
           {ws.note.text}
@@ -319,6 +325,56 @@ export function FilesPane({ ws }: { ws: Workspace }) {
       />
       {menu && <ContextMenu {...menu} onClose={() => setMenu(undefined)} />}
     </div>
+  );
+}
+
+const size = (n: number) => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+
+/** A file's versions, newest first, to view or restore (URS-WS-021); it follows the file through renames and moves (URS-WS-022). */
+function History({ ws, file, onView, viewing, onClose }: { ws: Workspace; file: WsNode; onView(file: WsNode, v: Version): void; viewing?: Version | undefined; onClose(): void }) {
+  const [versions, setVersions] = useState<Version[]>([]);
+  // Saves and restores change the tree, so its versions are read again.
+  useEffect(() => {
+    let live = true;
+    void ws.versions(file.id).then((v) => live && setVersions([...v].reverse()));
+    return () => {
+      live = false;
+    };
+  }, [ws, file.id, ws.nodes]);
+  return (
+    <section className="files__history" aria-label={`History of ${file.name}`}>
+      <div className="cluster">
+        <span className="pane__title">History · {file.name}</span>
+        <button type="button" className="btn push-right" data-variant="ghost" data-size="small" aria-label="Close history" onClick={onClose}>
+          ✕
+        </button>
+      </div>
+      {versions.length === 0 ? (
+        <p className="text-muted text-small">Not saved yet.</p>
+      ) : (
+        <ol className="files__versions">
+          {versions.map((v, i) => (
+            <li key={v.n} className="cluster" data-current={viewing?.file === v.file && viewing.n === v.n ? true : undefined}>
+              <button type="button" className="btn" data-variant="ghost" data-size="small" title="Show this version, read-only" onClick={() => onView(file, v)}>
+                <strong>v{v.n}</strong> {new Date(v.at).toLocaleString()}
+              </button>
+              <span className="text-muted text-small">{i === 0 ? 'latest · ' : ''}{size(v.size)}</span>
+              {i > 0 && (
+                <button
+                  type="button"
+                  className="btn push-right"
+                  data-variant="ghost"
+                  data-size="small"
+                  onClick={() => (!(file.id === ws.open?.id && ws.dirty) || window.confirm('Restoring replaces your unsaved edits to this file. Restore?')) && void ws.restoreVersion(v)}
+                >
+                  Restore
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 

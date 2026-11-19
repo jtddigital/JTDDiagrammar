@@ -161,3 +161,40 @@ test('imports files, converting YAML diagrams, and exports a file or the workspa
   expect(bytes.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
   for (const name of ['Untitled.json', 'door.json', 'data.csv']) expect(bytes.includes(Buffer.from(name))).toBe(true);
 });
+
+test('keeps every save: view an earlier version read-only and restore it as the newest; history survives a rename (URS-WS-020..022)', async ({ page }) => {
+  await open(page);
+  const versions = page.locator('.files__versions li');
+  for (const title of ['One', 'Two', 'Three']) {
+    await setSource(page, { version: '1', type: 'flowchart', title, nodes: [{ id: 'a' }] });
+    await page.keyboard.press('ControlOrMeta+s');
+    await expect(item(page, 'Untitled.json')).not.toContainText('•');
+  }
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await command(page, 'History').click();
+  const history = page.getByRole('region', { name: 'History of Untitled.json' });
+  // The first run's file, then three saves: newest first.
+  await expect(versions).toHaveCount(4);
+  await expect(versions.first()).toContainText('latest');
+
+  // View version 2 (the save titled One): read-only, the Preview follows.
+  await history.getByRole('button', { name: /^v2 / }).click();
+  await expect(page.locator('.source__banner')).toContainText('Version 2 of Untitled.json');
+  await expect(page.locator('.cm-content')).toContainText('"title": "One"');
+  await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'false');
+  await expect(page.getByTestId('preview')).toContainText('One');
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.locator('.cm-content')).toContainText('"title": "Three"');
+
+  // Restore it: it becomes version 5, and nothing is lost.
+  await versions.nth(2).getByRole('button', { name: 'Restore' }).click();
+  await expect(versions).toHaveCount(5);
+  await expect(page.locator('.cm-content')).toContainText('"title": "One"');
+  await expect(page.getByText('Restored version 2 as version 5')).toBeVisible();
+
+  // Renamed, it keeps its history.
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await command(page, 'Rename').click();
+  await typeName(page, 'Flow.json');
+  await expect(page.getByRole('region', { name: 'History of Flow.json' }).locator('.files__versions li')).toHaveCount(5);
+});
