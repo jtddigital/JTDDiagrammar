@@ -128,6 +128,9 @@ test('compares any two versions of a file from its history (URS-WS-021, WS-032)'
   // Version 2 (One) against the current text (Two).
   await history.locator('.files__versions li').nth(1).getByRole('button', { name: 'Compare' }).click();
   const pane = compare(page);
+  // Two diagrams open drawn; the text is a tab away.
+  await expect(pane.getByRole('list', { name: 'Changes' })).toContainText('title “One” → “Two”');
+  await pane.getByRole('button', { name: 'Text', exact: true }).click();
   const table = pane.getByRole('table', { name: 'Text comparison' });
   await expect(table.locator('tr[data-kind="change"] del')).toHaveText('One');
   await expect(table.locator('tr[data-kind="change"] ins')).toHaveText('Two');
@@ -135,4 +138,48 @@ test('compares any two versions of a file from its history (URS-WS-021, WS-032)'
   await pane.getByLabel('After version').selectOption('2');
   await pane.getByLabel('Before version').selectOption('1');
   await expect(table.locator('tr[data-kind="change"] ins').first()).toHaveText('One');
+});
+
+test('compares two versions of a diagram: both drawn, changes marked and listed, pan and zoom together (URS-WS-035)', async ({ page }) => {
+  await open(page);
+  const doc = {
+    version: '1',
+    type: 'flowchart',
+    nodes: [
+      { id: 'a', label: 'Submit', to: [{ node: 'b' }, { node: 'c' }] },
+      { id: 'b', label: 'Check' },
+      { id: 'c', label: 'Pay' },
+    ],
+  };
+  await setSource(page, doc);
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(item(page, 'Untitled.json')).not.toContainText('•');
+  await setSource(page, { ...doc, nodes: [{ id: 'a', label: 'Submit', to: [{ node: 'c' }, { node: 'd' }] }, { id: 'c', label: 'Pay now' }, { id: 'd', label: 'File' }] });
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await command(page, 'Compare with saved').click();
+  const pane = compare(page);
+  await expect(pane.getByRole('button', { name: 'Diagram', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  const before = pane.getByRole('region', { name: 'Before' });
+  const after = pane.getByRole('region', { name: 'After' });
+  await expect(before.locator('[id="n-b"]')).toHaveAttribute('data-diff', 'removed');
+  await expect(before.locator('[id="n-c"]')).toHaveAttribute('data-diff', 'changed');
+  await expect(after.locator('[id="n-c"]')).toHaveAttribute('data-diff', 'changed');
+  await expect(after.locator('[id="n-d"]')).toHaveAttribute('data-diff', 'added');
+  await expect(after.locator('[id="n-a"]')).not.toHaveAttribute('data-diff');
+
+  const changes = pane.getByRole('list', { name: 'Changes' });
+  await expect(changes.getByRole('button')).toHaveText([/removed.*Node “Check” removed/, /changed.*Node “Pay now”: label “Pay” → “Pay now”.*line \d+/, /added.*Node “File” added/, /removed.*Link “Submit” → “Check” removed.*was line \d+/, /added.*Link “Submit” → “File” added/]);
+  // Choosing a change outlines it in both drawings.
+  await changes.getByRole('button', { name: /Pay now/ }).click();
+  await expect(before.locator('[id="n-c"]')).toHaveClass(/is-selected/);
+  await expect(after.locator('[id="n-c"]')).toHaveClass(/is-selected/);
+
+  // Zooming one drawing zooms the other.
+  const stage = (r: typeof before) => r.getByTestId('preview');
+  await before.getByRole('button', { name: 'Zoom in' }).click();
+  await expect(stage(after)).toHaveAttribute('style', (await stage(before).getAttribute('style'))!);
+
+  // The text comparison is a tab away.
+  await pane.getByRole('button', { name: 'Text', exact: true }).click();
+  await expect(pane.getByRole('table', { name: 'Text comparison' })).toContainText('Pay now');
 });

@@ -7,13 +7,14 @@ import { pathOf } from '../workspace/tree.ts';
 import type { Workspace } from '../workspace/useWorkspace.ts';
 import type { Comparison, Side } from './comparison.ts';
 import { CsvDiff } from './CsvDiff.tsx';
+import { DiagramDiff } from './DiagramDiff.tsx';
 import { MarkdownDiff } from './MarkdownDiff.tsx';
 import { TextDiff } from './TextDiff.tsx';
 
-type View = 'text' | 'rendered' | 'table';
-const VIEW_LABELS: Record<View, string> = { text: 'Text', rendered: 'Rendered', table: 'Table' };
+type View = 'text' | 'rendered' | 'table' | 'drawing';
+const VIEW_LABELS: Record<View, string> = { text: 'Text', rendered: 'Rendered', table: 'Table', drawing: 'Diagram' };
 /** Views beyond the text one, when both sides are of a kind. */
-const EXTRA: Partial<Record<Kind, View>> = { markdown: 'rendered', csv: 'table' };
+const EXTRA: Partial<Record<Kind, View>> = { markdown: 'rendered', csv: 'table', diagram: 'drawing' };
 
 /**
  * The Compare pane (URS-WS-031, WS-032): two sides, each any file's saved version or current text, compared
@@ -51,8 +52,8 @@ export function ComparePane({ ws, comparison, onChange, onClose, links }: { ws: 
   const nameOf = (id: string) => nodes.find((n) => n.id === id)?.name ?? '';
   const nameA = nameOf(a.file);
   const nameB = nameOf(b.file);
-  const kinds = useMemo(() => (texts ? [kindOf(nameA, texts[0], registry).kind, kindOf(nameB, texts[1], registry).kind] : []), [texts, nameA, nameB]);
-  const extra = kinds[0] === kinds[1] ? EXTRA[kinds[0]!] : undefined;
+  const kinds = useMemo(() => (texts ? [kindOf(nameA, texts[0], registry), kindOf(nameB, texts[1], registry)] : []), [texts, nameA, nameB]);
+  const extra = kinds[0] && kinds[0].kind === kinds[1]?.kind ? EXTRA[kinds[0].kind] : undefined;
   const views: View[] = extra ? [extra, 'text'] : ['text'];
   const [chosen, setChosen] = useState<View>();
   const view = chosen && views.includes(chosen) ? chosen : views[0]!;
@@ -102,6 +103,8 @@ export function ComparePane({ ws, comparison, onChange, onClose, links }: { ws: 
         <p className="text-muted text-small compare__loading">Reading…</p>
       ) : view === 'rendered' ? (
         <MarkdownDiff a={texts[0]} b={texts[1]} links={links} />
+      ) : view === 'drawing' ? (
+        <DiagramDiff a={texts[0]} b={texts[1]} formatA={kinds[0]?.format ?? 'json'} formatB={kinds[1]?.format ?? 'json'} />
       ) : view === 'table' ? (
         <CsvDiff a={texts[0]} b={texts[1]} nameA={nameA} nameB={nameB} />
       ) : (

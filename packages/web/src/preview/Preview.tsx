@@ -14,9 +14,18 @@ interface Props {
   /** The editable label of an element, if it has one. */
   labelOf?(r: Ref): string | undefined;
   onLabel?(r: Ref, text: string): void;
+  /** Marks on drawn elements by SVG id, set as `data-diff` (URS-WS-035). */
+  marks?: Readonly<Record<string, string>>;
+  /** Pan and zoom held outside, so two drawings move together (URS-WS-035). */
+  view?: View | undefined;
+  onView?(v: View | undefined): void;
+  /** With a held view: this drawing's fit, for the holder to choose among (two drawings take the smaller). */
+  onFit?(v: View): void;
+  /** Accessible name of the drawing region. */
+  label?: string;
 }
 
-interface View {
+export interface View {
   scale: number;
   x: number;
   y: number;
@@ -33,10 +42,20 @@ const refOf = (el: EventTarget | null): { g: Element; ref: Ref } | undefined => 
  * Interactive (URS-WEB-020): click selects an element's source, hover highlights its connections, and
  * double-click edits its label in place. Fits the pane until the user pans or zooms.
  */
-export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel }: Props) {
+export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram' }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<View | undefined>();
+  const [own, setOwn] = useState<View | undefined>();
+  const view = onView ? held : own;
+  // The latest view and setter, for handlers set up once (the resize observer) and for moves in one frame.
+  const latest = useRef({ view, onView, onFit });
+  latest.current = { view, onView, onFit };
+  const setView = (next: View | undefined | ((v: View | undefined) => View | undefined)) => {
+    const v = typeof next === 'function' ? next(latest.current.view) : next;
+    latest.current.view = v;
+    if (latest.current.onView) latest.current.onView(v);
+    else setOwn(v);
+  };
   const [hover, setHover] = useState<Ref>();
   const [editing, setEditing] = useState<{ ref: Ref; text: string; left: number; top: number; width: number }>();
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
@@ -50,7 +69,9 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
     if (!el || !box) return;
     const [w, h] = [Number(el.getAttribute('width')), Number(el.getAttribute('height'))];
     const scale = Math.min(1, (box.width - 32) / w, (box.height - 32) / h);
-    setView({ scale, x: (box.width - w * scale) / 2, y: 16 });
+    const v = { scale, x: (box.width - w * scale) / 2, y: 16 };
+    if (latest.current.onFit) latest.current.onFit(v);
+    else setView(v);
   };
 
   useEffect(() => {
@@ -73,10 +94,12 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
       for (const id of ids) root.querySelector(`[id="${CSS.escape(id)}"]`)?.classList.add(cls);
     };
     mark('is-selected', selected ? [`${selected.kind}-${selected.id}`] : []);
+    root.querySelectorAll('[data-diff]').forEach((e) => e.removeAttribute('data-diff'));
+    for (const [id, m] of Object.entries(marks ?? {})) root.querySelector(`[id="${CSS.escape(id)}"]`)?.setAttribute('data-diff', m);
     const rel = hover && relatedOf ? relatedOf(hover) : [];
     mark('is-related', rel);
     root.classList.toggle('is-hovering', rel.length > 0);
-  }, [svg, selected, hover, relatedOf]);
+  }, [svg, selected, hover, relatedOf, marks]);
 
   const zoom = (factor: number, cx?: number, cy?: number) => {
     manual.current = true;
@@ -98,7 +121,7 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
   return (
     <section
       className="preview"
-      aria-label="Diagram"
+      aria-label={label}
       ref={host}
       onWheel={(e) => {
         const box = host.current!.getBoundingClientRect();

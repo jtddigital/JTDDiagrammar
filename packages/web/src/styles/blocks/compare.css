@@ -227,3 +227,84 @@
 .diff__grid td[data-changed] {
   background: var(--color-changed-soft);
 }
+
+/* Diagram comparison (URS-WS-035, D-008): two drawings side by side, then the list of changes. */
+.diff__drawings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 12rem;
+}
+
+.diff__drawings > .preview + .preview {
+  border-left: 1px solid var(--color-border);
+}
+
+.stage [data-diff] {
+  --diff: transparent;
+  filter: drop-shadow(0 0 3px var(--diff)) drop-shadow(0 0 3px var(--diff)) drop-shadow(0 0 1px var(--diff));
+}
+
+.stage [data-diff='added'] {
+  --diff: var(--color-success);
+}
+
+.stage [data-diff='removed'] {
+  --diff: var(--color-danger);
+}
+
+.stage [data-diff='changed'] {
+  --diff: var(--color-warning);
+}
+
+.stage [data-diff].is-selected {
+  outline: 2px solid var(--color-select);
+  outline-offset: 4px;
+}
+
+.diff__changes {
+  max-height: 40%;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--step--1);
+}
+
+.diff__change {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.diff__change:hover,
+.diff__change[aria-pressed='true'] {
+  background: var(--color-surface-2);
+}
+
+.diff__badge {
+  flex: none;
+  min-width: 4.5em;
+  font-weight: 600;
+}
+
+.diff__change[data-type='added'] .diff__badge {
+  color: var(--color-success);
+}
+
+.diff__change[data-type='removed'] .diff__badge {
+  color: var(--color-danger);
+}
+
+.diff__change[data-type='changed'] .diff__badge {
+  color: var(--color-warning);
+}

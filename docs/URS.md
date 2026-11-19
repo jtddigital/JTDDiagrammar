@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.73 (draft) |
+| Version | 0.74 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -313,7 +313,7 @@ Terms are defined in the glossary (ARCHITECTURE §13.2) and used with that meani
 | URS-WS-032 | M | **Compare anything.** Any two files, any two versions of a file, or a version and the current text, of any kind, can be compared; the text comparison is always available. | E2E for each pairing. | T | Verified |
 | URS-WS-033 | S | **Markdown comparison** also in rendered form: added, removed and changed blocks (paragraphs, headings, list items, table rows, code blocks) are marked in the rendered page. | Unit tests of the block diff; E2E. | T | Verified |
 | URS-WS-034 | S | **CSV comparison** as a table: rows matched by a chosen key column or by position; changed cells highlighted, added and removed rows marked. | Unit tests; E2E. | T | Verified |
-| URS-WS-035 | S | **Diagram comparison** (D-008): the two versions' Graph IR compared by element id: added, removed and changed elements (label, text, style, lane, phase, links). Both versions are drawn side by side as they really lay out, removed elements red in the earlier, added green in the later, changed amber in both, with pan and zoom kept in step. A list of changes in plain words; choosing one highlights it in both drawings and its source. A Source tab shows the text comparison. | Unit tests of the IR comparison on fixtures for several types; E2E. | T | Proposed |
+| URS-WS-035 | S | **Diagram comparison** (D-008): the two versions' Graph IR compared by element id: added, removed and changed elements (label, text, style, lane, phase, links). Both versions are drawn side by side as they really lay out, removed elements red in the earlier, added green in the later, changed amber in both, with pan and zoom kept in step. A list of changes in plain words; choosing one highlights it in both drawings and its source. A Source tab shows the text comparison. | Unit tests of the IR comparison on fixtures for several types; E2E. | T | Verified |
 | URS-WS-040 | M | **Markdown engine.** A parser built in the repo (D-007) that passes every example of the CommonMark 0.31.2 spec and of the GitHub Flavored Markdown spec extensions (tables, task lists, strikethrough, extended autolinks, footnotes), checked in CI through an HTML serialiser used only for the tests. | Spec suites at 100%. | T | Verified |
 | URS-WS-041 | S | **Markdown viewer.** Markdown files render in Preview, with: GitHub alerts (`[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`); heading anchors and a table of contents; front matter as a table; syntax highlighting of code in common languages; math (`$…$`, `$$…$$`) as MathML from a TeX subset; ```` ```jtd ```` fenced blocks drawn as diagrams; relative links and images that open or show workspace files. | Unit tests per feature; E2E rendering a sample with all of them. | T | Verified |
 | URS-WS-042 | M | **Safe rendering.** Markdown is rendered as elements, never as raw HTML strings; inline HTML is limited to `details`, `summary`, `kbd`, `sub`, `sup`, `br` and `mark`; links only `http:`, `https:`, `mailto:` or relative; nothing a document contains can run script. | Unit tests with hostile input. | T | Verified |
@@ -446,7 +446,8 @@ Updated with each change. `—` = not started.
 | WS-031, WS-032, WS-002 | web/src/compare/{ComparePane,TextDiff,comparison}.tsx, workspace/{FilesPane.tsx (Compare with…, Compare with saved, History Compare), layout.ts (Compare pane, auto-hidden without a comparison)}, App.tsx, styles/blocks/compare.css | e2e compare.spec.ts (unsaved edits vs saved: side by side, unified, folds, next and previous, live update, ✕; two files; any two versions from History), web/test/layout.test.ts | Compare has no toolbar switch: it opens with a comparison and closes with it. Layouts saved before it existed keep their widths. |
 | WS-033 | documents/src/diff/blocks.ts; web/src/compare/MarkdownDiff.tsx, viewers/Markdown.tsx (`marks`) | documents/test/diff.test.ts (paragraphs, task items, table rows, code), e2e compare.spec.ts | In the same place, blocks of the same kind count as one block changed. |
 | WS-034 | documents/src/diff/table.ts; web/src/compare/CsvDiff.tsx | documents/test/diff.test.ts (by key, by position, added column), e2e compare.spec.ts | By key, a row whose key moved shows as removed and added. At most 2,000 rows are drawn; the counts cover all. |
-| WS-035..039, WS-043 | — | — | Proposed 2026-11-19 (ARCHITECTURE §14). WS-043 Won't (this release): tabled by the owner. |
+| WS-035 | core/src/diff/ir.ts (`diffIR`); web/src/compare/DiagramDiff.tsx, preview/Preview.tsx (`marks`, held view, `onFit`), compare/ComparePane.tsx (Diagram view), styles/blocks/compare.css | core/test/diff-ir.test.ts (every example of every type equals itself; added, removed and changed nodes on the first example of each type; links matched by their ends; changes in words with source pointers), e2e compare.spec.ts (marks on each side, list, choosing outlines in both drawings, zoom together, Text tab) | Links match by their ends (the n-th link from A to B), not by id, because generated link ids count positions; a rewired link reads as removed and added. Diagram-wide changes (title, legend, title block) are listed without a mark. The source of a change is shown as its line in the list. |
+| WS-036..039, WS-043 | — | — | Proposed 2026-11-19 (ARCHITECTURE §14). WS-043 Won't (this release): tabled by the owner. |
 | PM-018, EXT-011, API-019, WEB-023 | core/src/diagrams/process/bpmn.ts (`toBpmn`, `bpmnExport`), core/src/export.ts (`exportDiagram`, `exportFormats`), registry/diagram-type.ts (`Exporter`, `exports`); lifecycle, sap and process `index.ts`; api/src/routes/export.ts, routes/meta.ts (`exports`); web/src/{App.tsx,download.ts,workspace/Toolbar.tsx} | core/test/bpmn.test.ts (every example through bpmn-moddle, notation, signals, lanes, loops, empty model, errors), api.test.ts (route, OpenAPI, types list), e2e app.spec.ts (BPMN button and download) | bpmn-moddle is a dev dependency (tests only). Placement is a simple grid: column by longest path from the start (loops ignored), row by lane; flows that go back run under the nodes. Lifecycle state-change tasks are named after the state's label. |
 | PM-021 | — | — | Won't (this release). |
 | TYP-024 | — | — | Won't (this release); follow-on from the process-model review. |
@@ -467,6 +468,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.74 | 2026-11-19 | Diagram comparison built (WS-035): both versions drawn side by side with changes marked, pan and zoom together, changes listed in words. |
 | 0.73 | 2026-11-19 | Diff engine and Compare pane built: text, Markdown and CSV comparisons of any two files or versions (WS-030..034); the context menu is complete (WS-002). |
 | 0.72 | 2026-11-19 | Version history built: view an earlier version read-only and restore it as the newest (WS-021, WS-022). |
 | 0.71 | 2026-11-19 | Markdown engine and viewer built (WS-040..042). |
