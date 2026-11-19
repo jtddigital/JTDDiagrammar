@@ -1,6 +1,6 @@
 import { json, jsonLanguage } from '@codemirror/lang-json';
 import { lintGutter, setDiagnostics } from '@codemirror/lint';
-import { Compartment } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import type { Diagnostic } from '@jtd/core';
 import { basicSetup, EditorView } from 'codemirror';
 import { useEffect, useRef } from 'react';
@@ -22,13 +22,17 @@ interface Props {
   onCursor?(offset: number): void;
   /** `json`: a diagram, with schema completion and colour pickers; `plain`: any other file (URS-WS-010). */
   language?: 'json' | 'plain';
+  /** Shown for reading only, e.g. an earlier version (URS-WS-021). */
+  readOnly?: boolean;
 }
 
 const JSON_TOOLS = [colorPicker, json(), jsonLanguage.data.of({ autocomplete: schemaCompletion(registry) })];
 
 /** CodeMirror JSON editor with inline diagnostics (URS-WEB-001, URS-WEB-004), schema completion (URS-WEB-005) and colour pickers (URS-WEB-021). */
-export function Editor({ value, onChange, diagnostics, source, reveal, onCursor, language = 'json' }: Props) {
+export function Editor({ value, onChange, diagnostics, source, reveal, onCursor, language = 'json', readOnly = false }: Props) {
   const lang = useRef(new Compartment());
+  const lock = useRef(new Compartment());
+  const locked = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)];
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const change = useRef(onChange);
@@ -40,7 +44,7 @@ export function Editor({ value, onChange, diagnostics, source, reveal, onCursor,
     const v = new EditorView({
       parent: host.current!,
       doc: value,
-      extensions: [basicSetup, tokenHighlight, lang.current.of(language === 'json' ? JSON_TOOLS : []), lintGutter(), EditorView.updateListener.of((u) => {
+      extensions: [basicSetup, tokenHighlight, lang.current.of(language === 'json' ? JSON_TOOLS : []), lock.current.of(locked(readOnly)), lintGutter(), EditorView.updateListener.of((u) => {
           if (u.docChanged) change.current(u.state.doc.toString());
           if (u.selectionSet) cursor.current?.(u.state.selection.main.head);
         }),
@@ -54,6 +58,11 @@ export function Editor({ value, onChange, diagnostics, source, reveal, onCursor,
   useEffect(() => {
     view.current?.dispatch({ effects: lang.current.reconfigure(language === 'json' ? JSON_TOOLS : []) });
   }, [language]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: lock.current.reconfigure(locked(readOnly)) });
+    // `locked` is a pure helper.
+  }, [readOnly]);
 
   useEffect(() => {
     const v = view.current;

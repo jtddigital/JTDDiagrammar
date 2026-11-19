@@ -6,7 +6,7 @@ import { decode, restore as restoreSession } from '../persist.ts';
 import { examples, pretty, registry } from '../registry.ts';
 import { indexedKv } from './kv.ts';
 import { kindOf } from './kinds.ts';
-import { StorageFull, Store } from './store.ts';
+import { StorageFull, Store, type Version } from './store.ts';
 import { freeName, inTrash, move as moveNode, pathOf, rename as renameNode, restore as restoreNode, subtree, type WsNode } from './tree.ts';
 
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -44,6 +44,12 @@ export interface Workspace {
   resolve(path: string): WsNode | undefined;
   /** The current text of a file: its draft, else its latest version. */
   read(id: string): Promise<string | undefined>;
+  /** A file's versions, oldest first (URS-WS-021). */
+  versions(id: string): Promise<Version[]>;
+  /** The text a version saved. */
+  versionText(v: Version): Promise<string>;
+  /** Open the file and save the version's text as its newest version; nothing is lost (URS-WS-021). */
+  restoreVersion(v: Version): Promise<void>;
 }
 
 /**
@@ -198,6 +204,23 @@ export function useWorkspace(): Workspace {
   return {
     ready,
     resolve,
+    versions: async (id) => (await store.current?.versions(id)) ?? [],
+    versionText: async (v) => (await store.current?.read(v.hash)) ?? '',
+    restoreVersion: (v) =>
+      run(async () => {
+        const s = store.current!;
+        const content = (await s.read(v.hash)) ?? '';
+        if (v.file !== openId) {
+          await flush();
+          await load(v.file);
+        }
+        const saved = await s.save(v.file, content);
+        setTextState(content);
+        setSaved(content);
+        setKindText(content);
+        await reload();
+        setNote(`Restored version ${v.n} as version ${saved.n}`);
+      }),
     read: async (id) => (id === openId ? text : ((await store.current?.draft(id)) ?? (await store.current?.content(id)))),
     nodes,
     ...(open && { open, path: pathOf(nodes, open.id) }),

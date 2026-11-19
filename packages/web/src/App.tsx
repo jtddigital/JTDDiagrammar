@@ -17,20 +17,29 @@ import { FilesPane } from './workspace/FilesPane.tsx';
 import { loadLayout, saveLayout, toggle, type Layout, type PaneId } from './workspace/layout.ts';
 import { Panes } from './workspace/Panes.tsx';
 import { PANE_LABELS, Toolbar } from './workspace/Toolbar.tsx';
+import { kindOf } from './workspace/kinds.ts';
+import type { Version } from './workspace/store.ts';
+import type { WsNode } from './workspace/tree.ts';
 import { useWorkspace } from './workspace/useWorkspace.ts';
 
 const kindLabel = { diagram: 'Diagram', markdown: 'Markdown', csv: 'CSV', text: 'Text' } as const;
 
 export function App() {
   const ws = useWorkspace();
-  const { text, setText } = ws;
-  const kind = ws.kind.kind;
+  const { setText } = ws;
+  // An earlier version shown for reading (URS-WS-021); the open file's own text otherwise.
+  const [viewing, setViewing] = useState<{ file: WsNode; version: Version; text: string }>();
+  useEffect(() => setViewing(undefined), [ws.open?.id]);
+  const text = viewing?.text ?? ws.text;
+  const shownKind = useMemo(() => (viewing ? kindOf(viewing.file.name, viewing.text, registry) : ws.kind), [viewing, ws.kind]);
+  const kind = shownKind.kind;
   const diagram = kind === 'diagram';
+  const shownName = viewing?.file.name ?? ws.open?.name;
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const [reveal, setReveal] = useState<Range>();
   const [cursor, setCursor] = useState<number>();
   const [shared, setShared] = useState(false);
-  const d = useDiagram(text, diagram ? (ws.kind.format ?? 'json') : 'none');
+  const d = useDiagram(text, diagram ? (shownKind.format ?? 'json') : 'none');
   const errors = d.diagnostics.filter((x) => x.severity === 'error').length;
   // The render lags the editor by the debounce; never show or export a stale result as current.
   const pending = d.source !== text;
@@ -97,6 +106,7 @@ export function App() {
   const relatedOf = useCallback((r: Ref) => (ir ? related(ir, r) : []), [ir]);
   const labelOf = useCallback((r: Ref) => (ir && d.value !== undefined ? labelTarget(ir, d.value, r)?.text : undefined), [ir, d.value]);
   const onLabel = (r: Ref, label: string) => {
+    if (viewing) return;
     const t = ir && d.value !== undefined ? labelTarget(ir, d.value, r) : undefined;
     if (t) setText(setAt(text, t.path, label));
   };
@@ -129,21 +139,40 @@ export function App() {
         onLayout={setLayout}
         auto={auto}
         panes={{
-          files: { label: PANE_LABELS.files, body: <FilesPane ws={ws} /> },
-          ai: { label: PANE_LABELS.ai, body: <ChatPane text={text} {...(!pending && d.value !== undefined && { value: d.value })} onSource={setText} /> },
+          files: {
+            label: PANE_LABELS.files,
+            body: <FilesPane ws={ws} onView={async (file, version) => setViewing({ file, version, text: await ws.versionText(version) })} viewing={viewing?.version} />,
+          },
+          ai: { label: PANE_LABELS.ai, body: <ChatPane text={ws.text} {...(!viewing && !pending && d.value !== undefined && { value: d.value })} onSource={setText} /> },
           source: {
             label: PANE_LABELS.source,
             body: (
               <SourcePane
                 text={text}
-                onText={setText}
+                onText={viewing ? () => {} : setText}
+                readOnly={Boolean(viewing)}
+                {...(viewing && {
+                  banner: (
+                    <>
+                      <span>
+                        Version {viewing.version.n} of {viewing.file.name}, saved {new Date(viewing.version.at).toLocaleString()} (read-only)
+                      </span>
+                      <button type="button" className="btn push-right" data-size="small" onClick={() => void ws.restoreVersion(viewing.version).then(() => setViewing(undefined))}>
+                        Restore this version
+                      </button>
+                      <button type="button" className="btn" data-variant="ghost" data-size="small" onClick={() => setViewing(undefined)}>
+                        Close
+                      </button>
+                    </>
+                  ),
+                })}
                 diagnostics={d.diagnostics}
                 source={d.source}
                 onReveal={setReveal}
                 onCursor={setCursor}
                 {...(reveal && { reveal })}
-                {...(ws.path && { title: ws.path })}
-                language={diagram && (ws.kind.format ?? 'json') === 'json' ? 'json' : 'plain'}
+                {...(ws.path && { title: viewing ? `${viewing.file.name} · version ${viewing.version.n}` : ws.path })}
+                language={diagram && (shownKind.format ?? 'json') === 'json' ? 'json' : 'plain'}
               />
             ),
           },
@@ -154,7 +183,7 @@ export function App() {
                 <div className="pane__header cluster">
                   <span className="pane__title">Preview</span>
                 </div>
-                {kind === 'csv' && ws.open ? <CsvTable text={text} name={ws.open.name} /> : kind === 'markdown' ? <Markdown text={text} links={links} /> : <pre className="preview-text">{text}</pre>}
+                {kind === 'csv' && shownName ? <CsvTable text={text} name={shownName} /> : kind === 'markdown' ? <Markdown text={text} links={links} /> : <pre className="preview-text">{text}</pre>}
               </div>
             ) : (
               <div className="frame">
