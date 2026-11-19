@@ -25,7 +25,7 @@ test('pans and zooms the preview (URS-WEB-006)', async ({ page }) => {
   await page.getByRole('button', { name: '1:1' }).click();
   expect(await scale(page)).toBe(1);
 
-  const box = (await page.getByLabel('Preview').boundingBox())!;
+  const box = (await page.getByLabel('Diagram', { exact: true }).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.wheel(0, -100);
   await expect.poll(() => scale(page)).toBeCloseTo(1.1);
@@ -104,7 +104,7 @@ test('exports a 2x PNG (URS-RN-007)', async ({ page }) => {
 
 test('fits each new diagram until the user zooms (URS-WEB-006)', async ({ page }) => {
   await open(page);
-  const pane = page.getByLabel('Preview');
+  const pane = page.getByLabel('Diagram', { exact: true });
   const inside = async () => {
     const [p, s] = [(await pane.boundingBox())!, (await preview(page).locator('svg').boundingBox())!];
     return s.x >= p.x && s.y >= p.y && s.x + s.width <= p.x + p.width + 0.5 && s.y + s.height <= p.y + p.height + 0.5;

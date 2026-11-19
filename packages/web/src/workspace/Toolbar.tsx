@@ -3,13 +3,15 @@ import { examples } from '../registry.ts';
 import { VersionBadge } from '../update/VersionBadge.tsx';
 import { PANES, type Layout, type PaneId } from './layout.ts';
 
-export const PANE_LABELS: Record<PaneId, string> = { ai: 'AI', source: 'Source', diagram: 'Diagram' };
+export const PANE_LABELS: Record<PaneId, string> = { files: 'Files', ai: 'AI', source: 'Source', preview: 'Preview' };
 
 interface Props {
   fileName?: string;
   dirty: boolean;
-  onOpen(): void;
-  onSave(saveAs: boolean): void;
+  /** Import files into the workspace (URS-WS-005). */
+  onImport(): void;
+  onSave(): void;
+  canSave: boolean;
   onExample(i: number): void;
   layout: Layout;
   onToggle(p: PaneId): void;
@@ -35,14 +37,14 @@ export function Toolbar(p: Props) {
         JTDDiagrammar
       </h1>
       <VersionBadge />
-      <button type="button" className="btn" data-variant="ghost" title="Open (Ctrl+O)" onClick={p.onOpen}>
-        <FolderOpen /> Open
+      <button type="button" className="btn" data-variant="ghost" title="Import files into the workspace (Ctrl+O)" onClick={p.onImport}>
+        <FolderOpen /> Import
       </button>
-      <button type="button" className="btn" data-variant="ghost" title="Save (Ctrl+S); Shift-click or Ctrl+Shift+S to save as" onClick={(e) => p.onSave(e.shiftKey)}>
+      <button type="button" className="btn" data-variant="ghost" title="Save a version into the workspace (Ctrl+S)" disabled={!p.canSave} onClick={p.onSave}>
         <Save /> Save
       </button>
       <span className="toolbar__file" title={p.fileName}>
-        {p.fileName ?? 'Untitled'}
+        {p.fileName ?? 'No file open'}
         {p.dirty && <span aria-label="unsaved changes"> •</span>}
       </span>
       <span className="toolbar__divider" />

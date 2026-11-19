@@ -16,6 +16,8 @@ export default tseslint.config(
   { rules: { '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }] } },
   { files: ['**/*.ts', '**/*.tsx'], ignores: ['packages/ai/**'], rules: restrict([sdk]) },
   { files: ['packages/core/src/**/*.ts'], rules: restrict(corePatterns) },
+  // D-007: the document engines are pure like core.
+  { files: ['packages/documents/src/**/*.ts'], rules: restrict(corePatterns) },
   {
     // URS-EXT-004: layout and render see only the IR, never diagram-type plugins.
     files: ['packages/core/src/layout/**/*.ts', 'packages/core/src/render/**/*.ts'],

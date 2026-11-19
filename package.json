@@ -9,7 +9,7 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc -p packages/core && tsc -p packages/ai && tsc -p packages/api && tsc -p packages/web && tsc -p .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/documents && tsc -p packages/ai && tsc -p packages/api && tsc -p packages/web && tsc -p .",
     "test": "pnpm test:budget && vitest run --coverage",
     "test:budget": "vitest run -c vitest.budget.config.ts",
     "docs:build": "tsx scripts/docs/cli.ts build",

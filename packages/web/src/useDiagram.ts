@@ -1,4 +1,4 @@
-import { parseJson, render, type Diagnostic, type GraphIR } from '@jtd/core';
+import { parseJson, parseSource, render, type Diagnostic, type GraphIR, type SourceFormat } from '@jtd/core';
 import { useEffect, useState } from 'react';
 import { registry } from './registry.ts';
 
@@ -17,8 +17,10 @@ export interface DiagramState {
   value?: unknown;
 }
 
-function compute(source: string, last?: DiagramState): DiagramState {
-  const parsed = parseJson(source);
+function compute(source: string, last?: DiagramState, format: SourceFormat | 'none' = 'json'): DiagramState {
+  // Not a diagram (URS-WS-010): nothing to render, nothing to report.
+  if (format === 'none') return { current: true, diagnostics: [], source };
+  const parsed = format === 'json' ? parseJson(source) : parseSource(source, format, registry);
   const r: { svg?: string; ir?: GraphIR; diagnostics: Diagnostic[] } = parsed.value === undefined ? parsed : render(parsed.value, registry);
   const title = (parsed.value as { title?: unknown } | undefined)?.title;
   return {
@@ -31,13 +33,17 @@ function compute(source: string, last?: DiagramState): DiagramState {
   };
 }
 
-/** Debounced client-side render of the editor text (URS-WEB-002). */
-export function useDiagram(text: string, delay = 250): DiagramState {
-  const [state, setState] = useState(() => compute(text));
+/**
+ * Debounced client-side render of the editor text (URS-WEB-002), in the file's format; `none` for a file that is
+ * not a diagram. Switching format renders at once, without the last file's drawing.
+ */
+export function useDiagram(text: string, format: SourceFormat | 'none' = 'json', delay = 250): DiagramState {
+  const [state, setState] = useState(() => ({ ...compute(text, undefined, format), format }));
   useEffect(() => {
+    if (format !== state.format) return setState({ ...compute(text, undefined, format), format });
     if (text === state.source) return;
-    const t = setTimeout(() => setState((prev) => compute(text, prev)), delay);
+    const t = setTimeout(() => setState((prev) => ({ ...compute(text, prev, format), format })), delay);
     return () => clearTimeout(t);
-  }, [text, delay, state.source]);
+  }, [text, format, delay, state.source, state.format]);
   return state;
 }

@@ -22,7 +22,7 @@ export const FILES = [
   'LICENSE',
   'README.md',
   '.env.example',
-  ...['core', 'ai', 'api'].flatMap((p) => [`packages/${p}/package.json`, `packages/${p}/src`]),
+  ...['core', 'documents', 'ai', 'api'].flatMap((p) => [`packages/${p}/package.json`, `packages/${p}/src`]),
   'packages/web/package.json',
   'packages/web/dist',
 ];
