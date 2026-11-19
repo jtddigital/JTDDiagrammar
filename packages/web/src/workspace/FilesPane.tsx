@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Comparison } from '../compare/comparison.ts';
 import { IMPORTABLE } from '../files.ts';
 import { examples, pretty } from '../registry.ts';
 import { Chevron, FileIcon, Folder, Trash } from '../ui/icons.tsx';
@@ -28,10 +29,24 @@ interface Row {
  * The Files pane (URS-WS-001..003): the workspace tree with a context menu on every item and on the empty
  * space, inline rename, drag and drop to move (or to import files from the computer), and the trash. The tree
  * follows the ARIA tree pattern: ↑ ↓ move, → opens or enters a folder, ← closes it or goes up, Enter opens,
- * F2 renames, Delete moves to the trash, Shift+F10 or the menu key opens the menu.
+ * F2 renames, Delete moves to the trash, Shift+F10 or the menu key opens the menu. Compare with… waits for
+ * the second file to be chosen in the tree (URS-WS-032).
  */
-export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file: WsNode, v: Version): void; viewing?: Version | undefined }) {
+export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; onView(file: WsNode, v: Version): void; viewing?: Version | undefined; onCompare(c: Comparison): void }) {
   const [historyOf, setHistoryOf] = useState<string>();
+  // The file waiting for a second one to compare with.
+  const [picking, setPicking] = useState<string>();
+  const pickingNode = ws.nodes.find((n) => n.id === picking);
+  /** Open a file, or, while choosing one to compare with, compare it. */
+  const activate = (n: WsNode) => {
+    if (!picking) return void ws.openFile(n.id);
+    setPicking(undefined);
+    onCompare({ a: { file: picking }, b: { file: n.id } });
+  };
+  const compareWithSaved = async (id: string) => {
+    const latest = (await ws.versions(id)).at(-1);
+    onCompare({ a: { file: id, ...(latest && { version: latest.n }) }, b: { file: id } });
+  };
   const [expanded, setExpanded] = useState(loadExpanded);
   const [focus, setFocus] = useState<string>();
   const [renaming, setRenaming] = useState<string>();
@@ -113,7 +128,13 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
     ];
     if (n)
       items.push(
-        ...(n.kind === 'file' ? [{ label: 'History', separator: true, onSelect: () => setHistoryOf(n.id) }] : []),
+        ...(n.kind === 'file'
+          ? [
+              { label: 'History', separator: true, onSelect: () => setHistoryOf(n.id) },
+              { label: 'Compare with…', onSelect: () => setPicking(n.id) },
+              { label: 'Compare with saved', onSelect: () => void compareWithSaved(n.id) },
+            ]
+          : []),
         { label: 'Rename', hint: 'F2', ...(n.kind === 'folder' && { separator: true }), onSelect: () => setRenaming(n.id) },
         { label: 'Duplicate', onSelect: () => void ws.duplicate(n.id) },
         { label: 'Delete', hint: 'Del', onSelect: () => void ws.trash(n.id) },
@@ -143,8 +164,8 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
       else if (n.parent) focusRow(n.parent);
     } else if (k === 'Enter') {
       if (n.kind === 'folder') toggle(n.id);
-      else void ws.openFile(n.id);
-    }
+      else activate(n);
+    } else if (k === 'Escape' && picking) setPicking(undefined);
     else if (k === 'F2') setRenaming(n.id);
     else if (k === 'Delete') void ws.trash(n.id);
     else if (k === 'ContextMenu' || (k === 'F10' && e.shiftKey)) menuAt(e.currentTarget as HTMLElement, n);
@@ -207,6 +228,7 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
                   {...(folder && { 'aria-expanded': expanded.has(n.id) })}
                   tabIndex={n.id === current ? 0 : -1}
                   className="tree__item"
+                  data-picking={picking && !folder && n.id !== picking ? true : undefined}
                   data-drop={dropOn === n.id || undefined}
                   style={{ paddingInlineStart: `${(r.level - 1) * 14 + 6}px` }}
                   draggable={renaming !== n.id}
@@ -221,7 +243,7 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
                     e.stopPropagation();
                     setFocus(n.id);
                     if (folder) toggle(n.id);
-                    else void ws.openFile(n.id);
+                    else activate(n);
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -290,7 +312,15 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
         )}
       </div>
       {historyOf && ws.nodes.some((n) => n.id === historyOf) && (
-        <History ws={ws} file={ws.nodes.find((n) => n.id === historyOf)!} onView={onView} viewing={viewing} onClose={() => setHistoryOf(undefined)} />
+        <History ws={ws} file={ws.nodes.find((n) => n.id === historyOf)!} onView={onView} viewing={viewing} onCompare={onCompare} onClose={() => setHistoryOf(undefined)} />
+      )}
+      {pickingNode && (
+        <p className="files__note text-small" role="status">
+          Choose a file to compare with {pickingNode.name}
+          <button type="button" className="btn" data-variant="ghost" data-size="small" onClick={() => setPicking(undefined)}>
+            Cancel
+          </button>
+        </p>
       )}
       {ws.note && (
         <p className="files__note text-small" role="status">
@@ -330,8 +360,11 @@ export function FilesPane({ ws, onView, viewing }: { ws: Workspace; onView(file:
 
 const size = (n: number) => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
 
-/** A file's versions, newest first, to view or restore (URS-WS-021); it follows the file through renames and moves (URS-WS-022). */
-function History({ ws, file, onView, viewing, onClose }: { ws: Workspace; file: WsNode; onView(file: WsNode, v: Version): void; viewing?: Version | undefined; onClose(): void }) {
+/**
+ * A file's versions, newest first, to view, compare with the current text or restore (URS-WS-021); it follows
+ * the file through renames and moves (URS-WS-022).
+ */
+function History({ ws, file, onView, viewing, onCompare, onClose }: { ws: Workspace; file: WsNode; onView(file: WsNode, v: Version): void; viewing?: Version | undefined; onCompare(c: Comparison): void; onClose(): void }) {
   const [versions, setVersions] = useState<Version[]>([]);
   // Saves and restores change the tree, so its versions are read again.
   useEffect(() => {
@@ -359,10 +392,13 @@ function History({ ws, file, onView, viewing, onClose }: { ws: Workspace; file: 
                 <strong>v{v.n}</strong> {new Date(v.at).toLocaleString()}
               </button>
               <span className="text-muted text-small">{i === 0 ? 'latest · ' : ''}{size(v.size)}</span>
+              <button type="button" className="btn push-right" data-variant="ghost" data-size="small" title="Compare with the current text" onClick={() => onCompare({ a: { file: file.id, version: v.n }, b: { file: file.id } })}>
+                Compare
+              </button>
               {i > 0 && (
                 <button
                   type="button"
-                  className="btn push-right"
+                  className="btn"
                   data-variant="ghost"
                   data-size="small"
                   onClick={() => (!(file.id === ws.open?.id && ws.dirty) || window.confirm('Restoring replaces your unsaved edits to this file. Restore?')) && void ws.restoreVersion(v)}

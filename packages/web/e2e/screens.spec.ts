@@ -27,3 +27,22 @@ test('chat', async ({ page }) => {
   await page.waitForTimeout(300);
   await page.screenshot({ path: '../../docs/img/web-generate.png' });
 });
+
+test('compare', async ({ page }) => {
+  await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true, model: 'claude-opus-5-5' } }));
+  await open(page);
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await (await chooser).setFiles([
+    { name: 'plan-v1.md', mimeType: 'text/markdown', buffer: Buffer.from('# Launch plan\n\nShip the beta to the pilot group in May.\n\n- [x] Draft the release notes\n- [ ] Review with support\n\n| Step | Days |\n|:--|--:|\n| Build | 5 |\n| Test | 3 |\n\nWe will decide on pricing later.\n') },
+    { name: 'plan-v2.md', mimeType: 'text/markdown', buffer: Buffer.from('# Launch plan\n\nShip the beta to every customer in June.\n\n- [x] Draft the release notes\n- [x] Review with support\n- [ ] Train the sales team\n\n| Step | Days |\n|:--|--:|\n| Build | 5 |\n| Test | 4 |\n') },
+  ]);
+  const panes = page.getByRole('group', { name: 'Panes' });
+  for (const p of ['AI', 'Preview']) await panes.getByRole('button', { name: p }).click();
+  const tree = page.getByRole('tree', { name: 'Files' });
+  await tree.getByRole('treeitem', { name: 'plan-v1.md' }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Compare with…' }).click();
+  await tree.getByRole('treeitem', { name: 'plan-v2.md' }).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: '../../docs/img/web-compare.png' });
+});

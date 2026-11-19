@@ -1,6 +1,8 @@
 import { exportDiagram, exportFormats } from '@jtd/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatPane } from './chat/ChatPane.tsx';
+import type { Comparison } from './compare/comparison.ts';
+import { ComparePane } from './compare/ComparePane.tsx';
 import { downloadPng, downloadSvg, downloadText } from './download.ts';
 import { SourcePane } from './editor/SourcePane.tsx';
 import { locate, type Range } from './editor/locate.ts';
@@ -36,6 +38,8 @@ export function App() {
   const diagram = kind === 'diagram';
   const shownName = viewing?.file.name ?? ws.open?.name;
   const [layout, setLayout] = useState<Layout>(loadLayout);
+  // The comparison on screen, if any: the Compare pane shows while there is one (URS-WS-031).
+  const [comparison, setComparison] = useState<Comparison>();
   const [reveal, setReveal] = useState<Range>();
   const [cursor, setCursor] = useState<number>();
   const [shared, setShared] = useState(false);
@@ -48,7 +52,7 @@ export function App() {
 
   useEffect(() => saveLayout(layout), [layout]);
   // A text file has nothing to preview: the pane steps aside while it is open (URS-WS-011).
-  const auto: PaneId[] = ws.open && kind === 'text' ? ['preview'] : [];
+  const auto: PaneId[] = [...(ws.open && kind === 'text' ? (['preview'] as const) : []), ...(comparison ? [] : (['compare'] as const))];
 
   const share = async () => {
     const url = await shareUrl(text);
@@ -121,7 +125,7 @@ export function App() {
         canSave={Boolean(ws.open)}
         onExample={(i) => void ws.create(ws.open?.parent ?? null, 'file', `${examples[i]!.title}.json`, pretty(examples[i]!.source))}
         layout={layout}
-        onToggle={(p) => setLayout((l) => toggle(l, p))}
+        onToggle={(p) => setLayout((l) => toggle(l, p, auto))}
         status={!diagram ? { state: 'ok', text: ws.open ? kindLabel[kind] : 'No file' } : pending ? { state: 'pending', text: 'Updating…' } : errors ? { state: 'error', text: `${errors} error${errors > 1 ? 's' : ''}` } : { state: 'ok', text: 'Valid' }}
         shared={shared}
         onShare={() => void share()}
@@ -141,7 +145,7 @@ export function App() {
         panes={{
           files: {
             label: PANE_LABELS.files,
-            body: <FilesPane ws={ws} onView={async (file, version) => setViewing({ file, version, text: await ws.versionText(version) })} viewing={viewing?.version} />,
+            body: <FilesPane ws={ws} onView={async (file, version) => setViewing({ file, version, text: await ws.versionText(version) })} viewing={viewing?.version} onCompare={setComparison} />,
           },
           ai: { label: PANE_LABELS.ai, body: <ChatPane text={ws.text} {...(!viewing && !pending && d.value !== undefined && { value: d.value })} onSource={setText} /> },
           source: {
@@ -175,6 +179,11 @@ export function App() {
                 language={diagram && (shownKind.format ?? 'json') === 'json' ? 'json' : 'plain'}
               />
             ),
+          },
+          compare: {
+            label: PANE_LABELS.compare,
+            // A new pair of files starts fresh; swapping sides or picking versions keeps the view.
+            body: comparison && <ComparePane key={[comparison.a.file, comparison.b.file].sort().join()} ws={ws} comparison={comparison} onChange={setComparison} onClose={() => setComparison(undefined)} links={links} />,
           },
           preview: {
             label: PANE_LABELS.preview,

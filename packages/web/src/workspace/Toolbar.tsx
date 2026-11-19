@@ -3,7 +3,9 @@ import { examples } from '../registry.ts';
 import { VersionBadge } from '../update/VersionBadge.tsx';
 import { PANES, type Layout, type PaneId } from './layout.ts';
 
-export const PANE_LABELS: Record<PaneId, string> = { files: 'Files', ai: 'AI', source: 'Source', preview: 'Preview' };
+export const PANE_LABELS: Record<PaneId, string> = { files: 'Files', ai: 'AI', source: 'Source', preview: 'Preview', compare: 'Compare' };
+/** Compare appears with a comparison and closes with it (URS-WS-031), so it has no switch. */
+const SWITCHED = PANES.filter((p) => p !== 'compare');
 
 interface Props {
   fileName?: string;
@@ -60,7 +62,7 @@ export function Toolbar(p: Props) {
       </select>
       <span className="push-right" />
       <div className="segmented" role="group" aria-label="Panes">
-        {PANES.map((id) => (
+        {SWITCHED.map((id) => (
           <button key={id} type="button" className="btn" aria-pressed={!p.layout.hidden.includes(id)} title={`Show or hide ${PANE_LABELS[id]}`} onClick={() => p.onToggle(id)}>
             {PANE_LABELS[id]}
           </button>
