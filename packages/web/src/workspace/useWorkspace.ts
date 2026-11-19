@@ -114,20 +114,36 @@ export function useWorkspace(): Workspace {
     })();
   }, [load, reload, fail]);
 
-  // Unsaved edits become a draft a moment after typing stops, so they survive switching and reloading (URS-WS-004).
+  // Unsaved edits are written as a draft at once, so they survive switching files and reloading (URS-WS-004).
+  // While a write is under way, later edits wait, and only the latest is written next.
+  const queued = useRef<{ id: string; text: string | undefined }>(undefined);
+  const writing = useRef(false);
+  const writeDrafts = useCallback(async () => {
+    if (writing.current || !store.current) return;
+    writing.current = true;
+    for (let job = queued.current; job; job = queued.current) {
+      queued.current = undefined;
+      try {
+        await store.current.setDraft(job.id, job.text);
+        const { id, text: draft } = job;
+        setDrafts((d) => {
+          if (d.has(id) === (draft !== undefined)) return d;
+          const next = new Set(d);
+          if (draft === undefined) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+      } catch (e) {
+        fail(e);
+      }
+    }
+    writing.current = false;
+  }, [fail]);
   useEffect(() => {
     if (!openId || !store.current) return;
-    const t = setTimeout(() => {
-      const draft = text === saved ? undefined : text;
-      void store.current!.setDraft(openId, draft).then(() => setDrafts((d) => {
-        const next = new Set(d);
-        if (draft === undefined) next.delete(openId);
-        else next.add(openId);
-        return next;
-      }), fail);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [text, saved, openId, fail]);
+    queued.current = { id: openId, text: text === saved ? undefined : text };
+    void writeDrafts();
+  }, [text, saved, openId, writeDrafts]);
 
   const flush = useCallback(async () => {
     if (openId && store.current) await store.current.setDraft(openId, text === saved ? undefined : text);
