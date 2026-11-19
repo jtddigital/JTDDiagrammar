@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "types": ["node"], "lib": ["ES2023", "DOM", "DOM.Iterable"] },
+  "compilerOptions": { "types": ["node"], "lib": ["ES2023", "DOM", "DOM.Iterable"], "jsx": "react-jsx" },
   "include": ["packages/*/test", "scripts", "test", "*.config.ts", "packages/web/src/registry-module.d.ts"]
 }

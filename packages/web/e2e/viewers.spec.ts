@@ -43,3 +43,49 @@ test('shows a large CSV as a table that draws only what is in view, sorts and re
   await setSource(page, 'x\ty\n7\t8\n');
   await expect(page.getByRole('table').getByRole('cell', { name: '8', exact: true })).toBeVisible();
 });
+
+test('renders Markdown with GFM, alerts, contents, math, code, diagrams and workspace links (URS-WS-040, WS-041)', async ({ page }) => {
+  await open(page);
+  const flow = JSON.stringify({ version: '1', type: 'flowchart', nodes: [{ id: 'a', label: 'Start', to: [{ node: 'b' }] }, { id: 'b', label: 'Finish' }] });
+  const md = [
+    '# Guide',
+    '[[toc]]',
+    '## Steps',
+    '- [x] Draft',
+    '- [ ] Review',
+    '',
+    '| Step | Days |',
+    '|:--|--:|',
+    '| Draft | 2 |',
+    '',
+    '> [!WARNING]',
+    '> Check the ~~old~~ new flow.',
+    '',
+    'Area $\\pi r^2$ and see [the data](data.csv).',
+    '',
+    '```jtd',
+    flow,
+    '```',
+    '',
+    '```python',
+    'def f(): return 1',
+    '```',
+  ].join('\n');
+  await importFile(page, 'data.csv', 'a,b\n1,2\n');
+  await importFile(page, 'guide.md', md);
+  const view = page.locator('article.md');
+  await expect(view.getByRole('heading', { name: 'Guide', level: 1 })).toBeVisible();
+  await expect(view.getByRole('navigation', { name: 'Contents' }).getByRole('link', { name: 'Steps' })).toBeVisible();
+  await expect(view.getByRole('checkbox', { name: 'Done', exact: true })).toBeChecked();
+  await expect(view.getByRole('cell', { name: '2', exact: true })).toHaveCSS('text-align', 'right');
+  await expect(view.getByRole('note')).toContainText('Warning');
+  await expect(view.locator('del')).toHaveText('old');
+  await expect(view.locator('math msup mi').first()).toHaveText('r');
+  await expect(view.locator('.tok-keyword').first()).toHaveText('def');
+  // The ```jtd block is drawn as the Preview draws diagrams.
+  await expect(view.locator('figure.md-diagram svg')).toContainText('Finish');
+  // A relative link opens the workspace file.
+  await view.getByRole('link', { name: 'the data' }).click();
+  await expect(page.locator('.toolbar__file')).toHaveText('data.csv');
+  await expect(page.getByRole('table')).toBeVisible();
+});
