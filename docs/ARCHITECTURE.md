@@ -464,3 +464,55 @@ Diagnostics are reported in the platform's terms through the profile (e.g. "rele
 3. ✔ Signals, subscriptions, channels and rules drawn in both types (URS-TYP-029), from one helper, `process/events.ts`.
 4. SAP follow-ons: ✔ rejection (URS-TYP-025), ✔ transaction codes (URS-TYP-026), ✔ charts without a status profile (URS-TYP-027); MDG (URS-TYP-028) with step 5.
 5. ✔ Generic `process` type (PM-020), in `diagrams/process/type/`; ✔ BPMN export (PM-018); ✔ MDG (TYP-028) as a `process` example in the `sap` profile; pipeline stage (PM-021) when a second consumer appears.
+
+## 14. Workspace and documents (URS-WS-001..043, D-006..D-008)
+
+### 14.1 Shape
+The web app gains a workspace of files and folders, kept in the browser (D-006). A file has a **kind**: diagram, Markdown, CSV or text (URS-WS-010). The kind decides what Source edits and what Preview shows; nothing branches on diagram type. Every save is a **version**, kept forever. Any two texts can be **compared**; Markdown, CSV and diagrams also compare in their own form.
+
+```
+packages/
+  documents/src/        pure TypeScript, no DOM, no Node built-ins, no dependencies (D-007)
+    markdown/           block.ts, inline.ts, entities.ts, ast.ts, gfm/ (table, tasklist, strike, autolink, footnote),
+                        extras/ (alerts, frontmatter, toc, math → tex.ts), highlight/ (tokenizers), html.ts (test serialiser only)
+    csv/                parse.ts (RFC 4180, separator detection), types.ts
+    diff/               lines.ts (Myers O(ND)), words.ts, blocks.ts (Markdown), table.ts (CSV)
+    zip/                write.ts (deflate-raw through CompressionStream, CRC-32)
+  core/src/diff/        ir.ts: Graph IR comparison by element id (URS-WS-035); pure, type-agnostic
+  web/src/workspace/    store.ts (IndexedDB), tree.ts (pure operations), kinds.ts, FilesPane.tsx, ContextMenu.tsx,
+                        History.tsx; viewers/ (Markdown.tsx, CsvTable.tsx); compare/ (ComparePane.tsx, TextDiff.tsx,
+                        MarkdownDiff.tsx, CsvDiff.tsx, DiagramDiff.tsx)
+```
+
+### 14.2 Storage (D-006)
+One IndexedDB database, `jtd-workspace`, behind a `Store` interface (so a server or disk backend can replace it):
+
+| Store | Key | Holds |
+|-------|-----|-------|
+| `nodes` | `id` | `{ id, parent, name, kind: 'folder' \| 'file', created, modified, trashed? }` |
+| `versions` | `[file, n]` | `{ file, n, at, hash, size }`, one per save, never deleted except with the trash |
+| `blobs` | `hash` (SHA-256) | the text; identical contents stored once |
+| `drafts` | `file` | unsaved edits, so they survive switching files and reloads (URS-WS-004) |
+
+A file's current content is its latest version. Restore writes the old content as version n+1. Rename and move change only `nodes`, so history follows (URS-WS-022). Tree operations (`tree.ts`) are pure functions over the node list: create, rename, move, duplicate, delete-to-trash, path and uniqueness checks, unit-tested without a browser. `navigator.storage.persist()` is asked once; a `QuotaExceededError` is reported and the draft kept (URS-WS-007). The first run imports the stored editor session as `Untitled.json` (URS-WS-006).
+
+### 14.3 Panes and kinds
+`PANES` becomes Files, AI, Source, Preview, Compare. Compare is hidden until a comparison runs. A text file adds an *automatic* hide of Preview, kept apart from the user's own `hidden` list so closing the text file restores exactly what the user chose (URS-WS-011). Kinds: `.json`, `.yaml`, `.yml`, `.xml` are diagrams when their content names a registered `type` (else text); `.md`, `.markdown` Markdown; `.csv`, `.tsv` CSV; anything else text. Diagrams edit as JSON with the existing schema tooling; other kinds edit as plain text in the same editor. The context menu is one component (`role="menu"`) opened by right-click, Shift+F10 or the menu key, positioned inside the viewport, closed by Escape or a click outside; the tree follows the ARIA tree pattern (arrow keys, Enter, F2 rename, Delete).
+
+### 14.4 Markdown (URS-WS-040..042)
+The parser follows the CommonMark algorithm: a block phase (container blocks by line, leaf blocks, link reference definitions) then an inline phase (delimiter stack for emphasis, brackets for links and images, backslash escapes, entities, code spans, autolinks, raw HTML). GFM extensions plug in at the points the GFM spec defines. The output is an AST. `html.ts` serialises it exactly as the specs expect; it runs only in tests, against the CommonMark 0.31.2 and GFM example files (vendored as JSON, URS-WS-040). The app renders the AST to React elements, so raw HTML never reaches `innerHTML`: inline HTML is re-parsed into the allowed elements (URS-WS-042) and anything else is shown as text. Extras: GitHub alerts (a blockquote whose first line is `[!KIND]`), heading slugs as GitHub makes them, a table of contents from the headings, YAML front matter shown as a table, code highlighting by small hand-written tokenizers (JavaScript/TypeScript, JSON, YAML, XML/HTML, CSS, shell, Python, SQL), math from a TeX subset (`\frac`, `\sqrt`, sub/superscripts, Greek, operators, `\left…\right`, matrices) to MathML Core, which browsers draw natively. A ```` ```jtd ```` fence renders through `render()` and the sanitised inline SVG path the Preview already uses.
+
+### 14.5 CSV (URS-WS-012)
+A single-pass state machine over characters (field, quoted field, quote-in-quoted) gives rows of strings and a list of problems with line numbers. The separator is the one of comma, semicolon or tab that gives the most consistent field count over the first lines. The table draws only the rows in view (fixed row height, a spacer for the rest).
+
+### 14.6 Comparison (URS-WS-030..035)
+`diff/lines.ts` is Myers' O(ND) algorithm with the linear-space refinement, after trimming the common head and tail. Changed lines pair up and are diffed again by word. Markdown compares its block lists (paragraphs, headings, items, table rows, code blocks) with the same algorithm over block fingerprints, then marks the rendered blocks. CSV matches rows by the chosen key column (or position) and compares cells. A diagram (D-008) compiles both versions; `core/src/diff/ir.ts` matches nodes, edges, containers and bands by id and reports added, removed and changed (label, sub, style, lane, phase, from/to), with each change's source pointer. The Compare pane draws both versions with the existing renderer, adding a `data-diff` mark per element that the stylesheet colours, and keeps pan and zoom in step.
+
+### 14.7 Plan
+1. URS §3.13 and this section (this change).
+2. Workspace: store, tree, Files pane, context menu, import, `.zip` export, Ctrl+S, first run (WS-001..007).
+3. Kinds, text and CSV (WS-010..013).
+4. Markdown engine and viewer (WS-040..042).
+5. Versions and history (WS-020..022).
+6. Diff engine and Compare pane: text, Markdown, CSV (WS-030..034).
+7. Diagram comparison (WS-035).
