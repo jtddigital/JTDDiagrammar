@@ -1,5 +1,5 @@
 /** Workspace layout: pane widths and visibility (URS-WEB-015). Pure, so it is unit-tested. */
-export const PANES = ['files', 'ai', 'source', 'preview'] as const;
+export const PANES = ['files', 'ai', 'source', 'preview', 'compare'] as const;
 export type PaneId = (typeof PANES)[number];
 
 export interface Layout {
@@ -8,7 +8,7 @@ export interface Layout {
   hidden: PaneId[];
 }
 
-export const DEFAULT_LAYOUT: Layout = { sizes: [0.16, 0.24, 0.26, 0.34], hidden: [] };
+export const DEFAULT_LAYOUT: Layout = { sizes: [0.16, 0.24, 0.26, 0.34, 0.5], hidden: [] };
 const KEY = 'jtd:layout';
 
 /**
@@ -28,10 +28,10 @@ export function shares(l: Layout, auto: readonly PaneId[] = []): Record<string, 
   return Object.fromEntries(ids.map((p) => [p, l.sizes[PANES.indexOf(p)]! / total]));
 }
 
-/** Show or hide a pane; the last visible pane stays. */
-export function toggle(l: Layout, p: PaneId): Layout {
+/** Show or hide a pane; the last pane on screen stays. */
+export function toggle(l: Layout, p: PaneId, auto: readonly PaneId[] = []): Layout {
   if (l.hidden.includes(p)) return { ...l, hidden: l.hidden.filter((h) => h !== p) };
-  return visible(l).length > 1 ? { ...l, hidden: [...l.hidden, p] } : l;
+  return visible(l, auto).filter((x) => x !== p).length > 0 ? { ...l, hidden: [...l.hidden, p] } : l;
 }
 
 /**
@@ -50,14 +50,20 @@ export function resize(l: Layout, a: PaneId, b: PaneId, delta: number, min: numb
   return { ...l, sizes };
 }
 
+/** A layout saved before the Compare pane existed gains its default width. */
+const upgrade = (v: unknown): unknown => {
+  const l = v as Layout;
+  return Array.isArray(l?.sizes) && l.sizes.length === PANES.length - 1 ? { ...l, sizes: [...l.sizes, DEFAULT_LAYOUT.sizes.at(-1)!] } : v;
+};
+
 const valid = (v: unknown): v is Layout => {
   const l = v as Layout;
-  return Array.isArray(l?.sizes) && l.sizes.length === PANES.length && l.sizes.every((x) => typeof x === 'number' && x > 0) && Array.isArray(l.hidden) && l.hidden.every((h) => PANES.includes(h)) && l.hidden.length < PANES.length;
+  return Array.isArray(l?.sizes) && l.sizes.length === PANES.length && l.sizes.every((x) => typeof x === 'number' && x > 0) && Array.isArray(l.hidden) && l.hidden.every((h) => PANES.includes(h)) && PANES.some((p) => p !== 'compare' && !l.hidden.includes(p));
 };
 
 export function loadLayout(storage: Pick<Storage, 'getItem'> = localStorage): Layout {
   try {
-    const v: unknown = JSON.parse(storage.getItem(KEY) ?? 'null');
+    const v: unknown = upgrade(JSON.parse(storage.getItem(KEY) ?? 'null'));
     return valid(v) ? v : DEFAULT_LAYOUT;
   } catch {
     return DEFAULT_LAYOUT;

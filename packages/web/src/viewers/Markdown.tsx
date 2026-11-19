@@ -1,6 +1,6 @@
 import { parseJson, parseSource, render } from '@jtd/core';
-import { highlight, language, parseMarkdown, plainText, slugger, texToMathml, type MathEl, type MdNode } from '@jtd/documents';
-import { createElement, Fragment, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { highlight, language, parseMarkdown, plainText, slugger, texToMathml, type Mark, type MathEl, type MdNode } from '@jtd/documents';
+import { cloneElement, createElement, Fragment, isValidElement, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sanitizeSvg } from '../preview/sanitize.ts';
 import { registry } from '../registry.ts';
 import { htmlParts, safeHref, safeSrc, type HtmlPart } from './safeHtml.ts';
@@ -20,11 +20,15 @@ const ALERT_TITLES: Record<string, string> = { NOTE: 'Note', TIP: 'Tip', IMPORTA
  * HTML string. GFM, GitHub alerts, heading anchors, a table of contents, front matter, highlighted code, MathML
  * math and ```jtd diagrams; links and images to workspace files open or show them.
  */
-export function Markdown({ text, links }: { text: string; links: MarkdownLinks }) {
+export function Markdown({ text, links, parsed, marks }: { text: string; links: MarkdownLinks; parsed?: MdNode; marks?: ReadonlyMap<MdNode, Mark> }) {
   const deferred = useDeferredValue(text);
-  const doc = useMemo(() => parseMarkdown(deferred, { gfm: true, extras: true }), [deferred]);
+  const own = useMemo(() => (parsed ? undefined : parseMarkdown(deferred, { gfm: true, extras: true })), [deferred, parsed]);
+  const doc = parsed ?? own!;
   const host = useRef<HTMLElement>(null);
-  const out = useMemo(() => new Renderer(links, (id) => host.current?.querySelector(`[id="${CSS.escape(`md-${id}`)}"]`)?.scrollIntoView({ block: 'start' })).document(doc), [doc, links]);
+  const out = useMemo(
+    () => new Renderer(links, (id) => host.current?.querySelector(`[id="${CSS.escape(`md-${id}`)}"]`)?.scrollIntoView({ block: 'start' }), marks).document(doc),
+    [doc, links, marks],
+  );
   return (
     <article className="md" ref={host}>
       {out}
@@ -39,11 +43,16 @@ class Renderer {
   private key = 0;
   private readonly links: MarkdownLinks;
   private readonly jump: (id: string) => void;
+  /** Blocks marked by a comparison (URS-WS-033). */
+  private readonly marks: ReadonlyMap<MdNode, Mark> | undefined;
 
-  constructor(links: MarkdownLinks, jump: (id: string) => void) {
+  constructor(links: MarkdownLinks, jump: (id: string) => void, marks?: ReadonlyMap<MdNode, Mark>) {
     this.links = links;
     this.jump = jump;
+    this.marks = marks;
   }
+
+  private mark = (n: MdNode) => (this.marks?.has(n) ? { 'data-diff': this.marks.get(n) } : {});
 
   document(doc: MdNode): ReactNode {
     // Headings first, so a table of contents anywhere lists them all.
@@ -90,7 +99,20 @@ class Renderer {
   };
 
   private blocks(parent: MdNode): ReactNode[] {
-    return [...parent.children()].map((n) => this.block(n)).filter((x) => x !== null);
+    return [...parent.children()].map((n) => this.marked(n)).filter((x) => x !== null);
+  }
+
+  /** A block, carrying its comparison mark: on its own element, or a wrapper when it has none. */
+  private marked(n: MdNode): ReactNode {
+    const el = this.block(n);
+    const m = this.mark(n);
+    if (!('data-diff' in m) || !isValidElement(el)) return el;
+    if (typeof el.type === 'string') return cloneElement(el as React.ReactElement<Record<string, unknown>>, m);
+    return (
+      <div key={el.key} className="md-mark" {...m}>
+        {el}
+      </div>
+    );
   }
 
   private block(n: MdNode): ReactNode {
@@ -125,7 +147,7 @@ class Renderer {
         return <blockquote key={key}>{this.blocks(n)}</blockquote>;
       case 'list': {
         const items = [...n.children()].map((item) => (
-          <li key={this.k()} {...(item.checked !== undefined && { className: 'md-task' })}>
+          <li key={this.k()} {...(item.checked !== undefined && { className: 'md-task' })} {...this.mark(item)}>
             {item.checked !== undefined && <input type="checkbox" checked={item.checked} disabled aria-label={item.checked ? 'Done' : 'Not done'} />}
             {this.blocks(item)}
           </li>
@@ -163,7 +185,7 @@ class Renderer {
       case 'table': {
         const [head, ...body] = [...n.children()];
         const row = (r: MdNode, cell: 'th' | 'td') => (
-          <tr key={this.k()}>
+          <tr key={this.k()} {...this.mark(r)}>
             {[...r.children()].map((c) => createElement(cell, { key: this.k(), ...(c.align[0] && { style: { textAlign: c.align[0] } }) }, ...this.inlines(c)))}
           </tr>
         );

@@ -6,3 +6,8 @@ export { MdNode, parseMarkdown, plainText, renderHtml, type Align, type Markdown
 export { highlight, language, type Token, type TokenKind } from './markdown/extras/highlight.ts';
 export { slugger } from './markdown/extras/slug.ts';
 export { mathmlString, texToMathml, type MathEl } from './markdown/extras/tex.ts';
+export { diff, type Op, type OpType } from './diff/myers.ts';
+export { changeStarts, diffLines, fold, rows, splitLines, type LineDiff, type Row, type Segment } from './diff/lines.ts';
+export { diffWords, tokens, type Part } from './diff/words.ts';
+export { blocks, diffBlocks, fingerprint, type BlockDiff, type Mark } from './diff/blocks.ts';
+export { diffTable, type TableDiff, type TableRow } from './diff/table.ts';

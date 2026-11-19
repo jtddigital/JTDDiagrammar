@@ -15,3 +15,4 @@ export { compile, type CompileResult } from './compile.ts';
 export { exportDiagram, exportFormats, type ExportResult } from './export.ts';
 export { render, type RenderOptions, type RenderResult } from './render.ts';
 export { renderSvg, type SvgOptions } from './render/svg/index.ts';
+export { diffIR, type ChangeType, type ElementKind, type FieldChange, type IrChange, type IrDiff } from './diff/ir.ts';

@@ -1,0 +1,310 @@
+/* Block: the Compare pane (URS-WS-031..034). Added is green, removed red, changed amber. */
+.compare__sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: end;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Label and path above, the version below. */
+.compare__side {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.compare__label {
+  font-weight: 600;
+  font-size: var(--step--1);
+}
+
+.compare__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--step--1);
+  color: var(--color-text-muted);
+}
+
+.compare__side .select {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+.compare__loading {
+  padding: var(--space-3);
+}
+
+.diff {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.diff__bar {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.diff__count[data-kind='ins'] {
+  color: var(--color-success);
+}
+
+.diff__count[data-kind='del'] {
+  color: var(--color-danger);
+}
+
+.diff__count[data-kind='change'] {
+  color: var(--color-warning);
+}
+
+.diff__note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.diff__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+/* Text comparison. */
+.diff__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+
+.diff__num {
+  width: 3.5em;
+  padding: 0 var(--space-2);
+  text-align: end;
+  color: var(--color-text-muted);
+  user-select: none;
+  vertical-align: top;
+}
+
+.diff__sign {
+  width: 1.5em;
+  text-align: center;
+  user-select: none;
+}
+
+.diff__code {
+  padding: 0 var(--space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff__table tr:focus {
+  outline: none;
+}
+
+.diff__table tr[data-active] {
+  box-shadow: inset 3px 0 0 var(--color-focus);
+}
+
+.diff__table[data-layout='split'] .diff__code + .diff__num {
+  border-left: 1px solid var(--color-border);
+}
+
+.diff__table tr[data-kind='del'] .diff__code,
+.diff__table[data-layout='split'] tr[data-kind='change'] td:nth-child(2) {
+  background: var(--color-removed-soft);
+}
+
+.diff__table tr[data-kind='ins'] .diff__code,
+.diff__table[data-layout='split'] tr[data-kind='change'] td:nth-child(4) {
+  background: var(--color-added-soft);
+}
+
+.diff__table tr .diff__code[data-empty] {
+  background: var(--color-surface-2);
+}
+
+.diff del,
+.diff ins {
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+.diff del {
+  background: var(--color-removed-strong);
+}
+
+.diff ins {
+  background: var(--color-added-strong);
+}
+
+.diff__fold td {
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface-2);
+  font-family: var(--font-ui);
+  text-align: center;
+}
+
+/* Rendered Markdown, side by side. */
+.diff__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.diff__page {
+  min-width: 0;
+}
+
+.diff__page + .diff__page {
+  border-left: 1px solid var(--color-border);
+}
+
+.diff__page [data-diff] {
+  border-radius: var(--radius-sm);
+  box-shadow: -6px 0 0 0 var(--mark), 6px 0 0 0 var(--mark);
+  background: var(--mark);
+}
+
+.diff__page [data-diff='added'] {
+  --mark: var(--color-added-soft);
+}
+
+.diff__page [data-diff='removed'] {
+  --mark: var(--color-removed-soft);
+}
+
+.diff__page [data-diff='changed'] {
+  --mark: var(--color-changed-soft);
+}
+
+/* CSV comparison. */
+.diff__grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--step--1);
+}
+
+.diff__grid th,
+.diff__grid td {
+  padding: var(--space-1) var(--space-2);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  text-align: start;
+}
+
+.diff__grid th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface-2);
+}
+
+.diff__grid tr[data-kind='added'] td,
+.diff__grid th[data-kind='added'] {
+  background: var(--color-added-soft);
+}
+
+.diff__grid tr[data-kind='removed'] td,
+.diff__grid th[data-kind='removed'] {
+  background: var(--color-removed-soft);
+  color: var(--color-text-muted);
+}
+
+.diff__grid td[data-changed] {
+  background: var(--color-changed-soft);
+}
+
+/* Diagram comparison (URS-WS-035, D-008): two drawings side by side, then the list of changes. */
+.diff__drawings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 12rem;
+}
+
+.diff__drawings > .preview + .preview {
+  border-left: 1px solid var(--color-border);
+}
+
+.stage [data-diff] {
+  --diff: transparent;
+  filter: drop-shadow(0 0 3px var(--diff)) drop-shadow(0 0 3px var(--diff)) drop-shadow(0 0 1px var(--diff));
+}
+
+.stage [data-diff='added'] {
+  --diff: var(--color-success);
+}
+
+.stage [data-diff='removed'] {
+  --diff: var(--color-danger);
+}
+
+.stage [data-diff='changed'] {
+  --diff: var(--color-warning);
+}
+
+.stage [data-diff].is-selected {
+  outline: 2px solid var(--color-select);
+  outline-offset: 4px;
+}
+
+.diff__changes {
+  max-height: 40%;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--step--1);
+}
+
+.diff__change {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.diff__change:hover,
+.diff__change[aria-pressed='true'] {
+  background: var(--color-surface-2);
+}
+
+.diff__badge {
+  flex: none;
+  min-width: 4.5em;
+  font-weight: 600;
+}
+
+.diff__change[data-type='added'] .diff__badge {
+  color: var(--color-success);
+}
+
+.diff__change[data-type='removed'] .diff__badge {
+  color: var(--color-danger);
+}
+
+.diff__change[data-type='changed'] .diff__badge {
+  color: var(--color-warning);
+}
