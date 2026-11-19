@@ -1,0 +1,180 @@
+/* Block: the Files pane, its tree and the context menu (URS-WS-001, WS-002). */
+.files__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-block: var(--space-1);
+}
+
+.files__body[data-drop],
+.tree__item[data-drop] {
+  outline: 2px dashed var(--color-focus);
+  outline-offset: -2px;
+}
+
+.files__empty {
+  padding: var(--space-3);
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding-inline-end: var(--space-2);
+  font-size: var(--step--1);
+  cursor: default;
+  user-select: none;
+}
+
+.tree__item:hover {
+  background: var(--color-surface-2);
+}
+
+.tree__item[aria-selected='true'] {
+  background: var(--color-accent-soft);
+}
+
+.tree__item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.tree__twisty,
+.tree__icon {
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+}
+
+.tree__twisty svg,
+.tree__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tree__twisty[data-open] svg {
+  transform: rotate(90deg);
+}
+
+.tree__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree__rename {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.tree__rename .input {
+  height: 24px;
+  padding-inline: var(--space-1);
+  border: 1px solid var(--color-focus);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.tree__why {
+  color: var(--color-danger);
+}
+
+.files__trash {
+  margin-block-start: var(--space-3);
+  padding-inline: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.files__trash ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+}
+
+.files__trashed {
+  font-size: var(--step--1);
+}
+
+.files__note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.btn[data-size='small'] {
+  height: 26px;
+  padding-inline: var(--space-2);
+}
+
+.menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 12rem;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+
+.menu__item--separated {
+  margin-block-start: var(--space-1);
+  padding-block-start: var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+
+.menu [role='menuitem'] {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--step--1);
+  text-align: start;
+}
+
+.menu [role='menuitem']:focus,
+.menu [role='menuitem'][aria-expanded='true'] {
+  background: var(--color-accent-soft);
+  outline: none;
+}
+
+.menu [role='menuitem']:disabled {
+  color: var(--color-text-muted);
+}
+
+.menu__hint {
+  color: var(--color-text-muted);
+}
+
+.preview-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  white-space: pre-wrap;
+}

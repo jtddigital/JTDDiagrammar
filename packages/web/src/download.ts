@@ -1,7 +1,8 @@
 export const fileName = (title?: string) =>
   (title ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'diagram';
 
-function save(blob: Blob, name: string): void {
+/** Save a blob under a file name. */
+export function downloadBlob(blob: Blob, name: string): void {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -10,10 +11,10 @@ function save(blob: Blob, name: string): void {
 }
 
 /** Save a type's text export, e.g. BPMN 2.0 XML (URS-PM-018). */
-export const downloadText = (text: string, mediaType: string, extension: string, title?: string) => save(new Blob([text], { type: mediaType }), `${fileName(title)}.${extension}`);
+export const downloadText = (text: string, mediaType: string, extension: string, title?: string) => downloadBlob(new Blob([text], { type: mediaType }), `${fileName(title)}.${extension}`);
 
 /** Save the exact SVG string the renderer produced (URS-WEB-003). */
-export const downloadSvg = (svg: string, title?: string) => save(new Blob([svg], { type: 'image/svg+xml' }), `${fileName(title)}.svg`);
+export const downloadSvg = (svg: string, title?: string) => downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), `${fileName(title)}.svg`);
 
 /** Rasterise the SVG in the browser at `scale`× and save it as PNG (URS-RN-007). */
 export async function downloadPng(svg: string, title?: string, scale = 2): Promise<void> {
@@ -27,5 +28,5 @@ export async function downloadPng(svg: string, title?: string, scale = 2): Promi
   canvas.height = Math.ceil(h! * scale);
   canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
-  if (blob) save(blob, `${fileName(title)}.png`);
+  if (blob) downloadBlob(blob, `${fileName(title)}.png`);
 }

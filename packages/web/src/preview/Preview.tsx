@@ -98,7 +98,7 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
   return (
     <section
       className="preview"
-      aria-label="Preview"
+      aria-label="Diagram"
       ref={host}
       onWheel={(e) => {
         const box = host.current!.getBoundingClientRect();

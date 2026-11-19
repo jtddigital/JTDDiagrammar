@@ -4,36 +4,40 @@ import { ChatPane } from './chat/ChatPane.tsx';
 import { downloadPng, downloadSvg, downloadText } from './download.ts';
 import { SourcePane } from './editor/SourcePane.tsx';
 import { locate, type Range } from './editor/locate.ts';
-import { openFile, saveFile, toEditorText, type DiagramFile } from './files.ts';
-import { restore, save, shareUrl } from './persist.ts';
+import { pickFiles } from './files.ts';
+import { shareUrl } from './persist.ts';
 import { pointerOf } from './pick.ts';
 import { elementAt, labelTarget, pointerAt, related, setAt, type Ref } from './preview/interact.ts';
 import { Preview } from './preview/Preview.tsx';
 import { examples, pretty, registry } from './registry.ts';
 import { useDiagram } from './useDiagram.ts';
-import { loadLayout, saveLayout, toggle, type Layout } from './workspace/layout.ts';
+import { FilesPane } from './workspace/FilesPane.tsx';
+import { loadLayout, saveLayout, toggle, type Layout, type PaneId } from './workspace/layout.ts';
 import { Panes } from './workspace/Panes.tsx';
 import { PANE_LABELS, Toolbar } from './workspace/Toolbar.tsx';
+import { useWorkspace } from './workspace/useWorkspace.ts';
+
+const kindLabel = { diagram: 'Diagram', markdown: 'Markdown', csv: 'CSV', text: 'Text' } as const;
 
 export function App() {
-  const [text, setText] = useState(() => pretty(examples[0]!.source));
-  const [file, setFile] = useState<DiagramFile>();
-  const [saved, setSaved] = useState<string>();
-  const [note, setNote] = useState<string>();
+  const ws = useWorkspace();
+  const { text, setText } = ws;
+  const kind = ws.kind.kind;
+  const diagram = kind === 'diagram';
   const [layout, setLayout] = useState<Layout>(loadLayout);
   const [reveal, setReveal] = useState<Range>();
   const [cursor, setCursor] = useState<number>();
   const [shared, setShared] = useState(false);
-  const d = useDiagram(text);
+  const d = useDiagram(text, diagram ? (ws.kind.format ?? 'json') : 'none');
   const errors = d.diagnostics.filter((x) => x.severity === 'error').length;
   // The render lags the editor by the debounce; never show or export a stale result as current.
   const pending = d.source !== text;
   const ready = !pending && d.current;
   const ir = ready ? d.ir : undefined;
 
-  useEffect(() => void restore().then((t) => t !== undefined && setText(t)), []);
-  useEffect(() => save(text), [text]);
   useEffect(() => saveLayout(layout), [layout]);
+  // A text file has nothing to preview: the pane steps aside while it is open (URS-WS-011).
+  const auto: PaneId[] = ws.open && kind === 'text' ? ['preview'] : [];
 
   const share = async () => {
     const url = await shareUrl(text);
@@ -43,32 +47,21 @@ export function App() {
     setTimeout(() => setShared(false), 2000);
   };
 
-  const open = async () => {
-    const r = await openFile().catch((e: unknown) => (setNote(e instanceof Error ? e.message : String(e)), undefined));
-    if (!r) return;
-    const t = toEditorText(r.file.name, r.content, registry);
-    if (t.text === undefined) return setNote(`Could not read ${r.file.name}: ${t.diagnostics[0]?.message ?? 'not a diagram'}`);
-    setText(t.text);
-    setFile(r.file);
-    setSaved(t.converted ? undefined : t.text);
-    setNote(t.converted ? `Converted ${r.file.name} to JSON` : undefined);
+  const importFiles = async () => {
+    const files = await pickFiles();
+    if (files.length) await ws.importFiles(files, ws.open?.parent ?? null);
   };
 
-  const saveTo = async (saveAs: boolean) => {
-    const f = await saveFile(text, file, saveAs).catch((e: unknown) => (setNote(e instanceof Error ? e.message : String(e)), undefined));
-    if (!f) return;
-    setFile(f);
-    setSaved(text);
-    setNote(`Saved ${f.name}`);
-  };
-
+  // Ctrl+S saves a version into the workspace; Ctrl+O imports; Ctrl+Shift+S downloads the open file (URS-WS-005).
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
       if (k !== 's' && k !== 'o') return;
       e.preventDefault();
-      void (k === 's' ? saveTo(e.shiftKey) : open());
+      if (k === 'o') void importFiles();
+      else if (e.shiftKey) void (ws.open && ws.exportNode(ws.open.id));
+      else void ws.save();
     };
     window.addEventListener('keydown', keys);
     return () => window.removeEventListener('keydown', keys);
@@ -91,20 +84,21 @@ export function App() {
   return (
     <div className="workspace">
       <Toolbar
-        {...(file && { fileName: file.name })}
-        dirty={saved !== undefined ? saved !== text : file !== undefined}
-        onOpen={() => void open()}
-        onSave={(as) => void saveTo(as)}
-        onExample={(i) => (setText(pretty(examples[i]!.source)), setFile(undefined), setSaved(undefined), setNote(undefined))}
+        {...(ws.path && { fileName: ws.path })}
+        dirty={ws.dirty}
+        onImport={() => void importFiles()}
+        onSave={() => void ws.save()}
+        canSave={Boolean(ws.open)}
+        onExample={(i) => void ws.create(ws.open?.parent ?? null, 'file', `${examples[i]!.title}.json`, pretty(examples[i]!.source))}
         layout={layout}
         onToggle={(p) => setLayout((l) => toggle(l, p))}
-        status={pending ? { state: 'pending', text: 'Updating…' } : errors ? { state: 'error', text: `${errors} error${errors > 1 ? 's' : ''}` } : { state: 'ok', text: 'Valid' }}
+        status={!diagram ? { state: 'ok', text: ws.open ? kindLabel[kind] : 'No file' } : pending ? { state: 'pending', text: 'Updating…' } : errors ? { state: 'error', text: `${errors} error${errors > 1 ? 's' : ''}` } : { state: 'ok', text: 'Valid' }}
         shared={shared}
         onShare={() => void share()}
-        canExport={Boolean(ready)}
+        canExport={Boolean(diagram && ready)}
         onSvg={() => downloadSvg(d.svg!, d.title)}
         onPng={() => void downloadPng(d.svg!, d.title)}
-        formats={ready ? exportFormats(d.value, registry) : []}
+        formats={diagram && ready ? exportFormats(d.value, registry) : []}
         onExport={(format) => {
           const out = exportDiagram(d.value, format, registry);
           if (out.text !== undefined) downloadText(out.text, out.mediaType!, out.extension!, d.title);
@@ -113,7 +107,9 @@ export function App() {
       <Panes
         layout={layout}
         onLayout={setLayout}
+        auto={auto}
         panes={{
+          files: { label: PANE_LABELS.files, body: <FilesPane ws={ws} /> },
           ai: { label: PANE_LABELS.ai, body: <ChatPane text={text} {...(!pending && d.value !== undefined && { value: d.value })} onSource={setText} /> },
           source: {
             label: PANE_LABELS.source,
@@ -126,16 +122,24 @@ export function App() {
                 onReveal={setReveal}
                 onCursor={setCursor}
                 {...(reveal && { reveal })}
-                {...(note && { note })}
+                {...(ws.path && { title: ws.path })}
+                language={diagram && (ws.kind.format ?? 'json') === 'json' ? 'json' : 'plain'}
               />
             ),
           },
-          diagram: {
-            label: PANE_LABELS.diagram,
-            body: (
+          preview: {
+            label: PANE_LABELS.preview,
+            body: !diagram ? (
               <div className="frame">
                 <div className="pane__header cluster">
-                  <span className="pane__title">Diagram</span>
+                  <span className="pane__title">Preview</span>
+                </div>
+                <pre className="preview-text">{text}</pre>
+              </div>
+            ) : (
+              <div className="frame">
+                <div className="pane__header cluster">
+                  <span className="pane__title">Preview</span>
                   <span className="text-muted text-small push-right">Click to find in source · double-click a label to edit</span>
                 </div>
                 <Preview

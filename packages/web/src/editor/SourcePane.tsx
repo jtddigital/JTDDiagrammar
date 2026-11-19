@@ -12,17 +12,21 @@ interface Props {
   onCursor(offset: number): void;
   /** A line about the last file operation, e.g. a conversion. */
   note?: string;
+  /** The open file's path, as the pane's title. */
+  title?: string;
+  language?: 'json' | 'plain';
 }
 
 /** JSON editor and its problems; clicking a problem jumps to it (URS-WEB-018). */
-export function SourcePane({ text, onText, diagnostics, source, reveal, onReveal, onCursor, note }: Props) {
+export function SourcePane({ text, onText, diagnostics, source, reveal, onReveal, onCursor, note, title, language }: Props) {
   return (
     <div className="frame">
       <div className="pane__header cluster">
         <span className="pane__title">Source</span>
+        {title && <span className="text-muted text-small" title={title}>{title}</span>}
         {note && <span className="text-muted text-small push-right">{note}</span>}
       </div>
-      <Editor value={text} onChange={onText} diagnostics={diagnostics} source={source} onCursor={onCursor} {...(reveal && { reveal })} />
+      <Editor value={text} onChange={onText} diagnostics={diagnostics} source={source} onCursor={onCursor} {...(reveal && { reveal })} {...(language && { language })} />
       <ul className="diagnostics" aria-label="Diagnostics">
         {diagnostics.map((x, i) => (
           <li key={i}>

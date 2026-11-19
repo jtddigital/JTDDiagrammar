@@ -9,23 +9,25 @@ interface Props {
   layout: Layout;
   onLayout(l: Layout): void;
   panes: Record<PaneId, { label: string; body: ReactNode }>;
+  /** Panes hidden for now by what is open (URS-WS-011). */
+  auto?: readonly PaneId[];
 }
 
 /**
  * Visible panes side by side with draggable gutters (URS-WEB-015). Gutters are ARIA window
  * splitters: arrow keys move them too.
  */
-export function Panes({ layout, onLayout, panes }: Props) {
+export function Panes({ layout, onLayout, panes, auto = [] }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const ids = visible(layout);
-  const s = shares(layout);
+  const ids = visible(layout, auto);
+  const s = shares(layout, auto);
   const min = () => Math.min(0.45, MIN_PX / (host.current?.clientWidth || 1200));
 
   const drag = (a: PaneId, b: PaneId) => (e: React.PointerEvent<HTMLDivElement>) => {
     const width = host.current!.clientWidth;
     const start = { x: e.clientX, layout };
     e.currentTarget.setPointerCapture(e.pointerId);
-    const move = (m: PointerEvent) => onLayout(resize(start.layout, a, b, (m.clientX - start.x) / width, min()));
+    const move = (m: PointerEvent) => onLayout(resize(start.layout, a, b, (m.clientX - start.x) / width, min(), auto));
     const up = () => {
       e.currentTarget.removeEventListener('pointermove', move);
       e.currentTarget.removeEventListener('pointerup', up);
@@ -55,7 +57,7 @@ export function Panes({ layout, onLayout, panes }: Props) {
                 const d = e.key === 'ArrowLeft' ? -STEP : e.key === 'ArrowRight' ? STEP : 0;
                 if (!d) return;
                 e.preventDefault();
-                onLayout(resize(layout, ids[i - 1]!, id, d, min()));
+                onLayout(resize(layout, ids[i - 1]!, id, d, min(), auto));
               }}
             />
           )}
