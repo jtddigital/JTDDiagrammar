@@ -11,6 +11,7 @@ import { elementAt, labelTarget, pointerAt, related, setAt, type Ref } from './p
 import { Preview } from './preview/Preview.tsx';
 import { examples, pretty, registry } from './registry.ts';
 import { useDiagram } from './useDiagram.ts';
+import { CsvTable } from './viewers/CsvTable.tsx';
 import { FilesPane } from './workspace/FilesPane.tsx';
 import { loadLayout, saveLayout, toggle, type Layout, type PaneId } from './workspace/layout.ts';
 import { Panes } from './workspace/Panes.tsx';
@@ -134,7 +135,7 @@ export function App() {
                 <div className="pane__header cluster">
                   <span className="pane__title">Preview</span>
                 </div>
-                <pre className="preview-text">{text}</pre>
+                {kind === 'csv' && ws.open ? <CsvTable text={text} name={ws.open.name} /> : <pre className="preview-text">{text}</pre>}
               </div>
             ) : (
               <div className="frame">

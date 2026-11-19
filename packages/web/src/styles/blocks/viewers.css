@@ -1,0 +1,90 @@
+/* Block: viewers for files that are not diagrams: CSV tables (URS-WS-012). */
+.csv {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.csv__summary {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.csv__problems {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.csv__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+.csv__scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.csv__table {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--step--1);
+}
+
+.csv__table th,
+.csv__table td {
+  height: 28px;
+  padding: 0 var(--space-2);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+
+.csv__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface-2);
+  font-weight: 600;
+}
+
+.csv__table th button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.csv__table [data-number] {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.csv__table .csv__num {
+  position: sticky;
+  left: 0;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.csv__table th.csv__num {
+  z-index: 2;
+}
