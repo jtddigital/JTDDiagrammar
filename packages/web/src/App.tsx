@@ -12,6 +12,7 @@ import { Preview } from './preview/Preview.tsx';
 import { examples, pretty, registry } from './registry.ts';
 import { useDiagram } from './useDiagram.ts';
 import { CsvTable } from './viewers/CsvTable.tsx';
+import { Markdown, type MarkdownLinks } from './viewers/Markdown.tsx';
 import { FilesPane } from './workspace/FilesPane.tsx';
 import { loadLayout, saveLayout, toggle, type Layout, type PaneId } from './workspace/layout.ts';
 import { Panes } from './workspace/Panes.tsx';
@@ -47,6 +48,24 @@ export function App() {
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   };
+
+  // Relative links and images in Markdown reach workspace files (URS-WS-041); rebuilt when the tree or the open file changes.
+  const { resolve, openFile, read, setNote } = ws;
+  const links = useMemo<MarkdownLinks>(
+    () => ({
+      open: (path) => {
+        const f = resolve(path);
+        if (f) void openFile(f.id);
+        else setNote(`No file ${path} in the workspace`);
+        return Boolean(f);
+      },
+      read: async (path) => {
+        const f = resolve(path);
+        return f ? read(f.id) : undefined;
+      },
+    }),
+    [resolve, openFile, read, setNote],
+  );
 
   const importFiles = async () => {
     const files = await pickFiles();
@@ -135,7 +154,7 @@ export function App() {
                 <div className="pane__header cluster">
                   <span className="pane__title">Preview</span>
                 </div>
-                {kind === 'csv' && ws.open ? <CsvTable text={text} name={ws.open.name} /> : <pre className="preview-text">{text}</pre>}
+                {kind === 'csv' && ws.open ? <CsvTable text={text} name={ws.open.name} /> : kind === 'markdown' ? <Markdown text={text} links={links} /> : <pre className="preview-text">{text}</pre>}
               </div>
             ) : (
               <div className="frame">

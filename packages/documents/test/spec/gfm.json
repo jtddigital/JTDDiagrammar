@@ -1,0 +1,205 @@
+[
+{
+"example": 198,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| foo | bar |\n| --- | --- |\n| baz | bim |\n",
+"html": "<table>\n<thead>\n<tr>\n<th>foo</th>\n<th>bar</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>baz</td>\n<td>bim</td>\n</tr>\n</tbody>\n</table>\n"
+},
+{
+"example": 199,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | defghi |\n:-: | -----------:\nbar | baz\n",
+"html": "<table>\n<thead>\n<tr>\n<th align=\"center\">abc</th>\n<th align=\"right\">defghi</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td align=\"center\">bar</td>\n<td align=\"right\">baz</td>\n</tr>\n</tbody>\n</table>\n"
+},
+{
+"example": 200,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| f\\|oo  |\n| ------ |\n| b `\\|` az |\n| b **\\|** im |\n",
+"html": "<table>\n<thead>\n<tr>\n<th>f|oo</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>b <code>|</code> az</td>\n</tr>\n<tr>\n<td>b <strong>|</strong> im</td>\n</tr>\n</tbody>\n</table>\n"
+},
+{
+"example": 201,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | def |\n| --- | --- |\n| bar | baz |\n> bar\n",
+"html": "<table>\n<thead>\n<tr>\n<th>abc</th>\n<th>def</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>bar</td>\n<td>baz</td>\n</tr>\n</tbody>\n</table>\n<blockquote>\n<p>bar</p>\n</blockquote>\n"
+},
+{
+"example": 202,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | def |\n| --- | --- |\n| bar | baz |\nbar\n\nbar\n",
+"html": "<table>\n<thead>\n<tr>\n<th>abc</th>\n<th>def</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>bar</td>\n<td>baz</td>\n</tr>\n<tr>\n<td>bar</td>\n<td></td>\n</tr>\n</tbody>\n</table>\n<p>bar</p>\n"
+},
+{
+"example": 203,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | def |\n| --- |\n| bar |\n",
+"html": "<p>| abc | def |\n| --- |\n| bar |</p>\n"
+},
+{
+"example": 204,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | def |\n| --- | --- |\n| bar |\n| bar | baz | boo |\n",
+"html": "<table>\n<thead>\n<tr>\n<th>abc</th>\n<th>def</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>bar</td>\n<td></td>\n</tr>\n<tr>\n<td>bar</td>\n<td>baz</td>\n</tr>\n</tbody>\n</table>\n"
+},
+{
+"example": 205,
+"section": "Tables (extension)",
+"extension": "table",
+"markdown": "| abc | def |\n| --- | --- |\n",
+"html": "<table>\n<thead>\n<tr>\n<th>abc</th>\n<th>def</th>\n</tr>\n</thead>\n</table>\n"
+},
+{
+"example": 279,
+"section": "Task list items (extension)",
+"extension": "disabled",
+"markdown": "- [ ] foo\n- [x] bar\n",
+"html": "<ul>\n<li><input disabled=\"\" type=\"checkbox\"> foo</li>\n<li><input checked=\"\" disabled=\"\" type=\"checkbox\"> bar</li>\n</ul>\n"
+},
+{
+"example": 280,
+"section": "Task list items (extension)",
+"extension": "disabled",
+"markdown": "- [x] foo\n  - [ ] bar\n  - [x] baz\n- [ ] bim\n",
+"html": "<ul>\n<li><input checked=\"\" disabled=\"\" type=\"checkbox\"> foo\n<ul>\n<li><input disabled=\"\" type=\"checkbox\"> bar</li>\n<li><input checked=\"\" disabled=\"\" type=\"checkbox\"> baz</li>\n</ul>\n</li>\n<li><input disabled=\"\" type=\"checkbox\"> bim</li>\n</ul>\n"
+},
+{
+"example": 491,
+"section": "Strikethrough (extension)",
+"extension": "strikethrough",
+"markdown": "~~Hi~~ Hello, world!\n",
+"html": "<p><del>Hi</del> Hello, world!</p>\n"
+},
+{
+"example": 492,
+"section": "Strikethrough (extension)",
+"extension": "strikethrough",
+"markdown": "This ~~has a\n\nnew paragraph~~.\n",
+"html": "<p>This ~~has a</p>\n<p>new paragraph~~.</p>\n"
+},
+{
+"example": 621,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "www.commonmark.org\n",
+"html": "<p><a href=\"http://www.commonmark.org\">www.commonmark.org</a></p>\n"
+},
+{
+"example": 622,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "Visit www.commonmark.org/help for more information.\n",
+"html": "<p>Visit <a href=\"http://www.commonmark.org/help\">www.commonmark.org/help</a> for more information.</p>\n"
+},
+{
+"example": 623,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "Visit www.commonmark.org.\n\nVisit www.commonmark.org/a.b.\n",
+"html": "<p>Visit <a href=\"http://www.commonmark.org\">www.commonmark.org</a>.</p>\n<p>Visit <a href=\"http://www.commonmark.org/a.b\">www.commonmark.org/a.b</a>.</p>\n"
+},
+{
+"example": 624,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "www.google.com/search?q=Markup+(business)\n\nwww.google.com/search?q=Markup+(business)))\n\n(www.google.com/search?q=Markup+(business))\n\n(www.google.com/search?q=Markup+(business)\n",
+"html": "<p><a href=\"http://www.google.com/search?q=Markup+(business)\">www.google.com/search?q=Markup+(business)</a></p>\n<p><a href=\"http://www.google.com/search?q=Markup+(business)\">www.google.com/search?q=Markup+(business)</a>))</p>\n<p>(<a href=\"http://www.google.com/search?q=Markup+(business)\">www.google.com/search?q=Markup+(business)</a>)</p>\n<p>(<a href=\"http://www.google.com/search?q=Markup+(business)\">www.google.com/search?q=Markup+(business)</a></p>\n"
+},
+{
+"example": 625,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "www.google.com/search?q=(business))+ok\n",
+"html": "<p><a href=\"http://www.google.com/search?q=(business))+ok\">www.google.com/search?q=(business))+ok</a></p>\n"
+},
+{
+"example": 626,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "www.google.com/search?q=commonmark&hl=en\n\nwww.google.com/search?q=commonmark&hl;\n",
+"html": "<p><a href=\"http://www.google.com/search?q=commonmark&amp;hl=en\">www.google.com/search?q=commonmark&amp;hl=en</a></p>\n<p><a href=\"http://www.google.com/search?q=commonmark\">www.google.com/search?q=commonmark</a>&amp;hl;</p>\n"
+},
+{
+"example": 627,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "www.commonmark.org/he<lp\n",
+"html": "<p><a href=\"http://www.commonmark.org/he\">www.commonmark.org/he</a>&lt;lp</p>\n"
+},
+{
+"example": 628,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "http://commonmark.org\n\n(Visit https://encrypted.google.com/search?q=Markup+(business))\n\nAnonymous FTP is available at ftp://foo.bar.baz.\n",
+"html": "<p><a href=\"http://commonmark.org\">http://commonmark.org</a></p>\n<p>(Visit <a href=\"https://encrypted.google.com/search?q=Markup+(business)\">https://encrypted.google.com/search?q=Markup+(business)</a>)</p>\n<p>Anonymous FTP is available at <a href=\"ftp://foo.bar.baz\">ftp://foo.bar.baz</a>.</p>\n"
+},
+{
+"example": 629,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "foo@bar.baz\n",
+"html": "<p><a href=\"mailto:foo@bar.baz\">foo@bar.baz</a></p>\n"
+},
+{
+"example": 630,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "hello@mail+xyz.example isn't valid, but hello+xyz@mail.example is.\n",
+"html": "<p>hello@mail+xyz.example isn't valid, but <a href=\"mailto:hello+xyz@mail.example\">hello+xyz@mail.example</a> is.</p>\n"
+},
+{
+"example": 631,
+"section": "Autolinks (extension)",
+"extension": "autolink",
+"markdown": "a.b-c_d@a.b\n\na.b-c_d@a.b.\n\na.b-c_d@a.b-\n\na.b-c_d@a.b_\n",
+"html": "<p><a href=\"mailto:a.b-c_d@a.b\">a.b-c_d@a.b</a></p>\n<p><a href=\"mailto:a.b-c_d@a.b\">a.b-c_d@a.b</a>.</p>\n<p>a.b-c_d@a.b-</p>\n<p>a.b-c_d@a.b_</p>\n"
+},
+{
+"example": 652,
+"section": "Disallowed Raw HTML (extension)",
+"extension": "tagfilter",
+"markdown": "<strong> <title> <style> <em>\n\n<blockquote>\n  <xmp> is disallowed.  <XMP> is also disallowed.\n</blockquote>\n",
+"html": "<p><strong> &lt;title> &lt;style> <em></p>\n<blockquote>\n  &lt;xmp> is disallowed.  &lt;XMP> is also disallowed.\n</blockquote>\n"
+},
+{
+"example": 1,
+"section": "Footnotes",
+"extension": "footnotes",
+"markdown": "This is some text![^1]. Other text.[^footnote].\n\nHere's a thing[^other-note].\n\nAnd another thing[^codeblock-note].\n\nThis doesn't have a referent[^nope].\n\n\n[^other-note]:       no code block here (spaces are stripped away)\n\n[^codeblock-note]:\n        this is now a code block (8 spaces indentation)\n\n[^1]: Some *bolded* footnote definition.\n\nHi!\n\n[^footnote]:\n    > Blockquotes can be in a footnote.\n\n        as well as code blocks\n\n    or, naturally, simple paragraphs.\n\n[^unused]: This is unused.\n",
+"html": "<p>This is some text!<sup class=\"footnote-ref\"><a href=\"#fn-1\" id=\"fnref-1\" data-footnote-ref>1</a></sup>. Other text.<sup class=\"footnote-ref\"><a href=\"#fn-footnote\" id=\"fnref-footnote\" data-footnote-ref>2</a></sup>.</p>\n<p>Here's a thing<sup class=\"footnote-ref\"><a href=\"#fn-other-note\" id=\"fnref-other-note\" data-footnote-ref>3</a></sup>.</p>\n<p>And another thing<sup class=\"footnote-ref\"><a href=\"#fn-codeblock-note\" id=\"fnref-codeblock-note\" data-footnote-ref>4</a></sup>.</p>\n<p>This doesn't have a referent[^nope].</p>\n<p>Hi!</p>\n<section class=\"footnotes\" data-footnotes>\n<ol>\n<li id=\"fn-1\">\n<p>Some <em>bolded</em> footnote definition. <a href=\"#fnref-1\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"1\" aria-label=\"Back to reference 1\">↩</a></p>\n</li>\n<li id=\"fn-footnote\">\n<blockquote>\n<p>Blockquotes can be in a footnote.</p>\n</blockquote>\n<pre><code>as well as code blocks\n</code></pre>\n<p>or, naturally, simple paragraphs. <a href=\"#fnref-footnote\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"2\" aria-label=\"Back to reference 2\">↩</a></p>\n</li>\n<li id=\"fn-other-note\">\n<p>no code block here (spaces are stripped away) <a href=\"#fnref-other-note\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"3\" aria-label=\"Back to reference 3\">↩</a></p>\n</li>\n<li id=\"fn-codeblock-note\">\n<pre><code>this is now a code block (8 spaces indentation)\n</code></pre>\n<a href=\"#fnref-codeblock-note\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"4\" aria-label=\"Back to reference 4\">↩</a>\n</li>\n</ol>\n</section>\n"
+},
+{
+"example": 2,
+"section": "When a footnote is used multiple times, we insert multiple backrefs.",
+"extension": "footnotes",
+"markdown": "This is some text. It has a footnote[^a-footnote].\n\nThis footnote is referenced[^a-footnote] multiple times, in lots of different places.[^a-footnote]\n\n[^a-footnote]: This footnote definition should have three backrefs.\n",
+"html": "<p>This is some text. It has a footnote<sup class=\"footnote-ref\"><a href=\"#fn-a-footnote\" id=\"fnref-a-footnote\" data-footnote-ref>1</a></sup>.</p>\n<p>This footnote is referenced<sup class=\"footnote-ref\"><a href=\"#fn-a-footnote\" id=\"fnref-a-footnote-2\" data-footnote-ref>1</a></sup> multiple times, in lots of different places.<sup class=\"footnote-ref\"><a href=\"#fn-a-footnote\" id=\"fnref-a-footnote-3\" data-footnote-ref>1</a></sup></p>\n<section class=\"footnotes\" data-footnotes>\n<ol>\n<li id=\"fn-a-footnote\">\n<p>This footnote definition should have three backrefs. <a href=\"#fnref-a-footnote\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"1\" aria-label=\"Back to reference 1\">↩</a> <a href=\"#fnref-a-footnote-2\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"1-2\" aria-label=\"Back to reference 1-2\">↩<sup class=\"footnote-ref\">2</sup></a> <a href=\"#fnref-a-footnote-3\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"1-3\" aria-label=\"Back to reference 1-3\">↩<sup class=\"footnote-ref\">3</sup></a></p>\n</li>\n</ol>\n</section>\n"
+},
+{
+"example": 3,
+"section": "Footnote reference labels are href escaped",
+"extension": "footnotes",
+"markdown": "Hello[^\"><script>alert(1)</script>]\n\n[^\"><script>alert(1)</script>]: pwned\n",
+"html": "<p>Hello<sup class=\"footnote-ref\"><a href=\"#fn-%22%3E%3Cscript%3Ealert(1)%3C/script%3E\" id=\"fnref-%22%3E%3Cscript%3Ealert(1)%3C/script%3E\" data-footnote-ref>1</a></sup></p>\n<section class=\"footnotes\" data-footnotes>\n<ol>\n<li id=\"fn-%22%3E%3Cscript%3Ealert(1)%3C/script%3E\">\n<p>pwned <a href=\"#fnref-%22%3E%3Cscript%3Ealert(1)%3C/script%3E\" class=\"footnote-backref\" data-footnote-backref data-footnote-backref-idx=\"1\" aria-label=\"Back to reference 1\">↩</a></p>\n</li>\n</ol>\n</section>\n"
+},
+{
+"example": 4,
+"section": "Interop",
+"extension": "footnotes",
+"markdown": "~~www.google.com~~\n\n~~http://google.com~~\n",
+"html": "<p><del><a href=\"http://www.google.com\">www.google.com</a></del></p>\n<p><del><a href=\"http://google.com\">http://google.com</a></del></p>\n"
+},
+{
+"example": 5,
+"section": "Interop",
+"extension": "footnotes",
+"markdown": "| a | b |\n| --- | --- |\n| https://github.com www.github.com | http://pokemon.com |\n",
+"html": "<table>\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><a href=\"https://github.com\">https://github.com</a> <a href=\"http://www.github.com\">www.github.com</a></td>\n<td><a href=\"http://pokemon.com\">http://pokemon.com</a></td>\n</tr>\n</tbody>\n</table>\n"
+}
+]

@@ -40,6 +40,10 @@ export interface Workspace {
   emptyTrash(): Promise<void>;
   importFiles(files: readonly File[], parent: string | null): Promise<void>;
   exportNode(id: string | null): Promise<void>;
+  /** A path relative to the open file's folder (`..` allowed), as a live file, if there is one (URS-WS-041). */
+  resolve(path: string): WsNode | undefined;
+  /** The current text of a file: its draft, else its latest version. */
+  read(id: string): Promise<string | undefined>;
 }
 
 /**
@@ -181,8 +185,20 @@ export function useWorkspace(): Workspace {
     return id;
   };
 
+  const resolve = (path: string): WsNode | undefined => {
+    const parts = path.startsWith('/') ? [] : pathOf(nodes, open?.parent ?? '').split('/').filter(Boolean);
+    for (const seg of path.split('/')) {
+      if (seg === '..') parts.pop();
+      else if (seg && seg !== '.') parts.push(seg);
+    }
+    const target = parts.join('/');
+    return nodes.find((n) => n.kind === 'file' && !inTrash(nodes, n.id) && pathOf(nodes, n.id) === target);
+  };
+
   return {
     ready,
+    resolve,
+    read: async (id) => (id === openId ? text : ((await store.current?.draft(id)) ?? (await store.current?.content(id)))),
     nodes,
     ...(open && { open, path: pathOf(nodes, open.id) }),
     kind,
