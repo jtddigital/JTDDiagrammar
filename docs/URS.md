@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.75 (draft) |
+| Version | 0.76 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -197,7 +197,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-012 | S | AI jobs show staged progress in the conversation and can be stopped. | E2E test. | T | Verified |
 | URS-WEB-013 | S | Edit from the AI pane: a natural-language message applied to the current source (URS-AI-013). | E2E test. | T | Verified |
 | URS-WEB-014 | S | Hovering a node shows its provenance quote (URS-AI-014). | E2E test. | T | Verified |
-| URS-WEB-015 | S | Workspace of panes (Files, AI, Source, Preview; Compare when a comparison is open, URS-WS-001, WS-031), each resizable (drag or keyboard) and hideable, at least one always shown; the layout is remembered. Styling follows CUBE CSS over design tokens, in light and dark themes, with text meeting WCAG 2.2 AA contrast. | Unit and E2E tests; contrast checked for every token pair. | T | Verified |
+| URS-WEB-015 | S | Workspace of panes (Files, AI, Source, Preview; Compare when a comparison is open, URS-WS-001, WS-031), each resizable (drag or keyboard), hideable and dockable (URS-WEB-024), at least one always shown; the layout is remembered. Styling follows CUBE CSS over design tokens, in light and dark themes, with text meeting WCAG 2.2 AA contrast. | Unit and E2E tests; contrast checked for every token pair. | T | Verified |
 | URS-WEB-016 | S | The AI pane is a conversation: messages in, replies out, attachments, a choice between editing the current diagram and creating a new one, kept across reloads, with a new-chat action. | E2E test with a mock API. | T | Verified |
 | URS-WEB-017 | S | Step back: every AI change keeps the source from before it, and any of them can be restored from the conversation. Stepping back is itself a change that can be stepped back. | Unit and E2E tests. | T | Verified |
 | URS-WEB-018 | S | Clicking a listed problem selects its location in the editor. | E2E test. | T | Verified |
@@ -206,6 +206,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-021 | C | Colour picker in the source editor: a swatch shows each hex colour value (`"#rgb"`, `"#rrggbb"`); clicking it opens the browser's colour picker, and the picked colour replaces the value in place (written `#rrggbb`) and updates the preview. | Swatches only on hex colours; picking rewrites the value, also while the picker stays open across redraws; end to end in Chromium. | T | Verified |
 | URS-WEB-022 | S | The toolbar shows the running version (`dev` outside a release). When a newer release is out it offers **Update to vX.Y.Z** (URS-NF-015), or says it is available and why this copy cannot update itself. While updating it says so, reloads once the new version answers, and shows a failure with the installer's last lines. `GET /v1/version` reports the version, the latest release (checked with the installer's repository, API host and token, reused for 10 minutes; not checked outside a release), and whether this copy can update. | Version, update offer, refusal reasons and failure shown; waits through the restart. | T | Verified |
 | URS-WEB-023 | S | The toolbar offers an export button for each format the current diagram's type exports (e.g. BPMN), saving the same text as `POST /v1/export/{format}` (URS-API-019). | E2E: no BPMN button for a flowchart; the process example's BPMN download equals the API's. | T | Verified |
+| URS-WEB-024 | S | **Docking panes, like an IDE.** Drag a pane by its header onto another pane's edge: left or right docks it as a column of its own, top or bottom stacks it in that pane's column (e.g. Files above Source). The half it will take is shown while dragging; Escape cancels. Stacked panes have their own resizable gutter. From the keyboard, Alt+Shift+arrows move the focused pane (up or down in its column; left or right out to a column of its own, or into the next column). The arrangement is remembered; moving a pane keeps what it holds (the editor keeps its text and undo history). | Unit tests of docking, moving and resizing; E2E drag to stack and to dock beside, keyboard moves, row gutter, reload. | T | Verified |
 
 ### 3.9 AI Generation (AI)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -424,6 +425,7 @@ Updated with each change. `—` = not started.
 | API-012, API-015, API-016 | api/src/routes/generate.ts, errors.ts | api/test/generate.test.ts, web/e2e/generate.spec.ts | |
 | WEB-011..013, WEB-016, WEB-017 | web/src/chat/{api,progress,history,ChatPane,Composer,MessageView}.* | web/e2e/chat.spec.ts, web/test/{api,history}.test.ts | SSE parsed from the fetch stream; falls back to plain JSON replies. Checkpoints are the source text before each change. |
 | WEB-015 | web/src/workspace/{layout,Panes,Toolbar}.*, web/src/styles/** | web/test/layout.test.ts, web/e2e/workspace.spec.ts | Gutters are ARIA window splitters. Tokens in styles/tokens.css. |
+| WEB-024 | web/src/workspace/{layout.ts (`dock`, `nudge`, `resize` of columns and rows, `shown`, upgrade from the column-per-pane layout), Panes.tsx (absolute placement, header drag, drop hint, Alt+Shift+arrows)}, styles/blocks/panes.css | web/test/layout.test.ts, web/e2e/workspace.spec.ts (stack by dragging, reload, row gutter, keyboard moves, dock beside, editor text kept) | Panes are placed absolutely in one container, so docking reorders them without remounting their contents. |
 | WEB-018, WEB-019 | web/src/editor/SourcePane.tsx, web/src/files.ts, web/src/workspace/useWorkspace.ts (import) | web/test/files.test.ts, web/e2e/workspace.spec.ts, web/e2e/files.spec.ts (import with YAML conversion) | Converted files are saved as new JSON, never over the YAML or XML. |
 | WEB-020 | web/src/preview/{interact.ts,Preview.tsx}, web/src/editor/Editor.tsx (cursor) | web/test/interact.test.ts, web/e2e/preview.spec.ts | Label found by value in the element's source object, so each type's own property name works. |
 | WEB-005 | web/src/editor/complete.ts | web/test/complete.test.ts, web/e2e/preview.spec.ts | Driven by the registered schema of the document's `type` (WEB-010). |
@@ -471,6 +473,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.76 | 2026-11-20 | Owner request: panes dock like an IDE, stacked in columns by dragging their headers (WEB-024, new; WEB-015 updated). |
 | 0.75 | 2026-11-20 | Owner feedback: History is a toggle on the Files pane that follows the open file (WS-021); Examples sit in the Source pane and make a file only when saved (WEB-007); clicking an element scrolls its source to the top (WEB-009); more table-of-contents markers and `<details>` over blocks (WS-041, WS-042); embedded workspace files (WS-044, new); the context menu closes on any outside click (WS-002). |
 | 0.74 | 2026-11-19 | Diagram comparison built (WS-035): both versions drawn side by side with changes marked, pan and zoom together, changes listed in words. |
 | 0.73 | 2026-11-19 | Diff engine and Compare pane built: text, Markdown and CSV comparisons of any two files or versions (WS-030..034); the context menu is complete (WS-002). |

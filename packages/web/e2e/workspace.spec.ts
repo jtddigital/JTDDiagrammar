@@ -47,6 +47,55 @@ test('resizes panes by dragging or with the keyboard (URS-WEB-015)', async ({ pa
   expect(await width()).toBeGreaterThanOrEqual(239);
 });
 
+test('docks a pane by dragging its header: stacked in a column or beside another (URS-WEB-024)', async ({ page }) => {
+  await open(page);
+  const box = async (name: string) => (await pane(page, name).boundingBox())!;
+  const dragTo = async (name: string, target: string, fx: number, fy: number) => {
+    const from = (await pane(page, name).locator('.pane__title').boundingBox())!;
+    const to = await box(target);
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width * fx, to.y + to.height * fy, { steps: 8 });
+    await expect(page.locator('.dock-hint')).toBeVisible();
+    await page.mouse.up();
+    await expect(page.locator('.dock-hint')).toHaveCount(0);
+  };
+
+  // Files below Source: one column, Source on top.
+  await dragTo('Files', 'Source', 0.5, 0.9);
+  let [files, source] = [await box('Files'), await box('Source')];
+  expect(Math.abs(files.x - source.x)).toBeLessThan(2);
+  expect(files.y).toBeGreaterThan(source.y + source.height - 2);
+  // Remembered across reloads.
+  await page.reload();
+  [files, source] = [await box('Files'), await box('Source')];
+  expect(Math.abs(files.x - source.x)).toBeLessThan(2);
+
+  // The gutter between them resizes their heights.
+  const gutter = page.getByRole('separator', { name: 'Resize Source and Files' });
+  await expect(gutter).toHaveAttribute('aria-orientation', 'horizontal');
+  const h0 = (await box('Source')).height;
+  await gutter.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  expect((await box('Source')).height).toBeGreaterThan(h0 + 20);
+
+  // Alt+Shift+arrows move the focused pane: Files above Source, then out to a column of its own.
+  await pane(page, 'Files').getByRole('button', { name: 'History', exact: true }).focus();
+  await page.keyboard.press('Alt+Shift+ArrowUp');
+  expect((await box('Files')).y).toBeLessThan((await box('Source')).y);
+  await page.keyboard.press('Alt+Shift+ArrowRight');
+  expect((await box('Files')).x).toBeGreaterThan((await box('Source')).x + 10);
+
+  // Dropping on the left edge docks beside: Preview left of AI.
+  await dragTo('Preview', 'AI', 0.05, 0.5);
+  const [preview, ai] = [await box('Preview'), await box('AI')];
+  expect(preview.x + preview.width).toBeLessThanOrEqual(ai.x + 2);
+  expect(Math.abs(preview.y - ai.y)).toBeLessThan(2);
+  // The editor kept its text through all the moves.
+  await expect(page.locator('.cm-content')).toContainText('"version"');
+});
+
 test('clicking a problem jumps to it in the source (URS-WEB-018)', async ({ page }) => {
   await open(page);
   await setSource(page, { version: '1', type: 'flowchart', nodes: [{ id: 'a', to: [{ node: 'b' }] }, { id: 'b', shape: 'star' }] });

@@ -6,12 +6,14 @@
 }
 
 .panes {
+  position: relative;
   flex: 1;
   min-height: 0;
-  display: flex;
 }
 
+/* Panes are placed by the layout (columns, stacked within a column, URS-WEB-024). */
 .pane {
+  position: absolute;
   min-width: 0;
   overflow: hidden;
   min-height: 0;
@@ -42,12 +44,25 @@
 }
 
 .gutter {
-  flex: 0 0 var(--gutter);
+  position: absolute;
+  z-index: 2;
   cursor: col-resize;
   background: var(--color-border);
-  position: relative;
   touch-action: none;
   transition: background var(--duration) var(--ease);
+}
+
+.gutter[data-kind='columns'] {
+  top: 0;
+  bottom: 0;
+  width: var(--gutter);
+  transform: translateX(-50%);
+}
+
+.gutter[data-kind='rows'] {
+  height: var(--gutter);
+  transform: translateY(-50%);
+  cursor: row-resize;
 }
 
 /* A wider hit area than the visible line. */
@@ -56,6 +71,42 @@
   position: absolute;
   z-index: 3;
   inset: 0 -5px;
+}
+
+.gutter[data-kind='rows']::after {
+  inset: -5px 0;
+}
+
+/* Docking: a pane is dragged by its header; the half it would take is shown. */
+.pane__header {
+  cursor: grab;
+}
+
+.pane__header :is(button, select, a) {
+  cursor: pointer;
+}
+
+.panes[data-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.panes[data-dragging] .pane__header {
+  cursor: grabbing;
+}
+
+.pane[data-moving] {
+  opacity: 0.6;
+}
+
+.dock-hint {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border: 2px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  transition: all var(--duration) var(--ease);
 }
 
 .gutter:hover,

@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LAYOUT, loadLayout, resize, saveLayout, shares, toggle, visible } from '../src/workspace/layout.ts';
+import { DEFAULT_LAYOUT, dock, loadLayout, nudge, resize, saveLayout, shown, toggle, visible, type Layout, type PaneId } from '../src/workspace/layout.ts';
 
 /** No comparison open: the Compare pane is hidden for now, as the app does. */
-const NONE = ['compare'] as const;
-const close = (a: Record<string, number>, b: Record<string, number>) => Object.keys(b).forEach((k) => expect(a[k]).toBeCloseTo(b[k]!));
+const NONE: PaneId[] = ['compare'];
+const close = (a: number, b: number) => expect(a).toBeCloseTo(b);
+const widths = (l: Layout, auto: readonly PaneId[] = NONE) => Object.fromEntries(shown(l, auto).map((c) => [c.panes.join('+'), c.width]));
+const columns = (l: Layout, auto: readonly PaneId[] = NONE) => shown(l, auto).map((c) => c.panes);
 
 describe('workspace layout (URS-WEB-015, URS-WS-011)', () => {
-  it('shares the width among visible panes', () => {
-    close(shares(DEFAULT_LAYOUT, NONE), { files: 0.16, ai: 0.24, source: 0.26, preview: 0.34 });
-    close(shares(toggle(DEFAULT_LAYOUT, 'ai'), NONE), { files: 0.16 / 0.76, source: 0.26 / 0.76, preview: 0.34 / 0.76 });
+  it('shares the width among visible columns', () => {
+    const w = widths(DEFAULT_LAYOUT);
+    close(w.files!, 0.16);
+    close(w.preview!, 0.34);
+    close(widths(toggle(DEFAULT_LAYOUT, 'ai', NONE)).files!, 0.16 / 0.76);
   });
 
   it('hides and shows panes, but never the last one', () => {
@@ -20,43 +24,91 @@ describe('workspace layout (URS-WEB-015, URS-WS-011)', () => {
 
   it('shows the Compare pane only while a comparison is open (URS-WS-031)', () => {
     expect(visible(DEFAULT_LAYOUT)).toEqual(['files', 'ai', 'source', 'preview', 'compare']);
-    close(shares(DEFAULT_LAYOUT), { compare: 0.5 / 1.5 });
-    // With nothing else on screen but a closed comparison, the last pane still stays.
-    const one = toggle(toggle(toggle(DEFAULT_LAYOUT, 'files', NONE), 'ai', NONE), 'source', NONE);
-    expect(toggle(one, 'preview', NONE)).toBe(one);
+    close(widths(DEFAULT_LAYOUT, []).compare!, 0.5 / 1.5);
   });
 
   it('hides a pane for now without touching the user’s own choice (URS-WS-011)', () => {
     expect(visible(DEFAULT_LAYOUT, ['preview', ...NONE])).toEqual(['files', 'ai', 'source']);
-    close(shares(DEFAULT_LAYOUT, ['preview', ...NONE]), { files: 0.16 / 0.66, ai: 0.24 / 0.66, source: 0.26 / 0.66 });
+    close(widths(DEFAULT_LAYOUT, ['preview', ...NONE]).ai!, 0.24 / 0.66);
     // When it would hide everything, it hides nothing.
-    const only = { ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source'] as const };
-    expect(visible({ ...only, hidden: [...only.hidden, 'compare'] }, ['preview'])).toEqual(['preview']);
-    // Resizing while a pane is hidden for now leaves its width alone.
-    const l = resize(DEFAULT_LAYOUT, 'ai', 'source', 0.1, 0.1, ['preview', ...NONE]);
-    expect(l.sizes[3]).toBe(0.34);
+    const only: Layout = { ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'compare'] };
+    expect(visible(only, ['preview'])).toEqual(['preview']);
   });
 
-  it('moves a gutter between two panes only, within the minimum', () => {
-    const l = resize(DEFAULT_LAYOUT, 'ai', 'source', 0.1, 0.15, NONE);
-    close(shares(l, NONE), { files: 0.16, ai: 0.34, source: 0.16, preview: 0.34 });
-    close(shares(resize(DEFAULT_LAYOUT, 'ai', 'source', 0.5, 0.15, NONE), NONE), { ai: 0.35, source: 0.15, preview: 0.34 });
-    close(shares(resize(toggle(DEFAULT_LAYOUT, 'source'), 'ai', 'preview', -0.1, 0.1, NONE), NONE), { ai: 0.24 / 0.74 - 0.1, preview: 0.34 / 0.74 + 0.1 });
+  it('moves a gutter between two columns only, within the minimum', () => {
+    const w = widths(resize(DEFAULT_LAYOUT, 'ai', 'source', 0.1, 0.15, NONE));
+    close(w.ai!, 0.34);
+    close(w.source!, 0.16);
+    close(w.preview!, 0.34);
+    close(widths(resize(DEFAULT_LAYOUT, 'ai', 'source', 0.5, 0.15, NONE)).source!, 0.15);
+  });
+});
+
+describe('docking panes (URS-WEB-024)', () => {
+  it('stacks a pane above or below another in its column, each taking half its height', () => {
+    const l = dock(DEFAULT_LAYOUT, 'files', 'source', 'bottom');
+    expect(columns(l)).toEqual([['ai'], ['source', 'files'], ['preview']]);
+    expect(shown(l, NONE)[1]!.heights).toEqual([0.5, 0.5]);
+    // Its old column is gone; the others share the width.
+    close(widths(l)['source+files']!, 0.26 / 0.84);
+    expect(columns(dock(l, 'ai', 'files', 'top'))).toEqual([['source', 'ai', 'files'], ['preview']]);
   });
 
-  it('remembers the layout and ignores damaged or older storage', () => {
-    const store = new Map<string, string>();
-    const s = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
-    const l = toggle(DEFAULT_LAYOUT, 'ai');
+  it('docks a pane beside another as a column of its own, halving that column', () => {
+    const l = dock(dock(DEFAULT_LAYOUT, 'files', 'source', 'bottom'), 'files', 'preview', 'right');
+    expect(columns(l)).toEqual([['ai'], ['source'], ['preview'], ['files']]);
+    close(widths(l).preview!, widths(l).files!);
+    expect(columns(dock(l, 'files', 'ai', 'left'))[0]).toEqual(['files']);
+    expect(dock(l, 'files', 'files', 'left')).toBe(l);
+  });
+
+  it('moves panes from the keyboard: up and down in a column, out to a column, into the next one', () => {
+    const stacked = dock(DEFAULT_LAYOUT, 'files', 'source', 'bottom');
+    expect(columns(nudge(stacked, 'files', 'top', NONE))).toEqual([['ai'], ['files', 'source'], ['preview']]);
+    expect(columns(nudge(stacked, 'files', 'right', NONE))).toEqual([['ai'], ['source'], ['files'], ['preview']]);
+    expect(columns(nudge(DEFAULT_LAYOUT, 'ai', 'right', NONE))).toEqual([['files'], ['source', 'ai'], ['preview']]);
+    // At an edge nothing moves.
+    expect(nudge(DEFAULT_LAYOUT, 'files', 'left', NONE)).toBe(DEFAULT_LAYOUT);
+    expect(nudge(DEFAULT_LAYOUT, 'files', 'top', NONE)).toBe(DEFAULT_LAYOUT);
+  });
+
+  it('resizes stacked panes within their column only', () => {
+    const l = resize(dock(DEFAULT_LAYOUT, 'files', 'source', 'bottom'), 'source', 'files', 0.2, 0.1, NONE, 'rows');
+    expect(shown(l, NONE)[1]!.heights.map((h) => Math.round(h * 100))).toEqual([70, 30]);
+    close(widths(l)['source+files']!, 0.26 / 0.84);
+    // A hidden pane in the column keeps its share for when it returns.
+    const hidden = toggle(l, 'files', NONE);
+    expect(shown(hidden, NONE)[1]!.heights).toEqual([1]);
+    expect(shown(toggle(hidden, 'files', NONE), NONE)[1]!.heights.map((h) => Math.round(h * 100))).toEqual([70, 30]);
+  });
+});
+
+describe('remembering the layout', () => {
+  const store = new Map<string, string>();
+  const s = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+
+  it('saves and loads it, ignoring damaged storage', () => {
+    const l = dock(toggle(DEFAULT_LAYOUT, 'ai'), 'files', 'source', 'top');
     saveLayout(l, s);
     expect(loadLayout(s)).toEqual(l);
-    // The three-pane layout of earlier releases falls back to the default.
-    for (const bad of ['{', '{"sizes":[1],"hidden":[]}', '{"sizes":[0.3,0.3,0.4],"hidden":[]}', '{"sizes":[1,1,1,1],"hidden":["files","ai","source","preview"]}', '{"sizes":[1,-1,1,1],"hidden":[]}']) {
+    for (const bad of ['{', '{"columns":[],"hidden":[]}', '{"sizes":[0.3,0.3,0.4],"hidden":[]}', JSON.stringify({ ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'preview'] }), JSON.stringify({ columns: DEFAULT_LAYOUT.columns.slice(1), hidden: [] })]) {
       store.set('jtd:layout', bad);
       expect(loadLayout(s)).toEqual(DEFAULT_LAYOUT);
     }
-    // A four-pane layout from before Compare keeps its widths and choices.
+  });
+
+  it('upgrades a layout from before columns, keeping widths and choices', () => {
     store.set('jtd:layout', '{"sizes":[0.1,0.2,0.3,0.4],"hidden":["ai"]}');
-    expect(loadLayout(s)).toEqual({ sizes: [0.1, 0.2, 0.3, 0.4, 0.5], hidden: ['ai'] });
+    const l = loadLayout(s);
+    expect(l.hidden).toEqual(['ai']);
+    expect(l.columns.map((c) => [c.panes, c.size])).toEqual([
+      [['files'], 0.1],
+      [['ai'], 0.2],
+      [['source'], 0.3],
+      [['preview'], 0.4],
+      [['compare'], 0.5],
+    ]);
+    store.set('jtd:layout', '{"sizes":[0.1,0.2,0.3,0.4,0.6],"hidden":[]}');
+    expect(loadLayout(s).columns[4]!.size).toBe(0.6);
   });
 });
