@@ -170,8 +170,7 @@ test('keeps every save: view an earlier version read-only and restore it as the 
     await page.keyboard.press('ControlOrMeta+s');
     await expect(item(page, 'Untitled.json')).not.toContainText('•');
   }
-  await item(page, 'Untitled.json').click({ button: 'right' });
-  await command(page, 'History').click();
+  await page.getByRole('button', { name: 'History', exact: true }).click();
   const history = page.getByRole('region', { name: 'History of Untitled.json' });
   // The first run's file, then three saves: newest first.
   await expect(versions).toHaveCount(4);
@@ -197,4 +196,40 @@ test('keeps every save: view an earlier version read-only and restore it as the 
   await command(page, 'Rename').click();
   await typeName(page, 'Flow.json');
   await expect(page.getByRole('region', { name: 'History of Flow.json' }).locator('.files__versions li')).toHaveCount(5);
+
+  // It follows the open file, and the toggle hides it.
+  await page.locator('.files__body').click({ button: 'right', position: { x: 20, y: 300 } });
+  await command(page, 'New text file').click();
+  await typeName(page, 'notes.txt');
+  await item(page, 'notes.txt').click();
+  await expect(page.getByRole('region', { name: 'History of notes.txt' }).locator('.files__versions li')).toHaveCount(1);
+  await item(page, 'Flow.json').click();
+  await expect(page.getByRole('region', { name: 'History of Flow.json' }).locator('.files__versions li')).toHaveCount(5);
+  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.locator('.files__history')).toHaveCount(0);
+});
+
+test('closes the context menu on a click anywhere outside it, in the Files pane too (URS-WS-002)', async ({ page }) => {
+  await open(page);
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await expect(menu(page)).toBeVisible();
+  await page.locator('.files__body').click({ position: { x: 20, y: 300 } });
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await page.getByRole('heading', { name: 'JTDDiagrammar' }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+});
+
+test('shows an example without making a file; Save makes it one (URS-WEB-007, WS-005)', async ({ page }) => {
+  await open(page);
+  const source = page.getByRole('region', { name: 'Source', exact: true });
+  await source.getByLabel('Example').selectOption({ index: 1 });
+  await expect(page.locator('.toolbar__file')).toContainText('(example, not saved yet)');
+  await expect(status(page)).toHaveText('Valid');
+  await expect(tree(page).getByRole('treeitem')).toHaveCount(1);
+  const name = (await page.locator('.toolbar__file').textContent())!.replace(/ \(example.*$/, '');
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(item(page, name)).toHaveAttribute('aria-selected', 'true');
+  await expect(tree(page).getByRole('treeitem')).toHaveCount(2);
+  await expect(page.locator('.toolbar__file')).toHaveText(name);
 });

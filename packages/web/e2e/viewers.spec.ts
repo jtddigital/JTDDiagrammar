@@ -89,3 +89,39 @@ test('renders Markdown with GFM, alerts, contents, math, code, diagrams and work
   await expect(page.locator('.toolbar__file')).toHaveText('data.csv');
   await expect(page.getByRole('table')).toBeVisible();
 });
+
+test('a collapsed <details> section hides everything up to </details>, code included; <!-- toc --> lists the headings (URS-WS-040, WS-042)', async ({ page }) => {
+  await open(page);
+  await importFile(page, 'notes.md', ['<!-- toc -->', '- [Old](#old)', '<!-- tocstop -->', '', '# Setup', '', '<details>', '<summary>Install steps</summary>', '', 'Run this:', '', '```sh', 'npm install', '```', '', '</details>', '', '## After'].join('\n'));
+  const view = page.locator('article.md');
+  const toc = view.getByRole('navigation', { name: 'Contents' });
+  await expect(toc.getByRole('link')).toHaveText(['Setup', 'After']);
+  // The generated list between the markers is replaced, not repeated.
+  await expect(view.getByRole('link', { name: 'Old' })).toHaveCount(0);
+  const code = view.locator('details pre');
+  await expect(code).toHaveCount(1);
+  await expect(code).toBeHidden();
+  await view.getByText('Install steps').click();
+  await expect(code).toBeVisible();
+  await expect(view.locator('details')).toContainText('Run this:');
+  await expect(view.getByRole('heading', { name: 'After' })).toBeVisible();
+});
+
+test('embeds workspace files in Markdown: a diagram drawn, a CSV as a table, Markdown and text (URS-WS-044)', async ({ page }) => {
+  await open(page);
+  const flow = JSON.stringify({ version: '1', type: 'flowchart', nodes: [{ id: 'a', label: 'Embedded start', to: [{ node: 'b' }] }, { id: 'b', label: 'Embedded end' }] });
+  await importFile(page, 'flow.json', flow);
+  await importFile(page, 'costs.csv', 'item,cost\nBolt,2\nNut,1\n');
+  await importFile(page, 'part.md', '## Part two\n\nFrom another file.\n');
+  await importFile(page, 'readme.txt', 'plain words');
+  await importFile(page, 'doc.md', ['# Report', '', '![[flow.json|The approval flow]]', '', '![Costs](costs.csv)', '', '![[part.md]]', '', '![[readme.txt]]', '', '![[missing.json]]'].join('\n'));
+  const view = page.locator('article.md').first();
+  await expect(view.locator('figure.md-diagram svg')).toContainText('Embedded end');
+  await expect(view.locator('figure.md-diagram figcaption')).toHaveText('The approval flow');
+  const table = view.getByRole('table');
+  await expect(table.getByRole('cell', { name: 'Bolt' })).toBeVisible();
+  await expect(table.locator('caption')).toHaveText('Costs · 2 rows');
+  await expect(view.getByRole('region', { name: 'part.md' }).getByRole('heading', { name: 'Part two' })).toBeVisible();
+  await expect(view.locator('.md-embed-text')).toContainText('plain words');
+  await expect(view.getByText('missing.json (no such file in the workspace)')).toBeVisible();
+});

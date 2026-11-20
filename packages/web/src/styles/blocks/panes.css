@@ -64,3 +64,17 @@
   box-shadow: 0 0 0 1.5px var(--color-accent);
   outline: none;
 }
+
+/* A file name in a pane header gives way to the controls beside it. */
+.pane__subtitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pane__header .select {
+  flex: none;
+  max-width: 9.5rem;
+}

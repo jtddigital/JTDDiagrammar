@@ -33,7 +33,8 @@ interface Row {
  * the second file to be chosen in the tree (URS-WS-032).
  */
 export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; onView(file: WsNode, v: Version): void; viewing?: Version | undefined; onCompare(c: Comparison): void }) {
-  const [historyOf, setHistoryOf] = useState<string>();
+  // History follows the open file while it is shown (URS-WS-021).
+  const [showHistory, setShowHistory] = useState(false);
   // The file waiting for a second one to compare with.
   const [picking, setPicking] = useState<string>();
   const pickingNode = ws.nodes.find((n) => n.id === picking);
@@ -130,8 +131,7 @@ export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; o
       items.push(
         ...(n.kind === 'file'
           ? [
-              { label: 'History', separator: true, onSelect: () => setHistoryOf(n.id) },
-              { label: 'Compare with…', onSelect: () => setPicking(n.id) },
+              { label: 'Compare with…', separator: true, onSelect: () => setPicking(n.id) },
               { label: 'Compare with saved', onSelect: () => void compareWithSaved(n.id) },
             ]
           : []),
@@ -192,7 +192,10 @@ export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; o
     <div className="frame files">
       <div className="pane__header cluster">
         <span className="pane__title">Files</span>
-        <button type="button" className="btn push-right" data-variant="ghost" data-size="small" aria-label="Workspace actions" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect().left, e.currentTarget.getBoundingClientRect().bottom, null)}>
+        <button type="button" className="btn push-right" data-variant="ghost" data-size="small" aria-pressed={showHistory} title="Show the open file's saved versions" onClick={() => setShowHistory((h) => !h)}>
+          History
+        </button>
+        <button type="button" className="btn" data-variant="ghost" data-size="small" aria-label="Workspace actions" onClick={(e) => openMenu(e.currentTarget.getBoundingClientRect().left, e.currentTarget.getBoundingClientRect().bottom, null)}>
           ⋯
         </button>
       </div>
@@ -311,9 +314,14 @@ export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; o
           </div>
         )}
       </div>
-      {historyOf && ws.nodes.some((n) => n.id === historyOf) && (
-        <History ws={ws} file={ws.nodes.find((n) => n.id === historyOf)!} onView={onView} viewing={viewing} onCompare={onCompare} onClose={() => setHistoryOf(undefined)} />
-      )}
+      {showHistory &&
+        (ws.open ? (
+          <History ws={ws} file={ws.open} onView={onView} viewing={viewing} onCompare={onCompare} onClose={() => setShowHistory(false)} />
+        ) : (
+          <section className="files__history" aria-label="History">
+            <p className="text-muted text-small">Open a file to see its saved versions.</p>
+          </section>
+        ))}
       {pickingNode && (
         <p className="files__note text-small" role="status">
           Choose a file to compare with {pickingNode.name}

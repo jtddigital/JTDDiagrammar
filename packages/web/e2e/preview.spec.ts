@@ -58,6 +58,25 @@ test('clicking a node or edge selects its source (URS-WEB-009)', async ({ page }
   await expect(page.locator('.cm-activeLine')).toContainText('{');
 });
 
+test('clicking an element scrolls its source to the top of the editor (URS-WEB-009)', async ({ page }) => {
+  await open(page);
+  const nodes = Array.from({ length: 40 }, (_, i) => ({ id: `n${i}`, label: `Step ${i}`, ...(i < 39 && { to: [{ node: `n${i + 1}` }] }) }));
+  await setSource(page, { version: '1', type: 'flowchart', direction: 'TB', nodes });
+  await expect(status(page)).toHaveText('Valid');
+  const scroller = page.locator('.cm-scroller');
+  await preview(page).locator('[id="n-n5"]').click();
+  // Further down: the element's first line goes to the top of the editor, so the element shows below it,
+  // not just its opening brace at the bottom edge.
+  await preview(page).locator('[id="n-n34"]').click();
+  const first = page.locator('.cm-line', { hasText: '"id": "n34"' });
+  const last = page.locator('.cm-line', { hasText: '"label": "Step 34"' });
+  await expect(first).toBeVisible();
+  const [s, f, l] = [(await scroller.boundingBox())!, (await first.boundingBox())!, (await last.boundingBox())!];
+  expect(f.y - s.y).toBeLessThan(3 * f.height);
+  expect(f.y).toBeGreaterThanOrEqual(s.y);
+  expect(l.y + l.height).toBeLessThanOrEqual(s.y + s.height);
+});
+
 test('autocompletes schema properties and values (URS-WEB-005)', async ({ page }) => {
   await open(page);
   await setSource(page, '{ "version": "1", "type": "flowchart", "direction": ');

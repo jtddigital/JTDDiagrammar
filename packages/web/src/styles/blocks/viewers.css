@@ -357,3 +357,28 @@
   color: var(--color-text-muted);
   font-style: italic;
 }
+
+/* Workspace files embedded in Markdown (URS-WS-044). */
+.md-caption {
+  caption-side: bottom;
+  margin-top: var(--space-1);
+  font-size: var(--step--1);
+  color: var(--color-text-muted);
+  text-align: start;
+}
+
+.md-embed {
+  margin-block: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.md-embed > .md {
+  padding: 0;
+  overflow: visible;
+}
+
+.md-embed-text {
+  margin: var(--space-3) 0;
+}

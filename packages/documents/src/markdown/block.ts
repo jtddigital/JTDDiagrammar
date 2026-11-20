@@ -221,8 +221,8 @@ export class BlockParser {
           return;
         }
         if (p.extras) {
-          // A table of contents where a paragraph is only [[toc]] or [TOC].
-          if (/^\s*(?:\[\[toc\]\]|\[toc\])\s*$/i.test(block.content)) {
+          // A table of contents where a paragraph is only [[toc]], [TOC], [[_TOC_]] (GitLab) or ${toc}.
+          if (/^\s*(?:\[\[_?toc_?\]\]|\[toc\]|\$\{toc\})\s*$/i.test(block.content)) {
             block.type = 'toc';
             block.content = '';
             return;
