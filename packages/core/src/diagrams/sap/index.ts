@@ -1,3 +1,4 @@
+import { sapEdit } from './edit.ts';
 import type { DiagramType } from '../../registry/diagram-type.ts';
 import { bpmnExport } from '../process/bpmn.ts';
 import { sapAi } from './ai.ts';
@@ -20,4 +21,5 @@ export const sap: DiagramType<Sap> = {
   examples,
   ai: sapAi,
   exports: { bpmn: bpmnExport(sapToProcess) },
+  edit: sapEdit,
 };

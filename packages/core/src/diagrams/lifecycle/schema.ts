@@ -8,7 +8,7 @@ const text = (description: string) => ({ type: 'string', description }) as const
 const texts = (description: string) => ({ type: 'array', items: { type: 'string' }, description }) as const;
 const flag = (description: string) => ({ type: 'boolean', description }) as const;
 const map = (description: string) => ({ type: 'object', additionalProperties: { type: 'string' }, description }) as const;
-const rules = { type: 'array', items: ref('Rule id.'), description: 'Rules (from the chart’s `rules`) this depends on; shown with its text.' } as const;
+const rules = { type: 'array', items: ref('Rule id.', 'rules'), description: 'Rules (from the chart’s `rules`) this depends on; shown with its text.' } as const;
 const quote = text('Supporting excerpt from the source material; shown as a tooltip.');
 const optionalId = { ...id, description: 'Optional; generated when absent.' };
 const main = flag('On the main path: drawn bold while other connections fade.');
@@ -17,7 +17,7 @@ const annotate = flag('Put the descriptive text in the annotation instead of on 
 
 /** A user action's fields; shared actions add their source states (URS-TYP-008, URS-TYP-009). */
 const action = {
-  state: ref('Target state id.'),
+  state: ref('Target state id.', 'states'),
   label: text('Action name.'),
   labels: edgeLabels,
   by: { type: 'string', enum: ['user', 'job'], default: 'user', description: '`job`: a scheduled job makes the change (timer icon).' },
@@ -30,7 +30,7 @@ const action = {
 
 /** A connection's routing and look, shared by `to` and `verdicts`. */
 const link = {
-  step: ref('Next step id.'),
+  step: ref('Next step id.', 'steps'),
   labels: edgeLabels,
   exitSide: { ...side, description: 'Side of this step the line leaves by.' },
   entrySide: { ...side, description: 'Side of the next step the line enters by.' },
@@ -54,8 +54,8 @@ const step = {
     },
     label: text('Defaults: the id; for a state change, the target state’s name.'),
     owner: text('Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`.'),
-    state: ref('State the record is in during this step. Optional for a state change (defaults to its target).'),
-    target: ref('For a state change: the state it moves the record to.'),
+    state: ref('State the record is in during this step. Optional for a state change (defaults to its target).', 'states'),
+    target: ref('For a state change: the state it moves the record to.', 'states'),
     fields: texts('Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label.'),
     rules,
     verdicts: {
@@ -129,7 +129,7 @@ export const lifecycleSchema = {
         type: 'object',
         additionalProperties: false,
         required: ['id', 'label', 'states'],
-        properties: { id, label: text('Stage name.'), states: { type: 'array', items: ref('State id.'), description: 'Adjacent states, in lifecycle order.' }, style },
+        properties: { id, label: text('Stage name.'), states: { type: 'array', items: ref('State id.', 'states'), description: 'Adjacent states, in lifecycle order.' }, style },
       },
     },
     states: {
@@ -202,8 +202,8 @@ export const lifecycleSchema = {
         required: ['state'],
         properties: {
           ...action,
-          from: { type: 'array', items: ref('State id.'), description: 'Source states. Default: every state that is not final or cancelled.' },
-          except: { type: 'array', items: ref('State id.'), description: 'States left out of the default.' },
+          from: { type: 'array', items: ref('State id.', 'states'), description: 'Source states. Default: every state that is not final or cancelled.' },
+          except: { type: 'array', items: ref('State id.', 'states'), description: 'States left out of the default.' },
           annotation,
           tags: tagsSchema,
         },
@@ -228,7 +228,7 @@ export const lifecycleSchema = {
             required: ['state'],
             description: 'What starts the workflow: a dashed arrow from the state in the actions band to the start step.',
             properties: {
-              state: ref('State it is started in.'),
+              state: ref('State it is started in.', 'states'),
               action: text('User action name; defaults by `by`.'),
               by: { type: 'string', enum: TRIGGERS, default: 'user', description: '`user` action, `entry` into the state, or a scheduled `job`.' },
             },

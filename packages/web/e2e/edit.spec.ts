@@ -73,13 +73,14 @@ test('the diagram toolbar adds, connects and deletes elements (URS-WEB-026)', as
   await expect(source(page)).not.toContainText('"id": "decision-1"');
   await expect(status(page)).toHaveText('1 error');
 
-  // A type without editing assets: Add and Connect are off; Details still works.
+  // Every type can add: an object lifecycle adds a state, drawn and selected.
   const examples = page.getByRole('region', { name: 'Source', exact: true }).getByLabel('Example');
   await examples.selectOption((await examples.locator('option', { hasText: /lifecycle/i }).first().getAttribute('value'))!);
   await expect(status(page)).toHaveText('Valid');
-  await expect(bar(page).getByLabel('Add')).toBeDisabled();
-  await expect(bar(page).getByRole('button', { name: 'Connect' })).toBeDisabled();
-  await expect(bar(page).getByRole('button', { name: 'Details' })).toBeEnabled();
+  await bar(page).getByLabel('Add').selectOption({ label: 'State' });
+  await expect(source(page)).toContainText('"label": "New state"');
+  await expect(preview(page)).toContainText('New state');
+  await expect(status(page)).toHaveText('Valid');
 });
 
 test('Escape leaves connect mode without changing anything (URS-WEB-026)', async ({ page }) => {
@@ -93,4 +94,78 @@ test('Escape leaves connect mode without changing anything (URS-WEB-026)', async
   await expect(bar(page).getByRole('button', { name: 'Connect' })).toHaveAttribute('aria-pressed', 'false');
   await preview(page).locator('[id="n-b"]').click();
   expect(await source(page).textContent()).toBe(before);
+});
+
+const lanes = {
+  version: '1',
+  type: 'flowchart',
+  lanes: [
+    { id: 'ops', label: 'Operations' },
+    { id: 'fin', label: 'Finance' },
+  ],
+  nodes: [
+    { id: 'a', label: 'Start', lane: 'ops', to: [{ node: 'b', label: 'then' }] },
+    { id: 'b', label: 'Pay', lane: 'fin' },
+  ],
+};
+
+test('details refuse a value that does not fit or would break the diagram, and say why (URS-WEB-025)', async ({ page }) => {
+  await open(page);
+  await setSource(page, lanes);
+  await expect(status(page)).toHaveText('Valid');
+  await preview(page).locator('[id="n-b"]').click();
+  await bar(page).getByRole('button', { name: 'Details' }).click();
+  const pane = details(page);
+  const style = pane.getByRole('group', { name: 'style' });
+  const before = await source(page).textContent();
+
+  // Does not fit the schema: the field keeps it, says why, and the source is untouched.
+  const fill = style.getByRole('textbox', { name: 'fill', exact: true });
+  await fill.fill('#zz0000');
+  await fill.press('Enter');
+  await expect(style.getByRole('alert')).toHaveText('Must be a hex colour, like #1d4ed8.');
+  await expect(fill).toHaveValue('#zz0000');
+  await expect(fill).toHaveAttribute('aria-invalid', 'true');
+  expect(await source(page).textContent()).toBe(before);
+  // Corrected, it is written and the warning goes.
+  await fill.fill('#dbeafe');
+  await fill.press('Enter');
+  await expect(source(page)).toContainText('"fill": "#dbeafe"');
+  await expect(style.getByRole('alert')).toHaveCount(0);
+
+  // Fits the schema but breaks the diagram: with lanes, every node needs one.
+  await pane.getByRole('combobox', { name: 'lane', exact: true }).selectOption('');
+  await expect(pane.getByRole('alert').first()).toContainText('Not changed: the diagram would then have this problem');
+  await expect(source(page)).toContainText('"lane": "fin"');
+  await expect(status(page)).toHaveText('Valid');
+});
+
+test('references are chosen from the elements they may point at (URS-WEB-027)', async ({ page }) => {
+  await open(page);
+  await setSource(page, lanes);
+  await expect(status(page)).toHaveText('Valid');
+  await preview(page).locator('[id="n-b"]').click();
+  await bar(page).getByRole('button', { name: 'Details' }).click();
+  const pane = details(page);
+  const lane = pane.getByRole('combobox', { name: 'lane', exact: true });
+  await expect(lane.locator('option')).toHaveText(['—', 'Operations (ops)', 'Finance (fin)']);
+  await expect(lane).toHaveValue('fin');
+  await lane.selectOption('ops');
+  await expect(source(page)).toContainText('"lane": "ops"');
+  // A connection's target is chosen from the nodes.
+  await preview(page).getByText('then', { exact: true }).click();
+  const target = pane.getByRole('combobox', { name: 'node', exact: true });
+  await expect(target.locator('option')).toHaveText(['—', 'Start (a)', 'Pay (b)']);
+  await expect(target).toHaveValue('b');
+});
+
+test('connects lifecycle states with a user action (URS-WEB-026)', async ({ page }) => {
+  await open(page);
+  await setSource(page, { version: '1', type: 'lifecycle', actionsLane: true, states: [{ id: 'draft', label: 'Draft' }, { id: 'done', label: 'Done', stateType: 'final' }] });
+  await expect(status(page)).toHaveText('Valid');
+  await bar(page).getByRole('button', { name: 'Connect' }).click();
+  await preview(page).locator('[id="n-state:draft"]').click();
+  await preview(page).locator('[id="n-state:done"]').click();
+  await expect(source(page)).toContainText('"state": "done"');
+  await expect(status(page)).toHaveText('Valid');
 });

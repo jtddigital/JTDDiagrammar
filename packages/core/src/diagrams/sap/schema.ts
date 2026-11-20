@@ -7,15 +7,16 @@ const text = (description: string) => ({ type: 'string', description }) as const
 const texts = (description: string) => ({ type: 'array', items: { type: 'string' }, description }) as const;
 const flag = (description: string) => ({ type: 'boolean', description }) as const;
 const code = { type: 'string', pattern: '^[A-Za-z0-9_][A-Za-z0-9_.-]*$', description: 'Status code, e.g. `REL` or `INIT`; unique across system and user statuses.' } as const;
-const codeRef = (description: string) => ({ ...code, description }) as const;
+/** A status code; references system statuses only, or either kind (URS-WEB-027). */
+const codeRef = (description: string, to = 'systemStatuses,userStatuses') => ({ ...code, description, $comment: `ref:${to}#code` }) as const;
 const notes = {
   annotation: text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart.'),
   tags: tagsSchema,
   quote: text('Supporting excerpt from the source material; shown as a tooltip.'),
   style,
 } as const;
-const ruleIds = (description: string) => ({ type: 'array', items: ref('Rule id.'), description }) as const;
-const txRefs = (description: string) => ({ type: 'array', items: ref('Business transaction id.'), description }) as const;
+const ruleIds = (description: string) => ({ type: 'array', items: ref('Rule id.', 'rules'), description }) as const;
+const txRefs = (description: string) => ({ type: 'array', items: ref('Business transaction id.', 'transactions'), description }) as const;
 const obj = (required: string[], properties: Record<string, unknown>, description?: string) => ({ type: 'object', additionalProperties: false, required, properties, ...(description && { description }) }) as const;
 
 const step = obj(['id'], {
@@ -66,7 +67,7 @@ export const sapSchema = {
         low: { type: 'integer', minimum: 1, maximum: 99, description: 'Lowest number the next status may have; default its own.' },
         high: { type: 'integer', minimum: 1, maximum: 99, description: 'Highest number the next status may have; default its own.' },
         initial: flag('Set when the object is created.'),
-        system: codeRef('System status it is used in, which places its column; default the previous numbered status’s.'),
+        system: codeRef('System status it is used in, which places its column; default the previous numbered status’s.', 'systemStatuses'),
         auth: text('Authorization key: who may set or delete it.'),
         control: {
           type: 'object',
@@ -81,7 +82,7 @@ export const sapSchema = {
     transactions: {
       type: 'array',
       description: 'Business transactions, e.g. Release or Complete technically.',
-      items: obj(['id'], { id, label: text('Defaults to the id.'), tcodes: texts('Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix.'), sets: { type: 'array', items: codeRef('System status code.'), description: 'System statuses it sets; labels the arrow into each.' }, ...notes }),
+      items: obj(['id'], { id, label: text('Defaults to the id.'), tcodes: texts('Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix.'), sets: { type: 'array', items: codeRef('System status code.', 'systemStatuses'), description: 'System statuses it sets; labels the arrow into each.' }, ...notes }),
     },
     workflows: {
       type: 'array',
@@ -104,7 +105,7 @@ export const sapSchema = {
       items: obj(['id', 'label', 'codes'], {
         id,
         label: text('Strategy name, e.g. "Z1 Requisitions over 10,000 EUR".'),
-        document: ref('Document it releases: a dashed arrow from the document starts it.'),
+        document: ref('Document it releases: a dashed arrow from the document starts it.', 'documents'),
         status: codeRef('Status the object is in while it runs, which places it; default the document’s.'),
         conditions: texts('Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate.'),
         rules: ruleIds('Rules (from `rules`) that are release conditions too; shown with them.'),
@@ -134,7 +135,7 @@ export const sapSchema = {
         label: text('Document, e.g. "Purchase requisition".'),
         kind: text('Document type, e.g. "NB"; shown under the label.'),
         status: codeRef('Status in which it is created: its column, and a dotted line from that status.'),
-        from: { type: 'array', items: ref('Document id.'), description: 'Preceding documents: an arrow from each.' },
+        from: { type: 'array', items: ref('Document id.', 'documents'), description: 'Preceding documents: an arrow from each.' },
         ...notes,
       }),
     },

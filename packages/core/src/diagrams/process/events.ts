@@ -80,7 +80,7 @@ export const eventsSchema = (on: string, onRequired = true) =>
           type: 'array',
           description: 'Subscribers: each names exactly one of `workflow`, `operation`, `handler` or `system`.',
           items: obj([], {
-            workflow: ref('Workflow it starts: a dashed arrow to its start.'),
+            workflow: ref('Workflow it starts: a dashed arrow to its start.', 'workflows'),
             operation: text('Operation it calls.'),
             handler: text('Handler that receives it, e.g. a BAdI or a script.'),
             system: text('External system it is sent to.'),

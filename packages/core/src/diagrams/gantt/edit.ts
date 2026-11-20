@@ -18,7 +18,7 @@ export const ganttEdit: EditAssets<Gantt> = {
     { label: 'Task', make: (id) => ({ at: '/tasks', append: true, value: { id, name: 'New task', duration: 2 } }) },
     { label: 'Milestone', make: (id) => ({ at: '/tasks', append: true, value: { id, name: 'New milestone', type: 'milestone' } }) },
   ],
-  connect: (m, from, to) => {
+  connect: (m, { id: from }, { id: to }) => {
     const b = find(m.tasks, to);
     if (from === to || !b || !find(m.tasks, from) || b.item.after?.some((a) => a.split(/\s/)[0] === from)) return undefined;
     return { at: `${b.at}/after`, append: true, value: from };

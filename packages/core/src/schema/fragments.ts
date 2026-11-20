@@ -4,7 +4,12 @@ export const SUPPORTED_MAJOR = 1;
 export const id = { type: 'string', pattern: '^[A-Za-z_][A-Za-z0-9_.-]*$', description: 'Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`.' } as const;
 
 /** An id that refers to another element. */
-export const ref = (what: string) => ({ ...id, description: what }) as const;
+/**
+ * A reference to another element's id. `to` names the collection whose items' ids it may take (`lanes`, `states`, …,
+ * at any depth); it is kept as `$comment: "ref:<to>"`, which validators ignore, so editors can offer the ids (URS-WEB-027).
+ * The full form is `ref:<collection>[,<collection>…][#<key>]`, the key defaulting to `id` (SAP statuses use `code`).
+ */
+export const ref = (what: string, to?: string) => ({ ...id, description: what, ...(to && { $comment: `ref:${to}` }) }) as const;
 
 export const direction = { type: 'string', enum: ['LR', 'TB'], default: 'LR', description: 'Flow direction: left to right (default) or top to bottom.' } as const;
 

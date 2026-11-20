@@ -100,9 +100,9 @@ Above the drawing, a toolbar edits the diagram directly; every change is written
 - **Add** a shape: a step, decision or start/end in a flowchart, a state, a person, a task or milestone. It gets a fresh id and is selected.
 - **Connect:** click it, then the element to connect from, then the one to connect to. Escape cancels.
 - **Delete** removes the selected element.
-- **Details** opens a pane, under the drawing, with every setting of the element you last clicked: its label, shape, lane, owner, colours, line style and the rest, each with a short explanation. Change a field and the diagram follows; clear it to go back to the default. Connections, lanes and phases have details too.
+- **Details** opens a pane, under the drawing, with every setting of the element you last clicked: its label, shape, lane, owner, colours, line style and the rest, each with a short explanation. Change a field and the diagram follows; clear it to go back to the default. Settings that point at other elements, such as a lane, a connection's target or a manager, are picked from a list. A value that doesn't fit (a colour that isn't one, a number out of range) or that would break the diagram (removing a lane every node needs) is not written: the field keeps it and says why, so you can fix it. Connections, lanes and phases have details too.
 
-Add and Connect work for flowcharts, state diagrams, org charts and Gantt charts; Details and Delete for every type.
+Every diagram type can add and connect: steps and decisions, states and transitions, people and their managers, tasks and dependencies, lifecycle states, workflow steps and user actions, SAP statuses and documents, process states and workflow nodes.
 
 ### Compare
 
