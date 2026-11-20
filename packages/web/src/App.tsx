@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatPane } from './chat/ChatPane.tsx';
 import type { Comparison } from './compare/comparison.ts';
 import { ComparePane } from './compare/ComparePane.tsx';
-import { downloadPng, downloadSvg, downloadText } from './download.ts';
+import { downloadBlob, downloadPng, downloadSvg, downloadText } from './download.ts';
+import { filePdf } from './export/filePdf.ts';
 import { ExamplePicker } from './editor/ExamplePicker.tsx';
 import { SourcePane } from './editor/SourcePane.tsx';
 import { locate, type Range } from './editor/locate.ts';
@@ -134,6 +135,12 @@ export function App() {
         canExport={Boolean(diagram && ready)}
         onSvg={() => downloadSvg(d.svg!, d.title)}
         onPng={() => void downloadPng(d.svg!, d.title)}
+        canPdf={Boolean(shownName) && (!diagram || Boolean(ready))}
+        onPdf={() => void (async () => {
+          const name = shownName!;
+          const bytes = await filePdf(name, text, links.read);
+          downloadBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }), `${name.replace(/\.[^.]+$/, '')}.pdf`);
+        })()}
         formats={diagram && ready ? exportFormats(d.value, registry) : []}
         onExport={(format) => {
           const out = exportDiagram(d.value, format, registry);

@@ -518,6 +518,9 @@ As built (WS-030..034): the engine is `diff/myers.ts`; before running it, items 
 
 As built (WS-035): `core/src/diff/ir.ts` matches nodes, containers, lanes, phases and their groups by id, and links by their ends (the n-th link from A to B) since generated link ids count positions. It compares every field but `id`, `src`, `quote` and `order`, plus the diagram-wide ones (title, direction, legend, title block, timeline). It returns the changes in words and a mark per SVG element id (`n-…`, `e-…`, URS-RN-005) for each side. `DiagramDiff` renders both versions with the existing renderer; `Preview` sets `data-diff` from the marks, takes a held pan and zoom so the two move together, and reports its fit so both show at the smaller scale.
 
+### 14.6a Excel and PDF (URS-WS-045, WS-046)
+`documents/src/xlsx/write.ts` writes SpreadsheetML parts into the existing `.zip` writer: inline strings, numbers as numbers, five cell styles (header, thousands, percent). `documents/src/pdf/` holds a PDF writer (`write.ts`: pages, the standard 14 fonts in WinAnsiEncoding, colours, `ExtGState` opacity, URI links; y-down coordinates by one flip per page, text un-flipped by its text matrix), SVG path conversion (`path.ts`: all commands, quadratics raised, arcs split into cubics, end directions for arrowheads) and a typesetter (`flow.ts`: wrapped styled runs, code, rules, tables with repeated headers, scaled graphics, page numbers) whose text widths come from the caller. In the web app `export/svgPdf.ts` walks the renderer's SVG (groups, transforms, inherited presentation attributes, markers) onto a page, and `export/filePdf.ts` turns each kind of file into pages; Helvetica is metric-compatible with the Liberation Sans the layout measured with, so text sits where it did on screen.
+
 ### 14.7 Plan
 1. URS §3.13 and this section (this change).
 2. Workspace: store, tree, Files pane, context menu, import, `.zip` export, Ctrl+S, first run (WS-001..007).

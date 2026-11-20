@@ -1,6 +1,7 @@
 import { zip, type ZipEntry } from '@jtd/documents';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { downloadBlob } from '../download.ts';
+import { csvXlsx, filePdf } from '../export/filePdf.ts';
 import { toEditorText } from '../files.ts';
 import { decode, restore as restoreSession } from '../persist.ts';
 import { examples, pretty, registry } from '../registry.ts';
@@ -44,6 +45,8 @@ export interface Workspace {
   emptyTrash(): Promise<void>;
   importFiles(files: readonly File[], parent: string | null): Promise<void>;
   exportNode(id: string | null): Promise<void>;
+  /** Download a file as a PDF, or a CSV file as an Excel workbook (URS-WS-045, WS-046). */
+  exportAs(id: string, format: 'pdf' | 'xlsx'): Promise<void>;
   /** A path relative to the open file's folder (`..` allowed), as a live file, if there is one (URS-WS-041). */
   resolve(path: string): WsNode | undefined;
   /** The current text of a file: its draft, else its latest version. */
@@ -198,8 +201,9 @@ export function useWorkspace(): Workspace {
     return id;
   };
 
-  const resolve = (path: string): WsNode | undefined => {
-    const parts = path.startsWith('/') ? [] : pathOf(nodes, open?.parent ?? '').split('/').filter(Boolean);
+  /** A path relative to a folder (`..` allowed), as a live file, if there is one. */
+  const resolveIn = (folder: string | null, path: string): WsNode | undefined => {
+    const parts = path.startsWith('/') ? [] : pathOf(nodes, folder ?? '').split('/').filter(Boolean);
     for (const seg of path.split('/')) {
       if (seg === '..') parts.pop();
       else if (seg && seg !== '.') parts.push(seg);
@@ -207,6 +211,8 @@ export function useWorkspace(): Workspace {
     const target = parts.join('/');
     return nodes.find((n) => n.kind === 'file' && !inTrash(nodes, n.id) && pathOf(nodes, n.id) === target);
   };
+  const resolve = (path: string) => resolveIn(open?.parent ?? null, path);
+  const textOf = async (id: string) => (id === openId ? text : ((await store.current?.draft(id)) ?? (await store.current?.content(id))));
 
   return {
     ready,
@@ -339,6 +345,18 @@ export function useWorkspace(): Workspace {
           last = await create(parent, 'file', name, converted?.text ?? content);
         }
         if (last) setNote(`Imported ${files.length} file${files.length === 1 ? '' : 's'}`);
+      }),
+    exportAs: (id, format) =>
+      run(async () => {
+        const n = nodes.find((x) => x.id === id)!;
+        const content = (await textOf(id)) ?? '';
+        const base = n.name.replace(/\.[^.]+$/, '');
+        if (format === 'xlsx') return downloadBlob(new Blob([(await csvXlsx(n.name, content)) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${base}.xlsx`);
+        const bytes = await filePdf(n.name, content, async (path) => {
+          const f = resolveIn(n.parent, path);
+          return f ? textOf(f.id) : undefined;
+        });
+        downloadBlob(new Blob([bytes as BlobPart], { type: 'application/pdf' }), `${base}.pdf`);
       }),
     exportNode: (id) =>
       run(async () => {
