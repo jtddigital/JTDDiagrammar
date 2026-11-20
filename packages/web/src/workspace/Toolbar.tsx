@@ -2,7 +2,7 @@ import { Download, FolderOpen, Link, Save } from '../ui/icons.tsx';
 import { VersionBadge } from '../update/VersionBadge.tsx';
 import { PANES, type Layout, type PaneId } from './layout.ts';
 
-export const PANE_LABELS: Record<PaneId, string> = { files: 'Files', ai: 'AI', source: 'Source', preview: 'Preview', compare: 'Compare' };
+export const PANE_LABELS: Record<PaneId, string> = { files: 'Files', ai: 'AI', source: 'Source', preview: 'Preview', details: 'Details', compare: 'Compare' };
 /** Compare appears with a comparison and closes with it (URS-WS-031), so it has no switch. */
 const SWITCHED = PANES.filter((p) => p !== 'compare');
 

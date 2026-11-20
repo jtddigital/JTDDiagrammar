@@ -21,7 +21,7 @@ test('web app', async ({ page }) => {
 test('chat', async ({ page }) => {
   await page.route('/v1/ai', (r) => r.fulfill({ json: { enabled: true, model: 'claude-opus-5-5' } }));
   await open(page);
-  await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'Source' }).click();
+  await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'Source', exact: true }).click();
   await page.getByRole('button', { name: 'New diagram' }).click();
   await page.getByLabel('Message').fill(conversation[0]!.text);
   await page.waitForTimeout(300);
@@ -38,7 +38,7 @@ test('compare', async ({ page }) => {
     { name: 'plan-v2.md', mimeType: 'text/markdown', buffer: Buffer.from('# Launch plan\n\nShip the beta to every customer in June.\n\n- [x] Draft the release notes\n- [x] Review with support\n- [ ] Train the sales team\n\n| Step | Days |\n|:--|--:|\n| Build | 5 |\n| Test | 4 |\n') },
   ]);
   const panes = page.getByRole('group', { name: 'Panes' });
-  for (const p of ['AI', 'Preview']) await panes.getByRole('button', { name: p }).click();
+  for (const p of ['AI', 'Preview']) await panes.getByRole('button', { name: p, exact: true }).click();
   const tree = page.getByRole('tree', { name: 'Files' });
   await tree.getByRole('treeitem', { name: 'plan-v1.md' }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Compare with…' }).click();
@@ -77,7 +77,7 @@ test('compare diagrams', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+s');
   await setSource(page, after);
   const panes = page.getByRole('group', { name: 'Panes' });
-  for (const p of ['AI', 'Source', 'Preview']) await panes.getByRole('button', { name: p }).click();
+  for (const p of ['AI', 'Source', 'Preview']) await panes.getByRole('button', { name: p, exact: true }).click();
   await page.getByRole('tree', { name: 'Files' }).getByRole('treeitem', { name: 'Untitled.json' }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Compare with saved' }).click();
   await page.getByRole('list', { name: 'Changes' }).getByRole('button', { name: /Check receipts/ }).click();

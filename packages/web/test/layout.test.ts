@@ -31,7 +31,7 @@ describe('workspace layout (URS-WEB-015, URS-WS-011)', () => {
     expect(visible(DEFAULT_LAYOUT, ['preview', ...NONE])).toEqual(['files', 'ai', 'source']);
     close(widths(DEFAULT_LAYOUT, ['preview', ...NONE]).ai!, 0.24 / 0.66);
     // When it would hide everything, it hides nothing.
-    const only: Layout = { ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'compare'] };
+    const only: Layout = { ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'details', 'compare'] };
     expect(visible(only, ['preview'])).toEqual(['preview']);
   });
 
@@ -91,7 +91,7 @@ describe('remembering the layout', () => {
     const l = dock(toggle(DEFAULT_LAYOUT, 'ai'), 'files', 'source', 'top');
     saveLayout(l, s);
     expect(loadLayout(s)).toEqual(l);
-    for (const bad of ['{', '{"columns":[],"hidden":[]}', '{"sizes":[0.3,0.3,0.4],"hidden":[]}', JSON.stringify({ ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'preview'] }), JSON.stringify({ columns: DEFAULT_LAYOUT.columns.slice(1), hidden: [] })]) {
+    for (const bad of ['{', '{"columns":[],"hidden":[]}', '{"sizes":[0.3,0.3,0.4],"hidden":[]}', JSON.stringify({ ...DEFAULT_LAYOUT, hidden: ['files', 'ai', 'source', 'preview', 'details'] }), JSON.stringify({ columns: DEFAULT_LAYOUT.columns.slice(1), hidden: [] })]) {
       store.set('jtd:layout', bad);
       expect(loadLayout(s)).toEqual(DEFAULT_LAYOUT);
     }
@@ -100,15 +100,24 @@ describe('remembering the layout', () => {
   it('upgrades a layout from before columns, keeping widths and choices', () => {
     store.set('jtd:layout', '{"sizes":[0.1,0.2,0.3,0.4],"hidden":["ai"]}');
     const l = loadLayout(s);
-    expect(l.hidden).toEqual(['ai']);
+    expect(l.hidden).toEqual(['ai', 'details']);
     expect(l.columns.map((c) => [c.panes, c.size])).toEqual([
       [['files'], 0.1],
       [['ai'], 0.2],
       [['source'], 0.3],
-      [['preview'], 0.4],
+      [['preview', 'details'], 0.4],
       [['compare'], 0.5],
     ]);
     store.set('jtd:layout', '{"sizes":[0.1,0.2,0.3,0.4,0.6],"hidden":[]}');
     expect(loadLayout(s).columns[4]!.size).toBe(0.6);
+  });
+
+  it('adds the Details pane to a layout saved before it, under Preview and hidden (D-009)', () => {
+    const before = { columns: [{ panes: ['files', 'source'], size: 0.4, heights: [0.5, 0.5] }, { panes: ['ai'], size: 0.2, heights: [1] }, { panes: ['preview'], size: 0.4, heights: [1] }, { panes: ['compare'], size: 0.5, heights: [1] }], hidden: [] };
+    store.set('jtd:layout', JSON.stringify(before));
+    const l = loadLayout(s);
+    expect(l.columns.map((c) => c.panes)).toEqual([['files', 'source'], ['ai'], ['preview', 'details'], ['compare']]);
+    expect(l.hidden).toEqual(['details']);
+    expect(visible(l, NONE)).toEqual(['files', 'source', 'ai', 'preview']);
   });
 });

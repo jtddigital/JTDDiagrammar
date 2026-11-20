@@ -182,3 +182,24 @@ test('compares two versions of a diagram: both drawn, changes marked and listed,
   await pane.getByRole('button', { name: 'Text', exact: true }).click();
   await expect(pane.getByRole('table', { name: 'Text comparison' })).toContainText('Pay now');
 });
+
+test('marks changed cells in a Gantt chart’s table, such as a new owner (URS-WS-035)', async ({ page }) => {
+  await open(page);
+  const plan = { version: '1', type: 'gantt', start: '2026-03-02', columns: ['name', 'owner', 'duration'], tasks: [{ id: 'plan', name: 'Plan', owner: 'Ann', duration: 3 }, { id: 'build', name: 'Build', owner: 'Ann', duration: 5, after: ['plan'] }] };
+  await setSource(page, plan);
+  await page.keyboard.press('ControlOrMeta+s');
+  await expect(item(page, 'Untitled.json')).not.toContainText('•');
+  await setSource(page, { ...plan, tasks: [plan.tasks[0], { ...plan.tasks[1], owner: 'Bob' }] });
+  await item(page, 'Untitled.json').click({ button: 'right' });
+  await command(page, 'Compare with saved').click();
+  const pane = compare(page);
+  const before = pane.getByRole('region', { name: 'Before' });
+  const after = pane.getByRole('region', { name: 'After' });
+  await expect(before.locator('[id="t-build--owner"]')).toHaveAttribute('data-diff', 'changed');
+  await expect(after.locator('[id="t-build--owner"]')).toHaveAttribute('data-diff', 'changed');
+  await expect(after.locator('[id="t-build--owner"]')).toHaveText('Bob');
+  // Cells that did not change stay unmarked.
+  await expect(after.locator('[id="t-build--name"]')).not.toHaveAttribute('data-diff');
+  await expect(after.locator('[id="t-plan--owner"]')).not.toHaveAttribute('data-diff');
+  await expect(pane.getByRole('list', { name: 'Changes' })).toContainText('Owner “Ann” → “Bob”');
+});

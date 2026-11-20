@@ -93,6 +93,17 @@ The Source pane is the text of the open file. For a diagram it completes field n
 
 **CSV** files show as a table. Click a column header to sort the view; your file doesn't change. Any problems, such as a row with too many fields, are listed above the table. **Text** files have nothing to preview, so the Preview pane steps aside while one is open.
 
+### Editing from the diagram (experimental)
+
+Above the drawing, a toolbar edits the diagram directly; every change is written into the source, so you can see and undo it there.
+
+- **Add** a shape: a step, decision or start/end in a flowchart, a state, a person, a task or milestone. It gets a fresh id and is selected.
+- **Connect:** click it, then the element to connect from, then the one to connect to. Escape cancels.
+- **Delete** removes the selected element.
+- **Details** opens a pane, under the drawing, with every setting of the element you last clicked: its label, shape, lane, owner, colours, line style and the rest, each with a short explanation. Change a field and the diagram follows; clear it to go back to the default. Connections, lanes and phases have details too.
+
+Add and Connect work for flowcharts, state diagrams, org charts and Gantt charts; Details and Delete for every type.
+
 ### Compare
 
 Right-click a file and choose **Compare with saved** to see your unsaved changes, or **Compare with…** and then click the other file. In the Compare pane either side can be switched to any saved version, so you can compare any two files or any two versions. ⇄ swaps the sides and ✕ closes the pane.
@@ -100,7 +111,7 @@ Right-click a file and choose **Compare with saved** to see your unsaved changes
 - **Text** comparisons show side by side or as one list, with the changed words marked and unchanged stretches folded. Use ↑ and ↓ to step through the changes.
 - **Markdown** files can be compared as rendered pages, with added, removed and changed paragraphs, list items and table rows marked.
 - **CSV** files are compared as a table. Rows are matched by position or by a column you choose (such as an id); changed cells show the old and the new value.
-- **Diagrams** are drawn side by side, each laid out as it really is. Removed elements are marked red in the earlier version, added ones green in the later, and changed ones amber in both. Pan and zoom move both drawings together. Below them every change is listed in words, with the line in the source; click one to outline it in both drawings.
+- **Diagrams** are drawn side by side, each laid out as it really is. Removed elements are marked red in the earlier version, added ones green in the later, and changed ones amber in both; in a Gantt chart's table each changed cell is highlighted, such as a new owner. Pan and zoom move both drawings together. Below them every change is listed in words, with the line in the source; click one to outline it in both drawings.
 
 ![Comparing two versions of a flowchart](docs/img/web-compare-diagram.png)
 

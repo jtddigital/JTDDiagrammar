@@ -1,3 +1,4 @@
+import { flowchartEdit } from './edit.ts';
 import type { DiagramType } from '../../registry/diagram-type.ts';
 import { flowchartAi } from './ai.ts';
 import { examples } from './examples.ts';
@@ -16,4 +17,5 @@ export const flowchart: DiagramType<Flowchart> = {
   toIR: flowchartToIR,
   examples,
   ai: flowchartAi,
+  edit: flowchartEdit,
 };

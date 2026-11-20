@@ -24,6 +24,22 @@ export interface AiAssets<M = unknown> {
   examples: readonly { input: string; output: unknown }[];
 }
 
+/** A change to a source document: the value for the JSON Pointer `at`, or, with `append`, added to the array there (made if missing). */
+export interface SourceEdit {
+  at: string;
+  value: unknown;
+  append?: boolean;
+}
+
+/**
+ * Direct editing from the diagram (URS-EXT-012, URS-WEB-026): what the diagram toolbar can add, each made
+ * from a fresh id and the current model, and how one drawn node connects to another (by IR node ids).
+ */
+export interface EditAssets<M = unknown> {
+  add: readonly { label: string; make(id: string, model: M): SourceEdit; /** Whether it can be added now; always, when absent. */ available?(model: M): boolean }[];
+  connect?(model: M, from: string, to: string): SourceEdit | undefined;
+}
+
 /** A text export a type offers besides SVG, e.g. BPMN 2.0 XML (URS-PM-018). */
 export interface Exporter<M = unknown> {
   /** Button and menu label, e.g. "BPMN". */
@@ -51,4 +67,6 @@ export interface DiagramType<M = unknown> {
   ai: AiAssets<M>;
   /** Exports by format id, e.g. `bpmn`; run only on sources without errors. */
   exports?: Readonly<Record<string, Exporter<M>>>;
+  /** Optional: editing from the diagram toolbar (URS-EXT-012). */
+  edit?: EditAssets<M>;
 }

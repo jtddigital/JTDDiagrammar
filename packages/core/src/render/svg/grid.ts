@@ -9,7 +9,10 @@ import { dash, type Palette } from './theme.ts';
 export const CELL_PAD = 6;
 const MARKER = '#dc2626';
 
-/** Tables, time axes and shaded periods, behind everything else (URS-LY-015). */
+/** SVG id of a table cell: its node row and column (URS-WS-035). */
+export const cellId = (node: string, column: string) => `t-${node}--${column}`;
+
+/** Tables, time axes and shaded periods, behind everything else (URS-LY-015). Body cells carry ids, so comparisons can mark them. */
 export function grid(cells: readonly PlacedCell[] = [], rules: readonly PlacedRule[] = [], P: Palette): string {
   if (!cells.length && !rules.length) return '';
   const boxes = cells
@@ -27,7 +30,7 @@ export function grid(cells: readonly PlacedCell[] = [], rules: readonly PlacedRu
     .map((c) => {
       const [x, anchor] = c.align === 'right' ? [c.x + c.w - CELL_PAD, 'end'] : c.align === 'center' ? [c.x + c.w / 2, 'middle'] : [c.x + CELL_PAD + (c.indent ?? 0), 'start'];
       const y = c.y + (c.h - lineHeight(TABLE_FONT)) / 2 + baseline(TABLE_FONT);
-      return `<text x="${num(x)}" y="${num(y)}" text-anchor="${anchor}" font-size="${TABLE_FONT.size}"${c.bold ? ' font-weight="bold"' : ''}>${esc(c.text!)}</text>`;
+      return `<text${c.of ? ` id="${esc(cellId(c.of.node, c.of.column))}"` : ''} x="${num(x)}" y="${num(y)}" text-anchor="${anchor}" font-size="${TABLE_FONT.size}"${c.bold ? ' font-weight="bold"' : ''}>${esc(c.text!)}</text>`;
     });
   return `<g class="jtd-grid">${boxes.join('')}${lines.join('')}${texts.join('')}</g>`;
 }

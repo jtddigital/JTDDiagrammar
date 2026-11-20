@@ -257,6 +257,26 @@
   --diff: var(--color-warning);
 }
 
+/* Table cells (a Gantt chart's): a highlighter behind the text rather than a glow, which blurs small type. */
+.stage text[data-diff] {
+  filter: none;
+  paint-order: stroke;
+  stroke-width: 9px;
+  stroke-linejoin: round;
+}
+
+.stage text[data-diff='added'] {
+  stroke: var(--color-added-strong);
+}
+
+.stage text[data-diff='removed'] {
+  stroke: var(--color-removed-strong);
+}
+
+.stage text[data-diff='changed'] {
+  stroke: var(--color-changed-strong);
+}
+
 .stage [data-diff].is-selected {
   outline: 2px solid var(--color-select);
   outline-offset: 4px;

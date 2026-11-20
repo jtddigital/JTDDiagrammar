@@ -3,7 +3,7 @@
  * it with a share of the space, and which panes are hidden. Panes are docked by dragging (or Alt+Shift+arrows):
  * beside another pane as a new column, or above or below it in its column. Pure, so it is unit-tested.
  */
-export const PANES = ['files', 'ai', 'source', 'preview', 'compare'] as const;
+export const PANES = ['files', 'ai', 'source', 'preview', 'details', 'compare'] as const;
 export type PaneId = (typeof PANES)[number];
 export type Side = 'left' | 'right' | 'top' | 'bottom';
 
@@ -32,10 +32,11 @@ export const DEFAULT_LAYOUT: Layout = {
     { panes: ['files'], size: 0.16, heights: [1] },
     { panes: ['ai'], size: 0.24, heights: [1] },
     { panes: ['source'], size: 0.26, heights: [1] },
-    { panes: ['preview'], size: 0.34, heights: [1] },
+    // Details (direct editing, an experiment: D-009) sits under Preview, hidden until asked for.
+    { panes: ['preview', 'details'], size: 0.34, heights: [0.62, 0.38] },
     { panes: ['compare'], size: 0.5, heights: [1] },
   ],
-  hidden: [],
+  hidden: ['details'],
 };
 const KEY = 'jtd:layout';
 
@@ -155,14 +156,25 @@ export function resize(l: Layout, a: PaneId, b: PaneId, delta: number, min: numb
   return { ...l, columns: l.columns.map((x, k) => (k === c ? { ...x, heights } : x)) };
 }
 
+/** A layout saved before the Details pane: it joins Preview's column, hidden (D-009). */
+function withDetails(v: unknown): unknown {
+  const l = v as Layout;
+  if (!Array.isArray(l?.columns) || l.columns.some((c) => c?.panes?.includes('details'))) return v;
+  const at = l.columns.findIndex((c) => c?.panes?.includes('preview'));
+  if (at < 0) return v;
+  const columns = l.columns.map((c, i) => (i === at ? { ...c, panes: [...c.panes, 'details' as PaneId], heights: [...c.heights, c.heights.reduce((s, h) => s + h, 0) * 0.6] } : c));
+  return { ...l, columns, hidden: [...(Array.isArray(l.hidden) ? l.hidden : []), 'details'] };
+}
+
 /** A layout saved before columns existed: each pane its own column, widths kept; Compare added when missing. */
 function upgrade(v: unknown): unknown {
   const old = v as { sizes?: unknown; hidden?: unknown };
   if (!Array.isArray(old?.sizes) || !old.sizes.every((x) => typeof x === 'number' && x > 0)) return v;
   const sizes = [...(old.sizes as number[])];
-  if (sizes.length === PANES.length - 1) sizes.push(0.5);
-  if (sizes.length !== PANES.length) return v;
-  return { columns: PANES.map((p, i) => ({ panes: [p], size: sizes[i]!, heights: [1] })), hidden: old.hidden };
+  if (sizes.length === 4) sizes.push(0.5);
+  if (sizes.length !== 5) return v;
+  const panes: PaneId[] = ['files', 'ai', 'source', 'preview', 'compare'];
+  return withDetails({ columns: panes.map((p, i) => ({ panes: [p], size: sizes[i]!, heights: [1] })), hidden: old.hidden });
 }
 
 const valid = (v: unknown): v is Layout => {
@@ -175,7 +187,7 @@ const valid = (v: unknown): v is Layout => {
 
 export function loadLayout(storage: Pick<Storage, 'getItem'> = localStorage): Layout {
   try {
-    const v: unknown = upgrade(JSON.parse(storage.getItem(KEY) ?? 'null'));
+    const v: unknown = withDetails(upgrade(JSON.parse(storage.getItem(KEY) ?? 'null')));
     return valid(v) ? v : DEFAULT_LAYOUT;
   } catch {
     return DEFAULT_LAYOUT;
