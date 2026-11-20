@@ -100,9 +100,7 @@
   overflow-wrap: break-word;
 }
 
-.md > * {
-  max-width: 52rem;
-}
+/* Blocks take the whole width of the pane (URS-WS-041); narrow the pane for shorter lines. */
 
 .md > :first-child {
   margin-top: 0;

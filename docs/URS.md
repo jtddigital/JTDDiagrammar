@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.79 (draft) |
+| Version | 0.80 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -320,7 +320,7 @@ Terms are defined in the glossary (ARCHITECTURE §13.2) and used with that meani
 | URS-WS-034 | S | **CSV comparison** as a table: rows matched by a chosen key column or by position; changed cells highlighted, added and removed rows marked. | Unit tests; E2E. | T | Verified |
 | URS-WS-035 | S | **Diagram comparison** (D-008): the two versions' Graph IR compared by element id: added, removed and changed elements (label, text, style, lane, phase, links). In a table beside a timeline (Gantt), each changed cell is marked too, and its change listed by column (e.g. Owner “Ann” → “Bob”). Both versions are drawn side by side as they really lay out, removed elements red in the earlier, added green in the later, changed amber in both, with pan and zoom kept in step. A list of changes in plain words; choosing one highlights it in both drawings and its source. A Source tab shows the text comparison. | Unit tests of the IR comparison on fixtures for several types; E2E. | T | Verified |
 | URS-WS-040 | M | **Markdown engine.** A parser built in the repo (D-007) that passes every example of the CommonMark 0.31.2 spec and of the GitHub Flavored Markdown spec extensions (tables, task lists, strikethrough, extended autolinks, footnotes), checked in CI through an HTML serialiser used only for the tests. | Spec suites at 100%. | T | Verified |
-| URS-WS-041 | S | **Markdown viewer.** Markdown files render in Preview, with: GitHub alerts (`[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`); heading anchors and a table of contents (`[[toc]]`, `[TOC]`, `[[_TOC_]]`, `${toc}` or `<!-- toc -->`, the last replacing a list generated up to `<!-- tocstop -->`); front matter as a table; syntax highlighting of code in common languages; math (`$…$`, `$$…$$`) as MathML from a TeX subset; ```` ```jtd ```` fenced blocks drawn as diagrams; relative links and images that open or show workspace files. | Unit tests per feature; E2E rendering a sample with all of them. | T | Verified |
+| URS-WS-041 | S | **Markdown viewer.** Markdown files render in Preview, using the full width of the pane, with: GitHub alerts (`[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`); heading anchors and a table of contents (`[[toc]]`, `[TOC]`, `[[_TOC_]]`, `${toc}` or `<!-- toc -->`, the last replacing a list generated up to `<!-- tocstop -->`); front matter as a table; syntax highlighting of code in common languages; math (`$…$`, `$$…$$`) as MathML from a TeX subset; ```` ```jtd ```` fenced blocks drawn as diagrams; relative links and images that open or show workspace files. | Unit tests per feature; E2E rendering a sample with all of them. | T | Verified |
 | URS-WS-042 | M | **Safe rendering.** Markdown is rendered as elements, never as raw HTML strings; inline HTML is limited to `details`, `summary`, `kbd`, `sub`, `sup`, `br` and `mark`, and a `<details>` opened in one HTML block holds the blocks after it, code included, up to its `</details>`; links only `http:`, `https:`, `mailto:` or relative; nothing a document contains can run script. | Unit tests with hostile input. | T | Verified |
 | URS-WS-044 | S | **Embedded files.** A Markdown file shows a workspace file in place with `![[path]]` (or `![[path\|caption]]`) or an image link to it (`![caption](path)`): a diagram drawn (JSON, YAML or XML), a CSV as a table (up to 200 rows, all counted), Markdown rendered (embeds nest at most three deep) and other text as it is. A missing file says so. | E2E embedding each kind and a missing file. | T | Verified |
 | URS-WS-045 | S | **CSV to Excel.** A CSV (or TSV) file exports as an Excel workbook (`.xlsx`): one sheet named after the file, the header row bold and frozen, numbers stored as numbers (thousands separators and percentages kept as formats; codes with leading zeros and numbers beyond 15 digits kept as text), columns sized to their content. | Unit tests reading the workbook back (Python's zipfile and XML parser in CI; openpyxl checked by hand); E2E export. | T | Verified |
@@ -482,6 +482,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.80 | 2026-11-20 | Owner request: Markdown uses the full width of its pane (WS-041). |
 | 0.79 | 2026-11-20 | Owner request: an isolated experiment in direct editing, a details pane and a diagram toolbar (D-009, WEB-025, WEB-026, EXT-012); Gantt table cells marked in comparisons (WS-035). |
 | 0.78 | 2026-11-20 | Owner request: the README is for end users only; a new administrator guide (docs/ADMIN.md) and CONTRIBUTING.md take the rest; content reviewed and brought up to date (DOC-001). |
 | 0.77 | 2026-11-20 | Owner request: CSV files export as Excel workbooks (WS-045) and every file as a PDF (WS-046); both writers built in the repo (D-007). |
