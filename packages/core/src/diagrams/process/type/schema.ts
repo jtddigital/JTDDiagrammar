@@ -4,7 +4,7 @@ import { eventsSchema } from '../events.ts';
 import { NODE_KINDS } from '../model.ts';
 
 const text = (description: string) => ({ type: 'string', description }) as const;
-const refs = (description: string) => ({ type: 'array', items: ref('Id.'), description }) as const;
+const refs = (description: string, to: string) => ({ type: 'array', items: ref('Id.', to), description }) as const;
 const flag = (description: string) => ({ type: 'boolean', description }) as const;
 const obj = (required: string[], properties: Record<string, unknown>, description?: string) => ({ type: 'object', additionalProperties: false, required, properties, ...(description && { description }) }) as const;
 const values = { type: 'object', additionalProperties: { type: 'string' }, description: 'Tagged values of the stereotype, e.g. `{ "table": "wo" }`.' } as const;
@@ -49,7 +49,7 @@ export const processSchema = {
             ...element,
             initial: flag('The region starts here.'),
             final: flag('Entering it ends the region.'),
-            entry: refs('Operations called on entry.'),
+            entry: refs('Operations called on entry.', 'operations'),
           }),
         },
       }),
@@ -64,20 +64,20 @@ export const processSchema = {
       description: 'Moves between two states of one region.',
       items: obj(['from', 'to'], {
         id: { ...id, description: 'Optional; generated when absent.' },
-        from: ref('State id.'),
-        to: ref('State id, in the same region.'),
+        from: ref('State id.', 'states'),
+        to: ref('State id, in the same region.', 'states'),
         trigger: obj(
           [],
           {
-            call: ref('Operation it waits for.'),
-            signal: ref('Signal it waits for.'),
+            call: ref('Operation it waits for.', 'operations'),
+            signal: ref('Signal it waits for.', 'signals'),
             after: text('Time after entering the state, e.g. "30d".'),
             at: text('A point in time, e.g. "Year end".'),
-            when: ref('Rule whose becoming true fires it.'),
+            when: ref('Rule whose becoming true fires it.', 'rules'),
           },
           'Exactly one of `call`, `signal`, `after`, `at` or `when`. Without a trigger, the transition is reported.',
         ),
-        guard: ref('Rule that must hold.'),
+        guard: ref('Rule that must hold.', 'rules'),
         label: text('Arrow label; defaults to the trigger.'),
         quote: element.quote,
         style,
@@ -86,7 +86,7 @@ export const processSchema = {
     permissions: {
       type: 'array',
       description: 'What each state allows: state × operation [× role] → outcome. Forbidden wins over allowed across the active states.',
-      items: obj(['state', 'operation', 'outcome'], { state: ref('State id.'), operation: ref('Operation id.'), role: text('Role it applies to; any when absent.'), outcome: text('`allowed`, `forbidden`, or an outcome the profile adds (e.g. `warning` for `sap`).') }),
+      items: obj(['state', 'operation', 'outcome'], { state: ref('State id.', 'states'), operation: ref('Operation id.', 'operations'), role: text('Role it applies to; any when absent.'), outcome: text('`allowed`, `forbidden`, or an outcome the profile adds (e.g. `warning` for `sap`).') }),
     },
     ...eventsSchema('State whose entry publishes it; or leave it out when only workflows send it.', false),
     workflows: {
@@ -104,13 +104,13 @@ export const processSchema = {
             ...element,
             kind: { type: 'string', enum: NODE_KINDS, description: '`initial`, `final`, `task`, `decision` and `merge` (exclusive), `fork` and `join` (parallel), or `send` (publishes a signal).' },
             role: text('Who performs it; shown under the label.'),
-            calls: refs('Operations it calls.'),
-            signal: ref('For `send`: the signal it publishes.'),
+            calls: refs('Operations it calls.', 'operations'),
+            signal: ref('For `send`: the signal it publishes.', 'signals'),
           }),
         },
         flows: {
           type: 'array',
-          items: obj(['from', 'to'], { from: ref('Node id.'), to: ref('Node id.'), guard: text('Outcome or rule id it is taken on; the arrow label.') }),
+          items: obj(['from', 'to'], { from: ref('Node id.', 'nodes'), to: ref('Node id.', 'nodes'), guard: text('Outcome or rule id it is taken on; the arrow label.') }),
         },
       }),
     },

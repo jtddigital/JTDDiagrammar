@@ -1,3 +1,4 @@
+import { processEdit } from './edit.ts';
 import type { DiagramType } from '../../../registry/diagram-type.ts';
 import { bpmnExport } from '../bpmn.ts';
 import { processAi } from './ai.ts';
@@ -20,4 +21,5 @@ export const processType: DiagramType<ProcessDoc> = {
   examples,
   ai: processAi,
   exports: { bpmn: bpmnExport(processToModel) },
+  edit: processEdit,
 };

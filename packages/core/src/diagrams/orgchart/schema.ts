@@ -49,7 +49,7 @@ export const orgchartSchema = {
           id,
           name: { type: 'string', description: 'Shown first, on its own line.' },
           title: { type: 'string', description: 'Role, shown under the name.' },
-          manager: ref('Id of the person this person reports to; omit at the top.'),
+          manager: ref('Id of the person this person reports to; omit at the top.', 'people'),
           quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
           style,
           stack: { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." },

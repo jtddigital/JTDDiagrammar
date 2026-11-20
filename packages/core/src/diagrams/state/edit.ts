@@ -21,7 +21,7 @@ export const stateEdit: EditAssets<StateDiagram> = {
     { label: 'Final', make: (id) => ({ at: '/states', append: true, value: { id, kind: 'final' } }) },
     { label: 'Choice', make: (id) => ({ at: '/states', append: true, value: { id, kind: 'choice' } }) },
   ],
-  connect: (m, from, to) => {
+  connect: (m, { id: from }, { id: to }) => {
     const a = find(m.states, from);
     const b = find(m.states, to);
     if (!a || !b || a.state.kind === 'final' || b.state.kind === 'initial') return undefined;

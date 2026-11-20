@@ -23,7 +23,7 @@ export const flowchartEdit: EditAssets<Flowchart> = {
       value: { id, shape, ...(text && { label: text }), ...(m.lanes?.[0] && { lane: m.lanes[0].id }), ...(m.phases?.[0] && { phase: m.phases[0].id }) },
     }),
   })),
-  connect: (m, from, to) => {
+  connect: (m, { id: from }, { id: to }) => {
     const i = m.nodes.findIndex((n) => n.id === from);
     if (i < 0 || !m.nodes.some((n) => n.id === to)) return undefined;
     return { at: pointer('nodes', i, 'to'), append: true, value: { node: to } };

@@ -9,7 +9,7 @@ const link = {
   additionalProperties: false,
   required: ['node'],
   properties: {
-    node: ref('Target node id.'),
+    node: ref('Target node id.', 'nodes'),
     label: { type: 'string', description: 'Text on the connection, placed where it fits best.' },
     labels: edgeLabels,
     exitSide: { ...side, description: 'Side of this node the line leaves by (N, E, S, W); default follows the flow.' },
@@ -29,8 +29,8 @@ const node = {
     shape: { type: 'string', enum: FLOWCHART_SHAPES, default: 'process', description: 'Default `process`.' },
     label: { type: 'string', description: 'Defaults to the id. `\\n` breaks lines; long text wraps.' },
     owner: { type: 'string', description: 'Who does it; shown under a line below the label, and matched by `styleBy.owner`.' },
-    lane: ref('Lane id; required when the diagram has lanes.'),
-    phase: ref('Phase id; required when the diagram has phases.'),
+    lane: ref('Lane id; required when the diagram has lanes.', 'lanes'),
+    phase: ref('Phase id; required when the diagram has phases.', 'phases'),
     order: { type: 'integer', description: 'Hint: nodes in the same column and lane are placed in ascending order.' },
     quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
     style,
@@ -46,9 +46,9 @@ const note = {
   properties: {
     id: { ...id, description: 'Optional; generated when absent.' },
     text: { type: 'string', description: 'Note text; `\\n` breaks lines.' },
-    for: ref('Node the note is attached to (dotted line, no arrow).'),
-    lane: ref('Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s.'),
-    phase: ref('Phase, likewise.'),
+    for: ref('Node the note is attached to (dotted line, no arrow).', 'nodes'),
+    lane: ref('Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s.', 'lanes'),
+    phase: ref('Phase, likewise.', 'phases'),
     style,
   },
 } as const;

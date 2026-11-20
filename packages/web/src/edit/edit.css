@@ -96,3 +96,24 @@
   outline: 2px solid var(--color-focus);
   outline-offset: -1px;
 }
+
+/* A refused change: why, under the field (URS-WEB-025). */
+.details__refused {
+  font-size: var(--step--1);
+  color: var(--color-danger);
+}
+
+.details [aria-invalid='true'] {
+  border-color: var(--color-danger);
+  outline-color: var(--color-danger);
+}
+
+.details__refs {
+  --stack-gap: var(--space-1);
+}
+
+.details__check {
+  --cluster-gap: var(--space-2);
+  font-size: var(--step--1);
+  font-weight: normal;
+}

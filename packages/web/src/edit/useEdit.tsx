@@ -36,12 +36,23 @@ export interface Edit {
  */
 export function useEdit({ text, setText, value, ir, reveal, detailsShown, toggleDetails }: Options): Edit {
   const [picked, setPicked] = useState<Ref>();
-  const [from, setFrom] = useState<string>();
+  const [from, setFrom] = useState<{ id: string; src?: string }>();
+  // What was just added, by its place in the source: selected once the diagram draws it.
+  const [pending, setPending] = useState<string>();
   const [connecting, setConnecting] = useState(false);
   const [status, setStatus] = useState<string>();
   const type = typeof (value as { type?: unknown } | undefined)?.type === 'string' ? registry.type((value as { type: string }).type) : undefined;
   const edit = type?.edit;
   const addable = edit && value !== undefined ? edit.add.filter((a) => !a.available || a.available(value as never)) : [];
+
+  useEffect(() => {
+    if (pending === undefined || !ir) return;
+    const n = ir.nodes.find((x) => x.src === pending);
+    if (n) {
+      setPicked({ kind: 'n', id: n.id });
+      setPending(undefined);
+    }
+  }, [ir, pending]);
 
   // Escape leaves connect mode.
   useEffect(() => {
@@ -63,12 +74,14 @@ export function useEdit({ text, setText, value, ir, reveal, detailsShown, toggle
       setStatus('Connections join nodes: click a node');
       return true;
     }
+    const src = ir ? pointerOf(ir, kind, id) : undefined;
+    const end = { id, ...(src !== undefined && { src }) };
     if (!from) {
-      setFrom(id);
+      setFrom(end);
       setStatus('Now click the node to connect to');
       return true;
     }
-    const e = edit?.connect?.(value as never, from, id);
+    const e = edit?.connect?.(value as never, from, end);
     setConnecting(false);
     setFrom(undefined);
     if (!e) {
@@ -88,7 +101,8 @@ export function useEdit({ text, setText, value, ir, reveal, detailsShown, toggle
     const id = freshId(value, a.label);
     const out = apply(text, value, a.make(id, value as never));
     setText(out.text);
-    setPicked({ kind: 'n', id });
+    setPicked(undefined);
+    setPending(out.at);
     reveal(out.at, out.text);
   };
 

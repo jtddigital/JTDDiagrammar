@@ -1,8 +1,8 @@
-import type { GraphIR } from '@jtd/core';
-import { useState } from 'react';
+import { compile, parseJson, type GraphIR } from '@jtd/core';
+import { useMemo, useState } from 'react';
 import { kinds, type Ref } from '../preview/interact.ts';
 import { registry } from '../registry.ts';
-import { fields, schemaAt, type Field, type Schema } from './schema.ts';
+import { fields, problem, schemaAt, targets, type Field, type Schema } from './schema.ts';
 import { setAt, valueAt } from './source.ts';
 
 const KIND_NAMES: Record<string, string> = { n: 'Node', e: 'Connection', c: 'Group', l: 'Lane', p: 'Phase', lg: 'Lane group', pg: 'Phase group' };
@@ -16,9 +16,25 @@ interface Props {
   onText(text: string): void;
 }
 
+/** What every field needs: the schema root, the parsed source for references, and a guarded write. */
+interface Ctx {
+  root: Schema;
+  doc: unknown;
+  /** Write a value (undefined removes it); returns why it was refused, or undefined when it was written. */
+  write(at: string, v: unknown, f: Field): string | undefined;
+}
+
+/** Errors of a source text, as "path message", so new ones can be told from those already there. */
+const errorsOf = (text: string): string[] => {
+  const parsed = parseJson(text);
+  const ds = parsed.value === undefined ? parsed.diagnostics : compile(parsed.value, registry).diagnostics;
+  return ds.filter((d) => d.severity === 'error').map((d) => `${d.path} ${d.message}`);
+};
+
 /**
- * The details pane (URS-WEB-025, experimental, D-009): every property the type's schema allows for the
- * selected element, each edited in place and written straight to the source. Type-agnostic.
+ * The details pane (URS-WEB-025, WEB-027, experimental, D-009): every property the type's schema allows for the
+ * selected element, each edited in place. A value is written to the source only if it fits its schema and adds
+ * no error to the diagram; otherwise the field keeps it and says why. References offer the ids they may take.
  */
 export function DetailsPane({ ir, value, text, picked, onText }: Props) {
   const item = ir && picked ? kinds(ir).find(([k]) => k === picked.kind)?.[1].find((x) => x.id === picked.id) : undefined;
@@ -28,20 +44,39 @@ export function DetailsPane({ ir, value, text, picked, onText }: Props) {
   const schema = root && src !== undefined ? schemaAt(root, src) : undefined;
   const current = src !== undefined ? valueAt(value, src) : undefined;
   const isObject = current !== null && typeof current === 'object' && !Array.isArray(current);
+  const before = useMemo(() => new Set(errorsOf(text)), [text]);
+
+  const ctx: Ctx | undefined = root && {
+    root,
+    doc: value,
+    write: (at, v, f) => {
+      if (v === undefined && f.required) return 'This is required.';
+      const bad = problem(root, f.schema, v);
+      if (bad) return bad;
+      const next = setAt(text, at, v);
+      const added = errorsOf(next).filter((e) => !before.has(e));
+      if (added.length) return `Not changed: the diagram would then have ${added.length === 1 ? 'this problem' : 'these problems'}: ${added.map((e) => e.replace(/^\S*\s/, '')).join('; ')}.`;
+      onText(next);
+      return undefined;
+    },
+  };
 
   let body;
   if (!picked) body = <p className="text-muted text-small">Click an element in the diagram to see its details here.</p>;
   else if (!item) body = <p className="text-muted text-small">The selected element is no longer in the diagram.</p>;
-  else if (src === undefined || !schema || !root) body = <p className="text-muted text-small">This element is made by the diagram itself and has nothing to edit.</p>;
-  else if (!isObject) body = <Single text={text} at={src} schema={schema} root={root} value={current} onText={onText} />;
-  else
+  else if (src === undefined || !schema || !ctx) body = <p className="text-muted text-small">This element is made by the diagram itself and has nothing to edit.</p>;
+  else {
+    const list = isObject ? fields(ctx.root, schema) : fields(ctx.root, { properties: { [src.split('/').pop() ?? '']: schema } });
+    const at = (f: Field) => (isObject ? `${src}/${f.name}` : src);
+    const of = (f: Field) => (isObject ? (current as Record<string, unknown>)[f.name] : current);
     body = (
       <form className="details__form stack" onSubmit={(e) => e.preventDefault()}>
-        {fields(root, schema).map((f) => (
-          <FieldView key={`${src}/${f.name}`} field={f} at={`${src}/${f.name}`} value={(current as Record<string, unknown>)[f.name]} text={text} root={root} onText={onText} depth={0} />
+        {list.map((f) => (
+          <FieldView key={at(f)} field={f} at={at(f)} value={of(f)} ctx={ctx} depth={0} />
         ))}
       </form>
     );
+  }
 
   return (
     <div className="frame details">
@@ -58,44 +93,95 @@ export function DetailsPane({ ir, value, text, picked, onText }: Props) {
   );
 }
 
-/** A value that is not an object of its own, e.g. a reporting line stored as a person's `manager`. */
-function Single(p: { text: string; at: string; schema: Schema; root: Schema; value: unknown; onText(t: string): void }) {
-  const name = p.at.split('/').pop() ?? '';
-  const [f] = fields(p.root, { properties: { [name]: p.schema } });
-  return <form className="details__form stack" onSubmit={(e) => e.preventDefault()}>{f && <FieldView field={f} at={p.at} value={p.value} text={p.text} root={p.root} onText={p.onText} depth={0} />}</form>;
-}
-
 interface FieldProps {
   field: Field;
   at: string;
   value: unknown;
-  text: string;
-  root: Schema;
-  onText(t: string): void;
+  ctx: Ctx;
   depth: number;
 }
 
-/** One property: a field of the right kind, its description as a hint. Clearing a field removes the property. */
-function FieldView({ field: f, at, value, text, root, onText, depth }: FieldProps) {
-  const set = (v: unknown) => onText(setAt(text, at, v === '' ? undefined : v));
+/** One property: a field of the right kind, its description as a hint, and why a change was refused. */
+function FieldView({ field: f, at, value, ctx, depth }: FieldProps) {
+  const [refused, setRefused] = useState<string>();
+  /** Try a value; true when it was written. */
+  const set = (v: unknown): boolean => {
+    const why = ctx.write(at, v === '' ? undefined : v, f);
+    setRefused(why);
+    return !why;
+  };
   const id = `details-${at.replace(/[^\w-]/g, '_')}`;
   const def = f.schema.default !== undefined ? ` (default ${String(f.schema.default)})` : '';
+  const about = [f.required && 'Required.', f.description].filter(Boolean).join(' ');
+  const hint = about && <span className="details__hint text-muted">{about}</span>;
+  const alert = refused && (
+    <span className="details__refused" role="alert">
+      {refused}
+    </span>
+  );
   const label = (
     <label htmlFor={id} className="details__label">
       {f.name}
       {f.required && <span aria-hidden="true"> *</span>}
     </label>
   );
-  const about = [f.required && 'Required.', f.description].filter(Boolean).join(' ');
-  const hint = about && <span className="details__hint text-muted">{about}</span>;
+  const invalid = refused ? { 'aria-invalid': true as const } : {};
   let control;
-  switch (f.name === 'id' ? 'id' : f.kind) {
+  switch (f.name === 'id' && depth === 0 ? 'id' : f.kind) {
     case 'id':
       control = <input id={id} className="input" value={String(value ?? '')} readOnly title="Ids are changed in the source, where everything that refers to them can be changed too" />;
       break;
+    case 'ref': {
+      const options = targets(ctx.doc, f.ref!);
+      const known = value === undefined || options.some((o) => o.id === value);
+      control = (
+        <select id={id} className="select" value={value === undefined ? '' : String(value)} onChange={(e) => set(e.target.value)} {...invalid}>
+          <option value="">—</option>
+          {!known && <option value={String(value)}>{String(value)} (not found)</option>}
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label ? `${o.label} (${o.id})` : o.id}
+            </option>
+          ))}
+        </select>
+      );
+      break;
+    }
+    case 'refs': {
+      const chosen = new Set(Array.isArray(value) ? (value as string[]) : []);
+      const options = targets(ctx.doc, f.ref!);
+      return (
+        <fieldset className="details__group details__refs stack">
+          <legend className="details__label">
+            {f.name}
+            {f.required && <span aria-hidden="true"> *</span>}
+          </legend>
+          {options.length === 0 && <span className="text-small text-muted">Nothing to choose from yet.</span>}
+          {options.map((o) => (
+            <label key={o.id} className="cluster details__check">
+              <input
+                type="checkbox"
+                checked={chosen.has(o.id)}
+                onChange={(e) => {
+                  // Keep the order of the collection; drop the list when nothing is left.
+                  const next = options.map((x) => x.id).filter((x) => (x === o.id ? e.target.checked : chosen.has(x)));
+                  set(next.length ? next : undefined);
+                }}
+              />
+              {o.label ? `${o.label} (${o.id})` : o.id}
+            </label>
+          ))}
+          {[...chosen].filter((c) => !options.some((o) => o.id === c)).map((c) => (
+            <span key={c} className="details__refused">{c} (not found)</span>
+          ))}
+          {hint}
+          {alert}
+        </fieldset>
+      );
+    }
     case 'choice':
       control = (
-        <select id={id} className="select" value={value === undefined ? '' : String(value)} onChange={(e) => set(e.target.value)}>
+        <select id={id} className="select" value={value === undefined ? '' : String(value)} onChange={(e) => set(e.target.value)} {...invalid}>
           <option value="">—{def}</option>
           {f.options!.map((o) => (
             <option key={o} value={o}>
@@ -107,7 +193,7 @@ function FieldView({ field: f, at, value, text, root, onText, depth }: FieldProp
       break;
     case 'yesno':
       control = (
-        <select id={id} className="select" value={value === undefined ? '' : value ? 'yes' : 'no'} onChange={(e) => set(e.target.value === '' ? undefined : e.target.value === 'yes')}>
+        <select id={id} className="select" value={value === undefined ? '' : value ? 'yes' : 'no'} onChange={(e) => set(e.target.value === '' ? undefined : e.target.value === 'yes')} {...invalid}>
           <option value="">—{def}</option>
           <option value="yes">yes</option>
           <option value="no">no</option>
@@ -115,96 +201,107 @@ function FieldView({ field: f, at, value, text, root, onText, depth }: FieldProp
       );
       break;
     case 'number':
-      control = <Commit id={id} type="number" value={value === undefined ? '' : String(value)} placeholder={def.trim()} onCommit={(v) => set(v === '' ? undefined : Number(v))} />;
+      control = <Commit id={id} type="number" value={value === undefined ? '' : String(value)} placeholder={def.trim()} invalid={!!refused} onCommit={(v) => set(v === '' ? undefined : Number(v))} onReset={() => setRefused(undefined)} />;
       break;
     case 'color':
       control = (
         <span className="cluster details__color">
           <input type="color" aria-label={`${f.name} colour`} value={typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000'} onChange={(e) => set(e.target.value)} />
-          <Commit id={id} value={typeof value === 'string' ? value : ''} placeholder="#rrggbb" onCommit={set} />
+          <Commit id={id} value={typeof value === 'string' ? value : ''} placeholder="#rrggbb" invalid={!!refused} onCommit={set} onReset={() => setRefused(undefined)} />
         </span>
       );
       break;
-    case 'list':
+    case 'list': {
+      const numeric = ['number', 'integer'].includes(String((f.schema.items as Schema | undefined)?.type));
       control = (
         <Commit
           id={id}
           value={Array.isArray(value) ? value.join(', ') : ''}
           placeholder="comma-separated"
+          invalid={!!refused}
           onCommit={(v) => {
             const items = v.split(',').map((x) => x.trim()).filter(Boolean);
-            set(items.length ? items : undefined);
+            return set(items.length ? (numeric ? items.map(Number) : items) : undefined);
           }}
+          onReset={() => setRefused(undefined)}
         />
       );
       break;
+    }
     case 'group':
       if (depth < 2)
         return (
           <fieldset className="details__group stack">
             <legend className="details__label">{f.name}</legend>
             {hint}
-            <Group at={at} schema={f.schema} value={value} text={text} root={root} onText={onText} depth={depth + 1} />
+            <Group at={at} schema={f.schema} value={value} ctx={ctx} depth={depth + 1} />
           </fieldset>
         );
-      control = <Json id={id} value={value} onCommit={set} />;
+      control = <Json id={id} value={value} invalid={!!refused} onCommit={set} />;
       break;
     case 'items':
       control = <span className="text-small text-muted">{Array.isArray(value) ? `${value.length} item${value.length === 1 ? '' : 's'}: select them in the diagram, or edit them in Source` : 'None'}</span>;
       break;
     case 'json':
-      control = <Json id={id} value={value} onCommit={set} />;
+      control = <Json id={id} value={value} invalid={!!refused} onCommit={set} />;
       break;
     default:
-      control = <Commit id={id} value={value === undefined ? '' : String(value)} placeholder={def.trim()} onCommit={set} />;
+      control = <Commit id={id} value={value === undefined ? '' : String(value)} placeholder={def.trim()} invalid={!!refused} onCommit={set} onReset={() => setRefused(undefined)} />;
   }
   return (
     <div className="details__field stack">
       {label}
       {control}
+      {alert}
       {hint}
     </div>
   );
 }
 
-function Group(p: { at: string; schema: Schema; value: unknown; text: string; root: Schema; onText(t: string): void; depth: number }) {
+function Group(p: { at: string; schema: Schema; value: unknown; ctx: Ctx; depth: number }) {
   const v = (p.value && typeof p.value === 'object' ? p.value : {}) as Record<string, unknown>;
   return (
     <>
-      {fields(p.root, p.schema).map((f) => (
-        <FieldView key={f.name} field={f} at={`${p.at}/${f.name}`} value={v[f.name]} text={p.text} root={p.root} onText={p.onText} depth={p.depth} />
+      {fields(p.ctx.root, p.schema).map((f) => (
+        <FieldView key={f.name} field={f} at={`${p.at}/${f.name}`} value={v[f.name]} ctx={p.ctx} depth={p.depth} />
       ))}
     </>
   );
 }
 
-/** A text box that writes when it loses focus or on Enter, not on every key. */
-function Commit({ id, value, onCommit, type = 'text', placeholder }: { id: string; value: string; onCommit(v: string): void; type?: string; placeholder?: string }) {
+/**
+ * A text box that writes when it loses focus or on Enter, not on every key. A refused value stays in the box
+ * so it can be corrected; Escape puts back what the source holds.
+ */
+function Commit(p: { id: string; value: string; onCommit(v: string): boolean; onReset(): void; type?: string; placeholder?: string; invalid: boolean }) {
   const [draft, setDraft] = useState<string>();
-  const shown = draft ?? value;
   const done = () => {
-    if (draft !== undefined && draft !== value) onCommit(draft);
-    setDraft(undefined);
+    if (draft === undefined || draft === p.value) return setDraft(undefined);
+    if (p.onCommit(draft)) setDraft(undefined);
   };
   return (
     <input
-      id={id}
+      id={p.id}
       className="input"
-      type={type}
-      value={shown}
-      {...(placeholder && { placeholder })}
+      type={p.type ?? 'text'}
+      value={draft ?? p.value}
+      {...(p.placeholder && { placeholder: p.placeholder })}
+      {...(p.invalid && { 'aria-invalid': true })}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={done}
       onKeyDown={(e) => {
         if (e.key === 'Enter') done();
-        if (e.key === 'Escape') setDraft(undefined);
+        if (e.key === 'Escape') {
+          setDraft(undefined);
+          p.onReset();
+        }
       }}
     />
   );
 }
 
-/** Anything the form has no field for, as JSON; written only when it parses. */
-function Json({ id, value, onCommit }: { id: string; value: unknown; onCommit(v: unknown): void }) {
+/** Anything the form has no field for, as JSON; written only when it parses and fits. */
+function Json({ id, value, onCommit, invalid }: { id: string; value: unknown; onCommit(v: unknown): boolean; invalid: boolean }) {
   const text = value === undefined ? '' : JSON.stringify(value);
   const [draft, setDraft] = useState<string>();
   const [bad, setBad] = useState(false);
@@ -215,20 +312,25 @@ function Json({ id, value, onCommit }: { id: string; value: unknown; onCommit(v:
         className="input details__json"
         rows={2}
         value={draft ?? text}
-        aria-invalid={bad || undefined}
+        {...((bad || invalid) && { 'aria-invalid': true })}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
           if (draft === undefined || draft === text) return setDraft(undefined);
+          let parsed: unknown;
           try {
-            onCommit(draft.trim() ? (JSON.parse(draft) as unknown) : undefined);
-            setDraft(undefined);
-            setBad(false);
+            parsed = draft.trim() ? (JSON.parse(draft) as unknown) : undefined;
           } catch {
-            setBad(true);
+            return setBad(true);
           }
+          setBad(false);
+          if (onCommit(parsed)) setDraft(undefined);
         }}
       />
-      {bad && <span className="details__hint" role="alert">Not valid JSON; nothing was changed.</span>}
+      {bad && (
+        <span className="details__refused" role="alert">
+          Not valid JSON; nothing was changed.
+        </span>
+      )}
     </>
   );
 }

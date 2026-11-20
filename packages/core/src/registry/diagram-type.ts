@@ -31,13 +31,19 @@ export interface SourceEdit {
   append?: boolean;
 }
 
+/** One end of a connection made from the diagram: the drawn node's IR id and the source pointer it was drawn from. */
+export interface EditEnd {
+  id: string;
+  src?: string;
+}
+
 /**
  * Direct editing from the diagram (URS-EXT-012, URS-WEB-026): what the diagram toolbar can add, each made
- * from a fresh id and the current model, and how one drawn node connects to another (by IR node ids).
+ * from a fresh id and the current model, and how one drawn node connects to another.
  */
 export interface EditAssets<M = unknown> {
   add: readonly { label: string; make(id: string, model: M): SourceEdit; /** Whether it can be added now; always, when absent. */ available?(model: M): boolean }[];
-  connect?(model: M, from: string, to: string): SourceEdit | undefined;
+  connect?(model: M, from: EditEnd, to: EditEnd): SourceEdit | undefined;
 }
 
 /** A text export a type offers besides SVG, e.g. BPMN 2.0 XML (URS-PM-018). */

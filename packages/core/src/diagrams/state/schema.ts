@@ -35,7 +35,7 @@ export const stateSchema = {
       required: ['state'],
       description: 'Drawn as `event [guard] / action`.',
       properties: {
-        state: ref('Target state id.'),
+        state: ref('Target state id.', 'states'),
         event: { type: 'string', description: 'Trigger.' },
         guard: { type: 'string', description: 'Condition, shown in brackets.' },
         action: { type: 'string', description: 'Effect, shown after a slash.' },
