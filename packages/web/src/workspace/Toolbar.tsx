@@ -1,5 +1,4 @@
 import { Download, FolderOpen, Link, Save } from '../ui/icons.tsx';
-import { examples } from '../registry.ts';
 import { VersionBadge } from '../update/VersionBadge.tsx';
 import { PANES, type Layout, type PaneId } from './layout.ts';
 
@@ -14,7 +13,6 @@ interface Props {
   onImport(): void;
   onSave(): void;
   canSave: boolean;
-  onExample(i: number): void;
   layout: Layout;
   onToggle(p: PaneId): void;
   status: { state: 'ok' | 'error' | 'pending'; text: string };
@@ -28,7 +26,7 @@ interface Props {
   onExport(format: string): void;
 }
 
-/** App toolbar: file, examples, pane visibility (URS-WEB-015), status, share and export. */
+/** App toolbar: file, pane visibility (URS-WEB-015), status, share and export. */
 export function Toolbar(p: Props) {
   return (
     <header className="toolbar cluster">
@@ -49,17 +47,6 @@ export function Toolbar(p: Props) {
         {p.fileName ?? 'No file open'}
         {p.dirty && <span aria-label="unsaved changes"> •</span>}
       </span>
-      <span className="toolbar__divider" />
-      <select className="select" aria-label="Example" value="" onChange={(e) => p.onExample(Number(e.target.value))}>
-        <option value="" disabled>
-          Examples…
-        </option>
-        {examples.map((ex, i) => (
-          <option key={i} value={i}>
-            {ex.type}: {ex.title}
-          </option>
-        ))}
-      </select>
       <span className="push-right" />
       <div className="segmented" role="group" aria-label="Panes">
         {SWITCHED.map((id) => (

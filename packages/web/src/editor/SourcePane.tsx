@@ -19,16 +19,19 @@ interface Props {
   readOnly?: boolean;
   /** A line above the editor, e.g. which version is shown and how to get back. */
   banner?: ReactNode;
+  /** Controls at the end of the header, e.g. the example picker. */
+  tools?: ReactNode;
 }
 
 /** JSON editor and its problems; clicking a problem jumps to it (URS-WEB-018). */
-export function SourcePane({ text, onText, diagnostics, source, reveal, onReveal, onCursor, note, title, language, readOnly, banner }: Props) {
+export function SourcePane({ text, onText, diagnostics, source, reveal, onReveal, onCursor, note, title, language, readOnly, banner, tools }: Props) {
   return (
     <div className="frame">
       <div className="pane__header cluster">
         <span className="pane__title">Source</span>
-        {title && <span className="text-muted text-small" title={title}>{title}</span>}
+        {title && <span className="pane__subtitle text-muted text-small" title={title}>{title}</span>}
         {note && <span className="text-muted text-small push-right">{note}</span>}
+        {tools && <span className={note ? undefined : 'push-right'}>{tools}</span>}
       </div>
       {banner && <div className="source__banner cluster text-small">{banner}</div>}
       <Editor readOnly={readOnly ?? false} value={text} onChange={onText} diagnostics={diagnostics} source={source} onCursor={onCursor} {...(reveal && { reveal })} {...(language && { language })} />

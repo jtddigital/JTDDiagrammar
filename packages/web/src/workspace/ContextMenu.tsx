@@ -59,7 +59,8 @@ function Menu({ items, x, y, alt, onClose, onDone, label, root }: Props & { onDo
 
   useEffect(() => {
     if (!root) return;
-    const outside = (e: Event) => !ref.current?.parentElement?.contains(e.target as Node) && onClose();
+    // Submenus sit inside the root menu, so anything outside it, the pane it opened from included, closes it.
+    const outside = (e: Event) => !ref.current?.contains(e.target as Node) && onClose();
     const opts = { capture: true };
     window.addEventListener('pointerdown', outside, opts);
     window.addEventListener('scroll', outside, opts);

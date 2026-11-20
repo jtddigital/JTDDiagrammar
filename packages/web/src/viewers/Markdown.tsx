@@ -1,9 +1,10 @@
-import { parseJson, parseSource, render } from '@jtd/core';
-import { highlight, language, parseMarkdown, plainText, slugger, texToMathml, type Mark, type MathEl, type MdNode } from '@jtd/documents';
+import { parseJson, parseSource, render, type SourceFormat } from '@jtd/core';
+import { highlight, language, parseCsv, parseMarkdown, plainText, slugger, texToMathml, type Mark, type MathEl, type MdNode } from '@jtd/documents';
 import { cloneElement, createElement, Fragment, isValidElement, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sanitizeSvg } from '../preview/sanitize.ts';
 import { registry } from '../registry.ts';
-import { htmlParts, safeHref, safeSrc, type HtmlPart } from './safeHtml.ts';
+import { kindOf } from '../workspace/kinds.ts';
+import { htmlParts, safeHref, safeSrc } from './safeHtml.ts';
 
 /** How the viewer reaches the workspace: relative links and images name files there (URS-WS-041). */
 export interface MarkdownLinks {
@@ -13,6 +14,16 @@ export interface MarkdownLinks {
   read(path: string): Promise<string | undefined>;
 }
 
+/** `<!-- toc -->` asks for a table of contents, as Markdown TOC tools write it; `<!-- tocstop -->` ends a list they generated. */
+const TOC_COMMENT = /^\s*<!--\s*toc\s*-->\s*$/i;
+const TOC_STOP = /^\s*<!--\s*(?:tocstop|\/toc)\s*-->\s*$/i;
+/** `![[path]]` or `![[path|caption]]`: a workspace file shown in place (URS-WS-044). */
+const EMBED = /^!\[\[([^\]|]+)(?:\|([^\]]*))?\]\]$/;
+/** Embeds inside embeds stop here, so files that embed each other cannot loop. */
+const MAX_DEPTH = 3;
+/** Rows of an embedded table; the caption counts them all. */
+const EMBED_ROWS = 200;
+
 const ALERT_TITLES: Record<string, string> = { NOTE: 'Note', TIP: 'Tip', IMPORTANT: 'Important', WARNING: 'Warning', CAUTION: 'Caution' };
 
 /**
@@ -20,14 +31,14 @@ const ALERT_TITLES: Record<string, string> = { NOTE: 'Note', TIP: 'Tip', IMPORTA
  * HTML string. GFM, GitHub alerts, heading anchors, a table of contents, front matter, highlighted code, MathML
  * math and ```jtd diagrams; links and images to workspace files open or show them.
  */
-export function Markdown({ text, links, parsed, marks }: { text: string; links: MarkdownLinks; parsed?: MdNode; marks?: ReadonlyMap<MdNode, Mark> }) {
+export function Markdown({ text, links, parsed, marks, depth = 0 }: { text: string; links: MarkdownLinks; parsed?: MdNode; marks?: ReadonlyMap<MdNode, Mark>; depth?: number }) {
   const deferred = useDeferredValue(text);
   const own = useMemo(() => (parsed ? undefined : parseMarkdown(deferred, { gfm: true, extras: true })), [deferred, parsed]);
   const doc = parsed ?? own!;
   const host = useRef<HTMLElement>(null);
   const out = useMemo(
-    () => new Renderer(links, (id) => host.current?.querySelector(`[id="${CSS.escape(`md-${id}`)}"]`)?.scrollIntoView({ block: 'start' }), marks).document(doc),
-    [doc, links, marks],
+    () => new Renderer(links, (id) => host.current?.querySelector(`[id="${CSS.escape(`md-${id}`)}"]`)?.scrollIntoView({ block: 'start' }), marks, depth).document(doc),
+    [doc, links, marks, depth],
   );
   return (
     <article className="md" ref={host}>
@@ -46,7 +57,10 @@ class Renderer {
   /** Blocks marked by a comparison (URS-WS-033). */
   private readonly marks: ReadonlyMap<MdNode, Mark> | undefined;
 
-  constructor(links: MarkdownLinks, jump: (id: string) => void, marks?: ReadonlyMap<MdNode, Mark>) {
+  readonly depth: number;
+
+  constructor(links: MarkdownLinks, jump: (id: string) => void, marks?: ReadonlyMap<MdNode, Mark>, depth = 0) {
+    this.depth = depth;
     this.links = links;
     this.jump = jump;
     this.marks = marks;
@@ -98,8 +112,71 @@ class Renderer {
     this.jump(id);
   };
 
+  /**
+   * Blocks in order. Allowed HTML tags opened in one HTML block stay open over the blocks after it, so a
+   * `<details>` holds the paragraphs, lists and code up to its `</details>` (URS-WS-042). An HTML comment
+   * `<!-- toc -->` is a table of contents; a generated list up to `<!-- tocstop -->` is replaced by it.
+   */
   private blocks(parent: MdNode): ReactNode[] {
-    return [...parent.children()].map((n) => this.marked(n)).filter((x) => x !== null);
+    type Frame = { tag: string; open?: boolean; kids: ReactNode[] };
+    const stack: Frame[] = [{ tag: '', kids: [] }];
+    const close = () => {
+      const f = stack.pop()!;
+      stack.at(-1)!.kids.push(createElement(f.tag, { key: this.k(), ...(f.open && { open: true }) }, ...f.kids));
+    };
+    const kids = [...parent.children()];
+    for (let i = 0; i < kids.length; i++) {
+      const n = kids[i]!;
+      if (n.type !== 'html_block') {
+        const el = this.marked(n);
+        if (el !== null) stack.at(-1)!.kids.push(el);
+        continue;
+      }
+      if (TOC_COMMENT.test(n.literal)) {
+        stack.at(-1)!.kids.push(this.toc());
+        const stop = kids.findIndex((x, j) => j > i && x.type === 'html_block' && TOC_STOP.test(x.literal));
+        if (stop > 0) i = stop;
+        continue;
+      }
+      // Text of an HTML block reads as a block of its own, unless it sits in an inline tag such as <summary>.
+      let text: ReactNode[] = [];
+      const flush = () => {
+        if (text.some((t) => typeof t !== 'string' || t.trim())) stack.at(-1)!.kids.push(<div key={this.k()} className="md-html">{text}</div>);
+        text = [];
+      };
+      const inline = () => !['', 'details'].includes(stack.at(-1)!.tag);
+      for (const p of htmlParts(n.literal)) {
+        if (p.kind === 'text') (inline() ? stack.at(-1)!.kids : text).push(p.text);
+        else if (p.kind === 'void') (inline() ? stack.at(-1)!.kids : text).push(<br key={this.k()} />);
+        else if (p.kind === 'open') {
+          flush();
+          stack.push({ tag: p.tag, kids: [], ...(p.open && { open: true }) });
+        } else if (stack.some((f, d) => d > 0 && f.tag === p.tag)) {
+          flush();
+          while (stack.length > 1 && stack.at(-1)!.tag !== p.tag) close();
+          close();
+        }
+      }
+      flush();
+    }
+    while (stack.length > 1) close();
+    return stack[0]!.kids;
+  }
+
+  private toc(): ReactNode {
+    return (
+      <nav key={this.k()} className="md-toc" aria-label="Contents">
+        <ul>
+          {this.headings.map((h) => (
+            <li key={this.k()} style={{ paddingInlineStart: `${(h.level - 1) * 1}em` }}>
+              <a href={`#${h.id}`} onClick={this.anchor(h.id)}>
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    );
   }
 
   /** A block, carrying its comparison mark: on its own element, or a wrapper when it has none. */
@@ -119,6 +196,12 @@ class Renderer {
     const key = this.k();
     switch (n.type) {
       case 'paragraph': {
+        // A paragraph that is only an embed shows the workspace file in its place (URS-WS-044).
+        const only = n.firstChild && !n.firstChild.next ? n.firstChild : undefined;
+        const wiki = only?.type === 'text' ? EMBED.exec(only.literal.trim()) : null;
+        if (wiki) return <WorkspaceEmbed key={key} path={wiki[1]!.trim()} alt={wiki[2]?.trim() ?? ''} links={this.links} depth={this.depth} block />;
+        if (only?.type === 'image' && !/^[a-z][a-z0-9+.-]*:/i.test(only.destination))
+          return <WorkspaceEmbed key={key} path={decodeURIComponent(only.destination)} alt={plainText(only)} links={this.links} depth={this.depth} block />;
         const tight = n.parent?.parent?.type === 'list' && n.parent.parent.listData.tight;
         const kids = this.inlines(n);
         return tight ? <Fragment key={key}>{kids}</Fragment> : <p key={key}>{kids}</p>;
@@ -180,8 +263,6 @@ class Renderer {
           </pre>
         );
       }
-      case 'html_block':
-        return <div key={key} className="md-html">{this.html(htmlParts(n.literal))}</div>;
       case 'table': {
         const [head, ...body] = [...n.children()];
         const row = (r: MdNode, cell: 'th' | 'td') => (
@@ -206,19 +287,7 @@ class Renderer {
       case 'front_matter':
         return <FrontMatter key={key} text={n.literal} />;
       case 'toc':
-        return (
-          <nav key={key} className="md-toc" aria-label="Contents">
-            <ul>
-              {this.headings.map((h) => (
-                <li key={this.k()} style={{ paddingInlineStart: `${(h.level - 1) * 1}em` }}>
-                  <a href={`#${h.id}`} onClick={this.anchor(h.id)}>
-                    {h.text}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        );
+        return this.toc();
       default:
         return null;
     }
@@ -319,34 +388,11 @@ class Renderer {
         const src = n.destination;
         if (safeSrc(src)) return <img key={key} src={src} alt={alt} {...(n.title && { title: n.title })} loading="lazy" referrerPolicy="no-referrer" />;
         if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return <span key={key} className="md-missing">{alt}</span>;
-        return <WorkspaceImage key={key} path={decodeURIComponent(src)} alt={alt} read={this.links.read} />;
+        return <WorkspaceEmbed key={key} path={decodeURIComponent(src)} alt={alt} links={this.links} depth={this.depth} />;
       }
       default:
         return null;
     }
-  }
-
-  /** Allowed HTML of an HTML block, as elements. */
-  private html(parts: HtmlPart[]): ReactNode[] {
-    const stack: { tag: string; open?: boolean; kids: ReactNode[] }[] = [{ tag: '', kids: [] }];
-    for (const p of parts) {
-      const top = stack.at(-1)!.kids;
-      if (p.kind === 'text') top.push(p.text);
-      else if (p.kind === 'void') top.push(<br key={this.k()} />);
-      else if (p.kind === 'open') stack.push({ tag: p.tag, kids: [], ...(p.open && { open: true }) });
-      else if (stack.some((s) => s.tag === p.tag)) {
-        while (stack.length > 1) {
-          const s = stack.pop()!;
-          stack.at(-1)!.kids.push(createElement(s.tag, { key: this.k(), ...(s.open && { open: true }) }, ...s.kids));
-          if (s.tag === p.tag) break;
-        }
-      }
-    }
-    while (stack.length > 1) {
-      const s = stack.pop()!;
-      stack.at(-1)!.kids.push(createElement(s.tag, { key: this.k(), ...(s.open && { open: true }) }, ...s.kids));
-    }
-    return stack[0]!.kids;
   }
 }
 
@@ -379,14 +425,14 @@ function FrontMatter({ text }: { text: string }) {
 }
 
 /** A ```jtd block: the diagram, drawn as in Preview and sanitised the same way; problems listed instead. */
-function JtdDiagram({ source }: { source: string }) {
+function JtdDiagram({ source, format, caption }: { source: string; format?: SourceFormat; caption?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const r = useMemo(() => {
-    const json = parseJson(source);
-    const value = json.value ?? parseSource(source, 'yaml', registry).value;
+    const json = format && format !== 'json' ? parseSource(source, format, registry) : parseJson(source);
+    const value = json.value ?? (format ? undefined : parseSource(source, 'yaml', registry).value);
     if (value === undefined) return { diagnostics: json.diagnostics };
     return render(value, registry);
-  }, [source]);
+  }, [source, format]);
   useEffect(() => {
     const el = r.svg ? sanitizeSvg(r.svg) : undefined;
     host.current?.replaceChildren(...(el ? [el] : []));
@@ -394,6 +440,7 @@ function JtdDiagram({ source }: { source: string }) {
   return (
     <figure className="md-diagram">
       <div ref={host} />
+      {caption && r.svg && <figcaption className="md-caption">{caption}</figcaption>}
       {!r.svg && (
         <figcaption className="md-missing">
           {r.diagnostics.slice(0, 3).map((d) => `${d.path || '/'}: ${d.message}`).join(' · ') || 'Not a diagram'}
@@ -403,15 +450,69 @@ function JtdDiagram({ source }: { source: string }) {
   );
 }
 
-/** An image that is a workspace file: SVG text shown through an <img>, which never runs it. */
-function WorkspaceImage({ path, alt, read }: { path: string; alt: string; read: MarkdownLinks['read'] }) {
-  const [src, setSrc] = useState<string>();
+/**
+ * A workspace file shown in place (URS-WS-041, WS-044): an SVG as a picture (through an <img>, which never runs it),
+ * a diagram drawn, a CSV as a table, Markdown rendered and text as it is. `block` when it stands as a paragraph of its own.
+ */
+function WorkspaceEmbed({ path, alt, links, depth, block }: { path: string; alt: string; links: MarkdownLinks; depth: number; block?: boolean }) {
+  const [text, setText] = useState<string | null>();
   useEffect(() => {
     let live = true;
-    void read(path).then((t) => live && t !== undefined && /^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(t) && setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(t)}`));
+    void links.read(path).then((t) => live && setText(t ?? null));
     return () => {
       live = false;
     };
-  }, [path, read]);
-  return src ? <img src={src} alt={alt} /> : <span className="md-missing">{alt || path}</span>;
+  }, [path, links]);
+  const name = path.split('/').pop() ?? path;
+  if (text === undefined) return <span className="md-missing">{alt || path}</span>;
+  if (text === null) return <span className="md-missing">{alt || path} (no such file in the workspace)</span>;
+  if (/^\s*(?:<\?xml[^>]*>\s*)?<svg[\s>]/i.test(text)) return <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`} alt={alt} />;
+  if (!block) return <span className="md-missing">{alt || path}</span>;
+  if (depth >= MAX_DEPTH) return <p className="md-missing">{name}: embedded too deeply to show</p>;
+  const k = kindOf(name, text, registry);
+  const caption = alt || name;
+  if (k.kind === 'diagram') return <JtdDiagram source={text} {...(k.format && { format: k.format })} caption={caption} />;
+  if (k.kind === 'markdown')
+    return (
+      <section className="md-embed" aria-label={caption}>
+        <Markdown text={text} links={links} depth={depth + 1} />
+      </section>
+    );
+  if (k.kind === 'csv') {
+    const [head = [], ...rows] = parseCsv(text, name.toLowerCase().endsWith('.tsv') ? '\t' : undefined).rows;
+    return (
+      <div className="md-table">
+        <table>
+          <caption className="md-caption">
+            {caption} · {rows.length.toLocaleString()} row{rows.length === 1 ? '' : 's'}
+            {rows.length > EMBED_ROWS && `, first ${EMBED_ROWS} shown`}
+          </caption>
+          <thead>
+            <tr>
+              {head.map((h, i) => (
+                <th key={i}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, EMBED_ROWS).map((r, i) => (
+              <tr key={i}>
+                {head.map((_, c) => (
+                  <td key={c}>{r[c]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  return (
+    <figure className="md-embed-text">
+      <pre className="md-code">
+        <code>{text}</code>
+      </pre>
+      <figcaption className="md-caption">{caption}</figcaption>
+    </figure>
+  );
 }

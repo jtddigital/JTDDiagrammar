@@ -20,6 +20,10 @@ export interface Workspace {
   open?: WsNode;
   /** The open file's path. */
   path?: string;
+  /** An example being looked at, not yet a file: its name if saved (URS-WEB-007). */
+  scratch?: string;
+  /** Show text that is not a file yet, e.g. an example; Save makes it one. */
+  openScratch(name: string, text: string): Promise<void>;
   kind: ReturnType<typeof kindOf>;
   text: string;
   setText(t: string): void;
@@ -61,6 +65,7 @@ export function useWorkspace(): Workspace {
   const [ready, setReady] = useState(false);
   const [nodes, setNodes] = useState<WsNode[]>([]);
   const [openId, setOpenId] = useState<string>();
+  const [scratch, setScratch] = useState<string>();
   const [text, setTextState] = useState('');
   const [saved, setSaved] = useState('');
   const [kindText, setKindText] = useState('');
@@ -80,6 +85,7 @@ export function useWorkspace(): Workspace {
     const content = await s.content(id);
     const draft = await s.draft(id);
     setOpenId(id);
+    setScratch(undefined);
     setSaved(content);
     setTextState(draft ?? content);
     setKindText(draft ?? content);
@@ -160,7 +166,8 @@ export function useWorkspace(): Workspace {
   }, [openId, text, saved]);
 
   const open = nodes.find((n) => n.id === openId);
-  const kind = useMemo(() => (open ? kindOf(open.name, kindText, registry) : { kind: 'text' as const }), [open, kindText]);
+  const shownName = open?.name ?? scratch;
+  const kind = useMemo(() => (shownName ? kindOf(shownName, kindText, registry) : { kind: 'text' as const }), [shownName, kindText]);
 
   const put = async (n: WsNode) => {
     await store.current!.putNode(n);
@@ -224,10 +231,20 @@ export function useWorkspace(): Workspace {
     read: async (id) => (id === openId ? text : ((await store.current?.draft(id)) ?? (await store.current?.content(id)))),
     nodes,
     ...(open && { open, path: pathOf(nodes, open.id) }),
+    ...(scratch !== undefined && { scratch }),
+    openScratch: (name, t) =>
+      run(async () => {
+        await flush();
+        setOpenId(undefined);
+        setScratch(name);
+        setTextState(t);
+        setSaved('');
+        setKindText(t);
+      }),
     kind,
     text,
     setText: setTextState,
-    dirty: text !== saved,
+    dirty: scratch !== undefined || text !== saved,
     drafts,
     ...(note && { note }),
     setNote,
@@ -240,6 +257,12 @@ export function useWorkspace(): Workspace {
       }),
     save: () =>
       run(async () => {
+        // An example becomes a file in the top folder when saved.
+        if (scratch !== undefined) {
+          const id = await create(null, 'file', scratch, text);
+          if (id) setNote(`Saved ${scratch}`);
+          return;
+        }
         if (!openId) return;
         await store.current!.save(openId, text);
         setSaved(text);

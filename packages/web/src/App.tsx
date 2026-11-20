@@ -4,6 +4,7 @@ import { ChatPane } from './chat/ChatPane.tsx';
 import type { Comparison } from './compare/comparison.ts';
 import { ComparePane } from './compare/ComparePane.tsx';
 import { downloadPng, downloadSvg, downloadText } from './download.ts';
+import { ExamplePicker } from './editor/ExamplePicker.tsx';
 import { SourcePane } from './editor/SourcePane.tsx';
 import { locate, type Range } from './editor/locate.ts';
 import { pickFiles } from './files.ts';
@@ -36,7 +37,9 @@ export function App() {
   const shownKind = useMemo(() => (viewing ? kindOf(viewing.file.name, viewing.text, registry) : ws.kind), [viewing, ws.kind]);
   const kind = shownKind.kind;
   const diagram = kind === 'diagram';
-  const shownName = viewing?.file.name ?? ws.open?.name;
+  const shownName = viewing?.file.name ?? ws.open?.name ?? ws.scratch;
+  // An example being looked at is named, and marked as not a file yet (URS-WEB-007).
+  const path = ws.path ?? (ws.scratch !== undefined ? `${ws.scratch} (example, not saved yet)` : undefined);
   const [layout, setLayout] = useState<Layout>(loadLayout);
   // The comparison on screen, if any: the Compare pane shows while there is one (URS-WS-031).
   const [comparison, setComparison] = useState<Comparison>();
@@ -118,12 +121,11 @@ export function App() {
   return (
     <div className="workspace">
       <Toolbar
-        {...(ws.path && { fileName: ws.path })}
+        {...(path && { fileName: path })}
         dirty={ws.dirty}
         onImport={() => void importFiles()}
         onSave={() => void ws.save()}
-        canSave={Boolean(ws.open)}
-        onExample={(i) => void ws.create(ws.open?.parent ?? null, 'file', `${examples[i]!.title}.json`, pretty(examples[i]!.source))}
+        canSave={Boolean(ws.open || ws.scratch !== undefined)}
         layout={layout}
         onToggle={(p) => setLayout((l) => toggle(l, p, auto))}
         status={!diagram ? { state: 'ok', text: ws.open ? kindLabel[kind] : 'No file' } : pending ? { state: 'pending', text: 'Updating…' } : errors ? { state: 'error', text: `${errors} error${errors > 1 ? 's' : ''}` } : { state: 'ok', text: 'Valid' }}
@@ -175,8 +177,9 @@ export function App() {
                 onReveal={setReveal}
                 onCursor={setCursor}
                 {...(reveal && { reveal })}
-                {...(ws.path && { title: viewing ? `${viewing.file.name} · version ${viewing.version.n}` : ws.path })}
+                {...(path && { title: viewing ? `${viewing.file.name} · version ${viewing.version.n}` : path })}
                 language={diagram && (shownKind.format ?? 'json') === 'json' ? 'json' : 'plain'}
+                tools={<ExamplePicker onPick={(i) => void ws.openScratch(`${examples[i]!.title}.json`, pretty(examples[i]!.source))} />}
               />
             ),
           },

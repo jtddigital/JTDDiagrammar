@@ -78,7 +78,8 @@ export function Editor({ value, onChange, diagnostics, source, reveal, onCursor,
   useEffect(() => {
     const v = view.current;
     if (!v || !reveal) return;
-    v.dispatch({ selection: { anchor: reveal.from, head: reveal.to }, scrollIntoView: true });
+    // The element's first line goes to the top of the editor, so all of it shows below (URS-WEB-009).
+    v.dispatch({ selection: { anchor: reveal.from, head: reveal.to }, effects: EditorView.scrollIntoView(reveal.from, { y: 'start', yMargin: 8 }) });
     v.focus();
   }, [reveal]);
 

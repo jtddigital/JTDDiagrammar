@@ -122,8 +122,7 @@ test('compares any two versions of a file from its history (URS-WS-021, WS-032)'
     await page.keyboard.press('ControlOrMeta+s');
     await expect(item(page, 'Untitled.json')).not.toContainText('•');
   }
-  await item(page, 'Untitled.json').click({ button: 'right' });
-  await command(page, 'History').click();
+  await page.getByRole('button', { name: 'History', exact: true }).click();
   const history = page.getByRole('region', { name: 'History of Untitled.json' });
   // Version 2 (One) against the current text (Two).
   await history.locator('.files__versions li').nth(1).getByRole('button', { name: 'Compare' }).click();
