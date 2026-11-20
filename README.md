@@ -1,27 +1,156 @@
 # JTDDiagrammar
 
-Diagrams as structured text. Write JSON and get SVG back, from an API or a web app. You can also let Claude draft the diagram from a document.
+Diagrams, notes and tables in one workspace in your browser. Describe a diagram as structured text, or let the AI draft it from your notes, and watch it drawn as you type. Alongside your diagrams keep Markdown notes, CSV tables and text files. Every save is kept, and any two versions can be compared.
 
-The main target is the **cross-functional flowchart** (lanes × phases, as in Visio). The engine is built for multiple diagram types: each type is a plugin, and everything downstream of the plugin is type-agnostic.
+Diagram types: **flowcharts** and **cross-functional (swimlane) flowcharts**, **state diagrams**, **org charts**, **object lifecycles** (as in Veeva Vault), **Gantt charts**, **SAP status and workflow** diagrams and **process models**. Layout is automatic: you say what connects to what, and the app places everything.
 
-## Status
+![The workspace: files, AI conversation, source and live diagram side by side](docs/img/web-app.png)
 
-| Phase | Scope | State |
-|-------|-------|-------|
-| P0 | Monorepo, CI, type registry, Graph IR, schemas, validation, README pipeline | **Done** |
-| P1 | Flowchart layout + SVG rendering, README images | **Done** |
-| P2 | Cross-functional layout (lanes × phases) | **Done** |
-| P3 | REST API + web app (editor, live preview, SVG export) | **Done** |
-| P4 | AI generation from documents (Claude) | **Done** |
-| P5 | State diagrams (composite states) | **Done** |
-| P6 | Layout quality, styling and themes | **Done** |
-| P7 | Extras: XML/YAML, hints, notes, org chart, refine, provenance, streaming, autocomplete, share links, PNG | **Done** |
+**Contents:** [Install and start](#install-and-start) · [The workspace](#the-workspace) · [Drafting with AI](#drafting-with-ai) · [Keyboard shortcuts](#keyboard-shortcuts) · [Diagram types](#diagram-types) · [Writing diagrams](#writing-diagrams)
 
-Today you can write **state diagrams** (with composite states), **org charts**, **object lifecycles** (e.g. Veeva Vault: states grouped by lifecycle stage against the workflows that move a record) and flowcharts, including **cross-functional flowcharts** (lanes × phases, `LR` or `TB`), in a web editor with autocomplete, live preview, pan/zoom, share links and SVG/PNG export, or render them through the REST API. You can also have Claude draft one from documents or notes. Layouts avoid running edges through nodes and keep labels off nodes and each other; colours and a dark theme are available.
+> Setting the app up for others, configuring AI, or using the HTTP API? See the [administrator guide](docs/ADMIN.md). Working on the code? See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Install and start
+
+### Windows
+
+In PowerShell (no admin rights needed):
+
+```powershell
+irm https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.ps1 | iex
+```
+
+This installs the app (and Node.js, if you don't have it) and adds a **JTDDiagrammar** shortcut to the Start Menu and the desktop. Double-click it: a console window starts the app and opens it in your browser at http://localhost:8080. Close the window to stop it.
+
+### Linux and macOS
+
+You need Node.js 22.18 or later. Then:
+
+```bash
+curl -fsSL https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.sh | bash
+```
+
+Run `jtddiagrammar` to start the app and open your browser; Ctrl+C stops it. On Linux there's also a desktop entry.
+
+### Updating and other commands
+
+When a newer version is out, the toolbar shows **Update to vX.Y.Z**. Click it: the app installs the update, restarts and reloads the page, keeping your work. You can also run any of these:
+
+| Command | Does |
+|---------|------|
+| `jtddiagrammar` | Start the app and open the browser |
+| `jtddiagrammar --port 9000` | Start on another port |
+| `jtddiagrammar update` | Install the latest version |
+| `jtddiagrammar restart` | Stop the app and start it again |
+| `jtddiagrammar stop` | Stop the app |
+| `jtddiagrammar version` | Show the installed version |
+| `jtddiagrammar uninstall` | Windows: remove the app and its shortcuts |
+
+If your organisation runs JTDDiagrammar on a server, just open the address you were given: there is nothing to install.
+
+## The workspace
+
+The workspace has four panes: **Files**, **AI**, **Source** and **Preview**. A fifth, **Compare**, appears while you compare two files. Show or hide each pane with the buttons in the toolbar, and drag the line between two panes to resize them.
+
+**Arrange the panes like an IDE.** Drag a pane by its header onto the edge of another pane. Drop it on the left or right edge to give it a column of its own, or on the top or bottom edge to stack it with that pane, for example Files above Source. The highlighted half shows where it will go; Escape cancels. From the keyboard, Alt+Shift+arrow keys move the pane you are in. The app remembers your layout. Light and dark themes follow your system.
+
+### Files
+
+Your files and folders live in this browser, on this computer. Nothing is stored on the server, so use **Export workspace** (in the **⋯** menu at the top of the Files pane) to back them up or move them to another computer.
+
+Right-click a file, a folder or the empty space (or press Shift+F10) for:
+
+- **New folder**, **New diagram** (from any example), and new **Markdown**, **text** or **CSV** files;
+- **Rename** (F2), **Duplicate** and **Delete**. Deleted files go to the **Trash** at the bottom of the pane, where you can restore them; right after a delete, **Undo** brings the file back;
+- **Compare with…** and **Compare with saved** (see [Compare](#compare));
+- **Import** files from your computer, and **Export** a file, a folder (as a `.zip`), a file **as PDF**, or a CSV file **as Excel**.
+
+Drag files to move them, or drop files from your computer onto a folder to import them. You can import diagrams in JSON, YAML or XML (YAML and XML are converted to JSON), Markdown, text and CSV files.
+
+**Saving and history.** Unsaved changes are marked with • and are kept even if you switch files or close the browser, until you save. **Save** (Ctrl+S) keeps a new version of the file, and every version is kept. Click **History** at the top of the Files pane to list the open file's versions. The list follows whichever file you open. Click a version to show it read-only; **Compare** sets it against your current text, and **Restore** makes it the newest version, so nothing is ever lost.
+
+### Source
+
+The Source pane is the text of the open file. For a diagram it completes field names and values as you type (Ctrl+Space), underlines mistakes and lists them below; click a problem to jump to it. Until a mistake is fixed, the Preview keeps showing the last version that worked.
+
+**Examples**, at the top of the Source pane, opens any example of any diagram type. It is not added to your files unless you save it; press **Save** to keep it as a file of your own.
+
+### Preview
+
+**Diagrams.** Scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click an element to find its source: the editor jumps to it and puts it at the top. The element your cursor is in is outlined, and hovering a node highlights its connections. Double-click a label to edit it in place. Hover an element the AI generated to see the passage from your material it came from.
+
+**Markdown** renders here with no plug-ins needed:
+
+- GitHub-style Markdown: tables, task lists, strikethrough, footnotes and links that appear automatically;
+- callouts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) and front matter;
+- a table of contents: `[[toc]]`, `[TOC]` or `<!-- toc -->` on a line of its own;
+- highlighted code, and maths with `$…$` and `$$…$$`;
+- collapsible sections with `<details>` and `<summary>`, which fold everything up to `</details>`, code included;
+- diagrams written right in the page, in a ```` ```jtd ```` code block;
+- links to other files in the workspace, which open when clicked.
+
+**Embed a file** by putting `![[file name]]` (or `![[file name|caption]]`, or `![caption](file name)`) on a line of its own. A diagram is drawn in place, a CSV file shows as a table, a Markdown file appears in full and a text file as it is. Paths are relative to the Markdown file, so `![[../plans/flow.json]]` works too.
+
+**CSV** files show as a table. Click a column header to sort the view; your file doesn't change. Any problems, such as a row with too many fields, are listed above the table. **Text** files have nothing to preview, so the Preview pane steps aside while one is open.
+
+### Compare
+
+Right-click a file and choose **Compare with saved** to see your unsaved changes, or **Compare with…** and then click the other file. In the Compare pane either side can be switched to any saved version, so you can compare any two files or any two versions. ⇄ swaps the sides and ✕ closes the pane.
+
+- **Text** comparisons show side by side or as one list, with the changed words marked and unchanged stretches folded. Use ↑ and ↓ to step through the changes.
+- **Markdown** files can be compared as rendered pages, with added, removed and changed paragraphs, list items and table rows marked.
+- **CSV** files are compared as a table. Rows are matched by position or by a column you choose (such as an id); changed cells show the old and the new value.
+- **Diagrams** are drawn side by side, each laid out as it really is. Removed elements are marked red in the earlier version, added ones green in the later, and changed ones amber in both. Pan and zoom move both drawings together. Below them every change is listed in words, with the line in the source; click one to outline it in both drawings.
+
+![Comparing two versions of a flowchart](docs/img/web-compare-diagram.png)
+
+![Comparing two Markdown files, rendered](docs/img/web-compare.png)
+
+### Export and share
+
+The toolbar exports what is on screen:
+
+- **SVG** saves the diagram as a vector image; **PNG** saves it as a picture at twice screen size.
+- **PDF** works for any file. A diagram becomes sharp vectors on a page its own size. A Markdown file is laid out on A4 pages, embedded diagrams and tables included; a CSV file becomes a table, and a text file prints as it is.
+- Some diagram types export to other formats too, such as **BPMN** for process models.
+
+**Share link** copies a link that carries the diagram itself; nothing is uploaded. Whoever opens it gets the diagram as a new file, `Shared.json`, in their workspace.
+
+## Drafting with AI
+
+Use the AI pane to have a diagram drafted or changed for you.
+
+- **New diagram:** paste a process description, meeting notes or a procedure, or attach documents (PDF, Word, HTML, text, Markdown, or pictures such as a whiteboard photo). Choose a diagram type or let the AI pick one. It drafts the source, checks it as the app checks yours, fixes what fails, and shows the result.
+- **Edit diagram:** ask for a change to the diagram in the editor, for example *"put each role in its own lane"* or *"add a manager approval before payment"*. The AI changes only what you ask.
+- Every change the AI makes has a **Step back** button that restores the diagram from before it. **Stop** cancels a request that is still running.
+
+Pick the AI at the top of the pane:
+
+- **Microsoft 365 Copilot** needs a Copilot licence. Choose it, click **Sign in**, and enter the code shown at the Microsoft page it links to. Copilot reads text only, so attach PDFs and pictures with Claude instead.
+- **Claude** is available when your administrator has set it up.
+
+The AI can make mistakes: review what it drafts like anything else. The app sends your material to the AI for that request only, and keeps no copy.
+
+![The AI pane: paste notes or attach documents to create a diagram](docs/img/web-generate.png)
+
+## Keyboard shortcuts
+
+| Keys | Does |
+|------|------|
+| Ctrl+S | Save a version of the open file (or keep an example as a file) |
+| Ctrl+O | Import files |
+| Ctrl+Shift+S | Download the open file |
+| Ctrl+Space | Complete a field name or value in the Source pane |
+| Shift+F10 or the menu key | Open the menu of the selected file or folder |
+| F2 / Delete | Rename / delete the selected file or folder |
+| ↑ ↓ ← → Enter | Move through the file tree, open and close folders, open files |
+| Alt+Shift+arrow keys | Move the pane you are in |
+| Arrow keys on a pane divider | Resize the panes beside it |
+| Escape | Close a menu, cancel a rename or a pane drag |
 
 ## Diagram types
 
-The examples and images below are generated from the registered types (`pnpm docs:build`) by the same renderer the API will use. CI fails if any of them go stale, and each example also has to pass validation.
+Every example below is drawn by the app itself. To start from one, pick it from **Examples** in the Source pane and press **Save**.
 
 <!-- BEGIN GENERATED: examples (pnpm docs:build) -->
 
@@ -4513,9 +4642,9 @@ The examples and images below are generated from the registered types (`pnpm doc
 
 <!-- END GENERATED: examples -->
 
-## Language
+## Writing diagrams
 
-Diagrams are JSON, XML or YAML documents describing the same model. The tables below are generated from the schemas (`pnpm docs:build`), so they always match what the validator accepts.
+A diagram is a JSON document (XML and YAML files are converted to JSON when you import them). The Source pane completes field names and values as you type (Ctrl+Space) and underlines mistakes. The field tables below are generated from the same schemas the app checks against, so they always match what it accepts.
 
 **Connections live under the node they leave from.** Each node lists its outgoing connections in `to`. Each entry names its target (`node` in flowcharts, `state` in state diagrams) and can carry its own label, side hints and style:
 
@@ -5199,289 +5328,13 @@ Validation also checks the lifecycle as a whole, with warnings for:
 - decisions with fewer than two ways out;
 - verdicts on anything but a task.
 
-### Diagnostics
+### Problems
 
-Validation reports **every** problem, not only the first. Each one carries a JSON Pointer to its location in the source:
+The app reports **every** problem, not only the first, underlined in the Source pane and listed below it; click one to jump to it. Each carries a path to its place in the source:
 
 ```json
 { "severity": "error", "code": "ref.lane", "message": "node 'ship' references unknown lane 'wh'", "path": "/nodes/3" }
 ```
-
-## Install
-
-### Windows
-
-In PowerShell (no admin rights needed):
-
-```powershell
-irm https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.ps1 | iex
-```
-
-If Node.js 22.18+ is missing, the installer installs the current Node.js LTS with `winget` first. Then it downloads the latest release, checks its SHA-256 and installs it to `%LOCALAPPDATA%\jtddiagrammar`. It also adds **JTDDiagrammar** shortcuts to the Start Menu and the desktop, and a `jtddiagrammar` command to your PATH.
-
-**To start:** double-click the **JTDDiagrammar** shortcut. A console window starts the app on http://localhost:8080 (local only) and opens your browser. Close the window to stop it.
-
-**Private repository:** the link above needs a signed-in browser. Download `install.ps1` from the [releases page](https://github.com/jtddigital/JTDDiagrammar/releases/latest) and run it with a token that can read the repository (or after `gh auth login`):
-
-```powershell
-$env:GITHUB_TOKEN = '<token>'; powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
-
-### Linux and macOS
-
-Needs Node.js 22.18+.
-
-```bash
-curl -fsSL https://github.com/jtddigital/JTDDiagrammar/releases/latest/download/install.sh | bash
-```
-
-Then run `jtddiagrammar` to start the app and open your browser; Ctrl+C stops it. On Linux there's also a desktop entry.
-
-### Commands
-
-| Command | Does |
-|---------|------|
-| `jtddiagrammar` | Start the app and open the browser |
-| `jtddiagrammar --port 9000 --no-open` | Another port; don't open the browser |
-| `jtddiagrammar update` | Install the latest release (or `update v1.2.3`) |
-| `jtddiagrammar restart` | Stop the running app and start it again, e.g. after changing `config.env` |
-| `jtddiagrammar stop` | Stop the running app |
-| `jtddiagrammar version` | Show the installed version |
-| `jtddiagrammar uninstall` | Windows: remove the app, its shortcuts and PATH entry (`--keep-config` keeps your settings) |
-
-**Updating from the app:** the toolbar shows the running version. When a newer release is out, it shows **Update to vX.Y.Z**: that installs the release the same way `jtddiagrammar update` does, restarts the app, and reloads the page (your diagram is kept). It needs the same access as the command, so a private repository needs `GITHUB_TOKEN` in `config.env`. If the install fails, the app keeps running and shows why; the full output is in `update.log` in the install folder. Only copies installed with the installer can update themselves (not Docker or a source checkout), and only from the computer running the app. Set `UPDATES=off` in `config.env` to turn it off.
-
-**Settings**, including `ANTHROPIC_API_KEY` for AI generation, go in `config.env` in the install folder. Updates keep it. If the app is already running, `jtddiagrammar` reuses it, unless it is an older version or `config.env` has changed since it started: then it restarts it. A server started by a release before v1.0.13 can't be restarted this way; close its window (or press Ctrl+C there) and run `jtddiagrammar` again. Installing also needs access to the npm registry, because dependencies are installed from the release's lockfile.
-
-**Publishing a release:** every merge to `main` publishes the next patch version automatically (v1.0.5 → v1.0.6), with release notes from the merged PRs, so `jtddiagrammar update` picks it up. Put `[skip release]` in the PR title to merge without releasing. For a minor or major version, push a tag such as `v1.1.0`, or create the release on the releases page. Either way the `Release` workflow runs the checks, then attaches the bundle, its checksum and both installers. You can also open **Actions → Release → Run workflow** and enter a version such as `v1.2.3`. If the tag doesn't exist yet, it is created on the branch you run from (normally `main`); if it does, its files are rebuilt and re-attached. GitHub's own "Source code" archives are not the app bundle. On every push, CI installs, launches, updates and uninstalls a packed release on Windows (Windows PowerShell 5.1 and PowerShell 7) and Linux (`pnpm release:e2e`).
-
-## Quick start
-
-To work on the code instead, you need Node ≥ 22.18 and pnpm 10.
-
-```bash
-pnpm install
-```
-
-Build the web app and start the API, which also serves the web app, at http://localhost:8080:
-
-```bash
-pnpm --filter @jtd/web build
-```
-
-```bash
-pnpm dev:api
-```
-
-For web development with hot reload (Vite, http://localhost:5173), run this alongside the API:
-
-```bash
-pnpm dev:web
-```
-
-Or run everything in one container:
-
-```bash
-docker build -t jtd .
-```
-
-```bash
-docker run -p 8080:8080 jtd
-```
-
-Configuration is through environment variables; see [`.env.example`](.env.example).
-
-### Web app
-
-![Web app: files, AI conversation, JSON source and live diagram side by side](docs/img/web-app.png)
-
-Four panes: **Files**, **AI**, **Source** and **Preview**, plus **Compare** while a comparison is open. Drag the lines between them to resize (or focus a line and use the arrow keys), and hide or show each from the toolbar. Drag a pane by its header onto another pane's edge to rearrange them like an IDE: drop on the left or right to put it in a column of its own, on the top or bottom to stack it in that column (for example Files above Source); the highlighted half shows where it will go, and Escape cancels. With the keyboard, Alt+Shift+arrow keys move the pane you are in. The layout is remembered. Light and dark themes follow your system. Rendering happens in the browser with the same core library the API uses.
-
-- **Files:** your workspace of folders and files, kept in this browser (nothing is stored on the server). Right-click a file, a folder or the empty space (or press Shift+F10) for **New folder**, **New diagram** from any example, new **Markdown**, **text** or **CSV** files, **Rename** (F2), **Duplicate**, **Delete** (to a trash you can restore from, with Undo), **Import** and **Export** (a file, or a folder or the whole workspace as a `.zip`), **Export as PDF** (any file) and **Export as Excel** (CSV files). Drag to move, or drop files from your computer onto a folder. Unsaved edits are marked • and kept until you save, even across reloads. **Save** (Ctrl+S) records a version; every version is kept. The **History** button at the top of the Files pane lists the open file's versions, following whichever file you open: show one read-only, **Compare** it with the current text, or **Restore** it as the newest version, so nothing is lost.
-- **Compare:** right-click a file for **Compare with saved** (your unsaved edits against the last save) or **Compare with…** (then click the other file). Either side can be switched to any saved version, so any two files or versions can be compared. Text shows side by side or unified, with changed words marked, unchanged stretches folded, and ↑ ↓ to step through the changes. Two Markdown files can also be compared rendered, with added, removed and changed blocks marked; two CSV files as a table, matching rows by position or by a key column, with changed cells showing the old and new value. Two diagrams are drawn side by side, each laid out as it really is: removed elements glow red in the earlier, added green in the later, changed amber in both, and pan and zoom move both drawings. Below them the changes are listed in words with their source lines; choose one to outline it in both drawings. ✕ closes the pane.
-
-![Compare: two Markdown files rendered side by side, with added, removed and changed blocks marked](docs/img/web-compare.png)
-
-![Compare: two versions of a flowchart drawn side by side, with the changes marked and listed](docs/img/web-compare-diagram.png)
-
-- **AI:** a conversation. Ask for a change to the diagram in the editor, or switch to **New diagram** and paste notes or attach documents. Every change the AI makes has a **Step back** button that restores the diagram from before it; stepping back can itself be stepped back. See [AI generation](#ai-generation).
-- **Source:** JSON with autocomplete (Ctrl+Space) for the fields and values of the document's `type`. Problems are underlined and listed below; click one to jump to it. The diagram keeps the last valid version until they are fixed.
-- **Preview:** for a diagram, scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click an element to find its source: it scrolls to the top of the editor. The element your editor cursor is in is outlined, and hovering a node highlights its connections. Double-click a label to edit it in place. Hover a generated element to see the quote it came from. Layout is automatic, so nodes can't be dragged to a position. A Markdown file renders here, built in (no library): GitHub Flavored Markdown (tables, task lists, strikethrough, autolinks, footnotes), GitHub alerts (`> [!NOTE]`), heading anchors, `[[toc]]` for a table of contents, front matter, highlighted code, `$…$` and `$$…$$` math, and ```` ```jtd ```` blocks drawn as diagrams; relative links open workspace files. Put `![[file]]` (or `![caption](file)`) on a line of its own to show a workspace file in place: a diagram drawn, a CSV as a table, Markdown rendered or text as it is. `<details>` sections fold everything up to `</details>`, code included; `<!-- toc -->` works as a table of contents too. A CSV file shows as a table (click a column header to sort the view); a text file hides the Preview while it is open.
-- **Import** (Ctrl+O) brings files into the workspace: diagrams in JSON, YAML or XML (YAML and XML are converted to JSON), Markdown, text and CSV. Ctrl+Shift+S downloads the open file.
-- **SVG** export downloads exactly what the API would return for the same source. **PNG** rasterises it at 2× in the browser. **PDF** works for any file: a diagram as sharp vectors on a page its own size, Markdown typeset on A4 pages (embedded diagrams and tables included), a CSV as a table, text as it is.
-- **Share link** copies a URL that carries the source itself (compressed into the `#fragment`, never sent to the server); opening it adds the diagram to the workspace as `Shared.json`.
-- **Examples** (in the Source pane) shows any registered example without adding a file; **Save** keeps it as a file.
-
-### Library
-
-```ts
-import { createRegistry, parseJson, render } from '@jtd/core';
-
-const { value } = parseJson(text);
-const { svg, diagnostics } = render(value, createRegistry()); // svg is undefined if there are errors
-```
-
-Output is standalone SVG 1.1. Text uses `Arial, Liberation Sans, Helvetica, sans-serif`; the first two have identical metrics, so text fits its boxes without embedding a font. Elements carry ids and classes for styling and scripting: `n-<id>` / `jtd-node jtd-shape-<shape>` for nodes, and `e-<id>` / `jtd-edge` for edges.
-
-## API
-
-| Method | Path | Returns |
-|--------|------|---------|
-| POST | `/v1/render` | `image/svg+xml`, or `{ svg, diagnostics }` with `Accept: application/json`. Body as JSON, XML (`application/xml`) or YAML (`application/yaml`) |
-| GET | `/v1/render?src=…` | SVG for `<img>` embedding; `src` is the JSON document, base64url-encoded |
-| POST | `/v1/validate` | `{ valid, diagnostics }`; JSON, XML or YAML |
-| GET | `/v1/types` | Registered diagram types and their examples |
-| GET | `/v1/schema`, `/v1/schema/{type}` | JSON Schema (2020-12), combined or per type |
-| POST | `/v1/refine` | Changes an existing diagram from an instruction (see [AI generation](#ai-generation)) |
-| POST | `/v1/generate` | Diagram source generated by Claude from text and/or documents (see [AI generation](#ai-generation)) |
-| GET | `/v1/ai` | `{ enabled, model? }`: whether AI generation is configured |
-| GET | `/v1/openapi.json` | OpenAPI 3.1, generated from the route table |
-| GET | `/health` | `{ status: "ok" }` |
-
-```bash
-curl -X POST localhost:8080/v1/render -H 'content-type: application/json' --data @diagram.json -o diagram.svg
-```
-
-Errors come back as `{ diagnostics: [...] }` (shape as in [Diagnostics](#diagnostics)):
-
-| Status | When |
-|--------|------|
-| 400 | Invalid JSON or invalid diagram |
-| 413 | Body over `BODY_LIMIT`, or more than `MAX_NODES` / `MAX_EDGES` |
-| 415 | Body is not `application/json` |
-| 422 | Rendering took longer than `RENDER_TIMEOUT_MS`, so the render was stopped |
-
-Rendering runs in worker threads, so one slow diagram can't stall the server. Request bodies are never logged. SVG responses carry `Content-Security-Policy: default-src 'none'`.
-
-## AI generation
-
-Give it a process description, meeting notes or a procedure, as pasted text or as PDF, DOCX, HTML, TXT or MD files. The AI drafts the diagram source, and you review and edit it like anything else. Two AI providers are supported: **Claude** (with `ANTHROPIC_API_KEY`) and **Microsoft 365 Copilot** (on by default, with a Microsoft sign-in); see [Microsoft 365 Copilot](#microsoft-365-copilot).
-
-![AI pane: paste notes or attach documents to create a diagram](docs/img/web-generate.png)
-
-```bash
-curl -X POST localhost:8080/v1/generate -F type=auto -F files=@procedure.pdf -F 'text=Focus on the approval steps'
-```
-
-Images (PNG, JPEG, GIF, WebP: whiteboard photos, screenshots of old diagrams) work too.
-
-The response is `{ type, reason?, source, valid, diagnostics, attempts, usage, svg? }`. `usage` includes token counts and an estimated `costUsd` (published prices; override with `AI_PRICES`).
-
-**Refine** an existing diagram with a plain-language instruction. The AI edits the source itself, with the full language schema and examples, so it can change anything the language allows (content, layout options, styles, colours, hints) and keeps what you did not ask to change. If it changes nothing, the result carries the warning `ai.unchanged`:
-
-```bash
-curl -X POST localhost:8080/v1/refine -H 'content-type: application/json' --data '{"source": {...}, "instruction": "Add a manager approval step before payment"}'
-```
-
-**Progress:** send `Accept: text/event-stream` to either endpoint for `progress` events (`ingest`, `select`, `generate`, `validate`, `repair`), then one `result` or `error` event.
-
-**Provenance:** generated nodes and edges carry a short `quote` from the material; it shows as a tooltip when you hover the element in the SVG.
-
-**How it stays correct:**
-1. Claude's reply is constrained to the diagram type's generation schema (structured outputs).
-2. The reply then passes the **same validation as hand-written source**: schema, references, lanes and phases, and a real layout.
-3. If anything fails, the diagnostics go back to Claude for correction, up to `AI_MAX_REPAIRS` times (default 2).
-4. If it still fails, you get the best attempt with `valid: false` and its diagnostics. A failed attempt is never presented as valid.
-
-**Setup:**
-- Set `ANTHROPIC_API_KEY` on the server. Without it, generation returns `503` and the web panel says it's unavailable.
-- The default model is `claude-opus-5-5` (`AI_MODEL`), at effort `high` (`AI_EFFORT`).
-- Each client IP gets `AI_RATE_LIMIT` AI requests per minute (default 10); then `429` with `Retry-After`.
-- Server-side refusal fallbacks are on; set `AI_FALLBACKS=off` to disable them.
-- Limits on file count, file size, total size and input tokens are in [`.env.example`](.env.example). Input is checked with token counting *before* any generation spend.
-
-**Safety:**
-- The key is read only by the SDK on the server. The browser never sees it, and lint rules stop the web app from importing AI code. A Microsoft Graph token for Copilot stays in the browser's session storage and goes only to this app's API, for the request it is for; the server never stores or logs it.
-- Uploaded material is treated as data. It's wrapped and can't close its own wrapper, Claude gets no tools, and the server fixes the type and schema. Any text that ends up in the diagram is escaped when rendered.
-- Material and results are not logged or stored.
-- Closing the request (or **Stop** in the web app) aborts the Claude call.
-
-In the web app, the AI pane shows each stage as it happens and can stop a job. In **Edit diagram** mode a message refines whatever is in the editor; each change can be stepped back.
-
-**Status:** CI tests generation end to end against a deterministic mock, never the live API. `pnpm ai:live` runs three real cases (cross-functional, plain, prompt injection) with pass/fail checks; its first run (2026-11-11, `claude-opus-5-5`) passed all three, each valid on the first attempt, with the cached prefix read on repeat calls. A full accuracy evaluation with reference diagrams (URS-AI-018) is still to do.
-
-### Microsoft 365 Copilot
-
-Copilot works on behalf of the person using the app: they sign in with their Microsoft work account, and the server calls the Microsoft Graph Copilot Chat API with their token. **It needs no settings and no app registration:** pick **Microsoft 365 Copilot** in the list at the top of the AI pane, then **Sign in**. A code appears in the conversation; enter it at the Microsoft page it links to, as with `Connect-MgGraph -UseDeviceCode`. The choice is remembered.
-
-- Each user needs a Microsoft 365 Copilot licence.
-- The first sign-in asks for consent to the seven Microsoft Graph permissions the Copilot Chat API needs: `Sites.Read.All`, `Mail.Read`, `People.Read.All`, `OnlineMeetingTranscript.Read.All`, `Chat.Read`, `ChannelMessage.Read.All`, `ExternalItem.Read.All`. Where your tenant requires it, an admin has to consent instead.
-- Sign-in goes through *Microsoft Graph Command Line Tools*, Microsoft's own public app (the one `Connect-MgGraph` uses), so it shows in your tenant's sign-in logs under that name and your organisation's policies for it apply.
-- The token stays in that browser tab and is refreshed as needed. The server only relays the sign-in requests (Microsoft refuses them from a browser for this kind of app) and keeps nothing.
-
-Settings, all optional, in `config.env`:
-
-| Setting | Does |
-|---------|------|
-| `COPILOT=off` | Turn Copilot off |
-| `COPILOT_TENANT_ID` | Your tenant id or domain (default `organizations`: any work or school account) |
-| `COPILOT_CLIENT_ID` | Use an app of your own instead. A single-page app (redirect URI `https://<your host>/auth-redirect.html`, the seven delegated permissions) signs in with a popup; for a public client app, also set `COPILOT_SIGNIN=device` |
-| `COPILOT_GRAPH_URL`, `COPILOT_SCOPES` | Override the endpoint and permissions if Microsoft changes them |
-
-Over the API, send `"provider": "copilot"` (a form field for multipart requests) and the user's Graph token in `X-Graph-Token`.
-
-Copilot has no structured outputs, so the schema is sent as instructions and every reply is checked and repaired like Claude's. It takes text only, so PDFs and images need Claude, and it does not report token usage or cost.
-
-**Status:** tested against a stand-in for Graph, not yet against a live tenant. The request shape follows Microsoft's Graph beta reference for the Copilot Chat API, which is a preview API and may change.
-
-## Architecture
-
-```
-packages/core/src
-  registry/     DiagramType + LayoutEngine contracts, Registry
-  diagrams/     one folder per diagram type (the only type-specific code)
-  ir/           shared Graph IR
-  schema/       shared schema fragments, combined schema
-  validate/     envelope, JSON Schema (Ajv), common IR rules
-  adapters/     source formats (JSON)
-  measure/      text metrics from a generated font table (no DOM)
-  shapes/       shape library: size, outline, ports
-  layout/       layered engine: cycles → rank → order → place → route, then polish (fewer bends) and labels
-  render/svg/   geometry → SVG string
-packages/ai/src    Claude client (SDK + mock), ingest, prompts, generate + repair loop
-packages/api/src   Fastify server: route table → routes + OpenAPI, worker-thread render pool
-packages/web/src   Vite + React + CodeMirror: editor, live preview, export
-scripts/docs/   README generation + checks
-scripts/fonts/  font metrics generator
-```
-
-Pipeline: `parse → envelope → type schema → type rules + IR + common rules → layout engine → geometry → SVG`.
-
-Enforced boundaries (lint + tests):
-- `core` has no DOM and no Node built-ins, so it runs in the browser and on the server.
-- `layout/` and `render/` never import diagram types.
-- Only `packages/ai` imports the Anthropic SDK, and the web app never imports AI code.
-
-Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Requirements: [docs/URS.md](docs/URS.md).
-
-## Development
-
-| Script | Does |
-|--------|------|
-| `pnpm check` | lint + typecheck + tests + docs check (what CI runs) |
-| `pnpm test` | Vitest (unit, layout invariants, golden SVGs) |
-| `pnpm test -u` | Accept changed golden SVGs. Review the diff first. |
-| `pnpm test:budget` | Timing budgets (URS-LY-010), alone and without coverage; `pnpm test` runs it first |
-| `pnpm e2e` | Playwright tests: built web app against the real API, and every generated SVG opened in Chromium and Firefox (`playwright install firefox` once) |
-| `pnpm licences` | Production dependency licences against the permissive allowlist |
-| `pnpm docs:build` | Regenerate README examples and `docs/img/*.svg` |
-| `pnpm docs:screens` | Regenerate web app screenshots (`docs/img/*.png`) |
-| `pnpm quality` | Layout quality table (crossings, overlaps, label collisions, timing) over all fixtures; `--update` lowers the baseline that CI enforces |
-| `pnpm ai:eval` | Accuracy evaluation over a 6-document corpus (valid rate, node/edge recall, lane accuracy). Needs `ANTHROPIC_API_KEY`; writes `.live/eval.json` |
-| `pnpm ai:live` | Live check of AI generation against the real API. Needs `ANTHROPIC_API_KEY`, costs a few cents, never runs in CI; outputs go to `.live/` |
-| `pnpm fonts:metrics` | Regenerate `measure/font-metrics.ts` from Liberation Sans |
-
-Every change cites URS IDs and includes an impact assessment in the commit body ([URS §5](docs/URS.md)).
-
-### Adding a diagram type
-
-1. Create `packages/core/src/diagrams/<type>/` with a schema (unique `$id`), model, `toIR`, optional `validate`, ≥ 1 example, and AI assets: a generation schema in the structured-outputs subset, `fromGenerated`, a guide and few-shot examples.
-2. Register it in `packages/core/src/builtins.ts`.
-3. Run `pnpm docs:build`.
-
-Nothing else changes. The test-only `checklist` type (`packages/core/test/fixture-type.ts`) proves it.
-
-To ship types from a separate package instead, point `REGISTRY_MODULE` at a module that exports `createRegistry()`. The API reads it at startup; the web app reads it when built (`REGISTRY_MODULE=@acme/diagrams pnpm --filter @jtd/web build`).
 
 ## Licence
 

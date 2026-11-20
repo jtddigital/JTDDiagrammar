@@ -238,7 +238,7 @@ files/text ─ingest─▶ content blocks ─(type=auto? select)─▶ Claude + 
 - Known gaps: no PDF page count check (the API's limit applies), no staged progress events, no provenance quotes, and no cost estimate. Diagnostic pointers assume the generation and authoring shapes line up, which holds for flowchart; a nested type such as state must translate pointers. The live smoke check (`pnpm ai:live`, three cases) passes, but output quality is not measured against reference diagrams until the full evaluation suite (URS-AI-018) exists.
 
 ## 10. Documentation
-- `README.md` contains overview, quick start, API with `curl`, a per-type section (source + rendered image), AI usage and config, architecture and workflow. (URS-DOC-001/002)
+- `README.md` is for end users: overview, install, the workspace, AI, shortcuts, a per-type section (source + rendered image) and the language reference. `docs/ADMIN.md` is for administrators (install, settings, updates, AI setup, API, security); `CONTRIBUTING.md` for developers. (URS-DOC-001/002)
 - `pnpm docs:images` renders every type's README fixture through core into `docs/img/<type>.svg` and captures the web app (workspace, AI pane) to PNG with Playwright. (URS-DOC-003/005)
 - A CI job re-runs the script and fails on any diff, or when a registered type has no fixture. That ties the docs to the registry, so a new type can't ship undocumented. (URS-DOC-004, URS-EXT-010)
 
