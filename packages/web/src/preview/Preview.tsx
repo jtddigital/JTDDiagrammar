@@ -23,6 +23,8 @@ interface Props {
   onFit?(v: View): void;
   /** Accessible name of the drawing region. */
   label?: string;
+  /** A mode the drawing is in, set as `data-mode`, e.g. while connecting two elements. */
+  mode?: string | undefined;
 }
 
 export interface View {
@@ -42,7 +44,7 @@ const refOf = (el: EventTarget | null): { g: Element; ref: Ref } | undefined => 
  * Interactive (URS-WEB-020): click selects an element's source, hover highlights its connections, and
  * double-click edits its label in place. Fits the pane until the user pans or zooms.
  */
-export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram' }: Props) {
+export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram', mode }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [own, setOwn] = useState<View | undefined>();
@@ -122,6 +124,7 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
     <section
       className="preview"
       aria-label={label}
+      {...(mode && { 'data-mode': mode })}
       ref={host}
       onWheel={(e) => {
         const box = host.current!.getBoundingClientRect();

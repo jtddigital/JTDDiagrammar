@@ -54,7 +54,7 @@ export const timeline: LayoutEngine = {
       ir.nodes.forEach((n, i) => {
         const indent = (c.align ?? 'left') === 'left' ? (n.depth ?? 0) * INDENT : 0;
         const text = n.cells?.[c.id];
-        if (text) cells.push({ x, y: rowTop(i), w, h: ROW, text: fit(text, w - 2 * CELL_PAD - indent, n.strong ? bold : TABLE_FONT), align: c.align ?? 'left', ...(indent && { indent }), ...(n.strong && { bold: true }) });
+        if (text) cells.push({ x, y: rowTop(i), w, h: ROW, text: fit(text, w - 2 * CELL_PAD - indent, n.strong ? bold : TABLE_FONT), align: c.align ?? 'left', ...(indent && { indent }), ...(n.strong && { bold: true }), of: { node: n.id, column: c.id } });
       });
       x += w;
     });

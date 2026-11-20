@@ -133,7 +133,7 @@ test('fits each new diagram until the user zooms (URS-WEB-006)', async ({ page }
     await expect.poll(inside).toBe(true);
   }
   // Resizing the pane keeps the diagram fitted.
-  await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'AI' }).click();
+  await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'AI', exact: true }).click();
   await expect.poll(inside).toBe(true);
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await page.getByRole('button', { name: 'Zoom in' }).click();

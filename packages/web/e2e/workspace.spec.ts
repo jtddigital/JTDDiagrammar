@@ -6,7 +6,7 @@ const pane = (page: import('@playwright/test').Page, name: string) => page.getBy
 test('shows the panes, which can be hidden, but not all of them (URS-WEB-015)', async ({ page }) => {
   await open(page);
   for (const name of ['Files', 'AI', 'Source', 'Preview']) await expect(pane(page, name)).toBeVisible();
-  const toggle = (name: string) => page.getByRole('group', { name: 'Panes' }).getByRole('button', { name });
+  const toggle = (name: string) => page.getByRole('group', { name: 'Panes' }).getByRole('button', { name, exact: true });
   await toggle('AI').click();
   await expect(pane(page, 'AI')).toHaveCount(0);
   await expect(toggle('AI')).toHaveAttribute('aria-pressed', 'false');

@@ -1,3 +1,4 @@
+import { stateEdit } from './edit.ts';
 import type { DiagramType } from '../../registry/diagram-type.ts';
 import { stateAi } from './ai.ts';
 import { examples } from './examples.ts';
@@ -16,4 +17,5 @@ export const state: DiagramType<StateDiagram> = {
   toIR: stateToIR,
   examples,
   ai: stateAi,
+  edit: stateEdit,
 };

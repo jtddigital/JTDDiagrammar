@@ -66,4 +66,30 @@ describe('diagram comparison by element identity (URS-WS-035, D-008)', () => {
     expect(d.marksB['e-edge:a:0']).toBe('changed');
     expect(d.marksA['e-edge:a:0']).toBe('removed');
   });
+
+  it('marks the changed cells of a timeline table, and lists them by column (Gantt)', () => {
+    const doc = {
+      version: '1',
+      type: 'gantt',
+      start: '2026-03-02',
+      columns: ['name', 'owner', 'duration'],
+      tasks: [
+        { id: 'plan', name: 'Plan', owner: 'Ann', duration: 3 },
+        { id: 'build', name: 'Build', owner: 'Ann', duration: 5, after: ['plan'] },
+      ],
+    };
+    const next = clone(doc);
+    next.tasks[1]!.owner = 'Bob';
+    next.tasks.push({ id: 'ship', name: 'Ship', owner: 'Cy', duration: 1, after: ['build'] });
+    const d = diffIR(ir(doc), ir(next));
+    const build = d.changes.find((c) => c.kind === 'n' && c.b === 'build')!;
+    expect(build.text).toBe('Node “Build”: Owner “Ann” → “Bob”');
+    expect(d.marksA['t-build--owner']).toBe('changed');
+    expect(d.marksB['t-build--owner']).toBe('changed');
+    // Unchanged cells of a changed row stay unmarked.
+    expect(d.marksB['t-build--name']).toBeUndefined();
+    // A new row's cells are all added.
+    expect(d.marksB['t-ship--name']).toBe('added');
+    expect(d.marksB['t-ship--owner']).toBe('added');
+  });
 });

@@ -1,3 +1,4 @@
+import { orgchartEdit } from './edit.ts';
 import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { GraphIR } from '../../ir/types.ts';
 import type { AiAssets, DiagramType, Example } from '../../registry/diagram-type.ts';
@@ -269,4 +270,5 @@ export const orgchart: DiagramType<OrgChart> = {
   toIR,
   examples,
   ai,
+  edit: orgchartEdit,
 };

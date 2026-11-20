@@ -1,3 +1,4 @@
+import { ganttEdit } from './edit.ts';
 import type { DiagramType } from '../../registry/diagram-type.ts';
 import { ai } from './ai.ts';
 import { examples } from './examples.ts';
@@ -18,4 +19,5 @@ export const gantt: DiagramType<Gantt> = {
   toIR,
   examples,
   ai,
+  edit: ganttEdit,
 };

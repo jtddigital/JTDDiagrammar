@@ -1,0 +1,98 @@
+/* Direct editing (URS-WEB-025, WEB-026): the diagram toolbar and the details pane. An isolated experiment (D-009). */
+.editbar {
+  --cluster-gap: var(--space-1);
+  flex-wrap: nowrap;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.editbar .select {
+  max-width: 10rem;
+}
+
+.editbar__status {
+  padding-inline: var(--space-2);
+  color: var(--color-accent);
+}
+
+.preview[data-mode='connect'],
+.preview[data-mode='connect'] .stage g[id] {
+  cursor: crosshair;
+}
+
+.details__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3);
+}
+
+.details__form {
+  --stack-gap: var(--space-3);
+}
+
+.details__field {
+  --stack-gap: var(--space-1);
+}
+
+.details__label {
+  font-size: var(--step--1);
+  font-weight: 600;
+}
+
+.details__hint {
+  font-size: var(--step--2);
+  line-height: 1.4;
+}
+
+.details__group {
+  --stack-gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.details__json {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+}
+
+.details__color input[type='color'] {
+  width: 2.25rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: none;
+}
+
+.details__color .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.details .input,
+.details .select {
+  width: 100%;
+  max-width: none;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--step--1);
+}
+
+.details .input[readonly] {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+}
+
+.details .input:focus-visible,
+.details .select:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -1px;
+}

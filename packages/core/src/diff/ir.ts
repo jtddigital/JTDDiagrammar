@@ -4,6 +4,7 @@
  * ids count positions. Every type compares the same way: there is no type-specific code.
  */
 import type { GraphIR } from '../ir/types.ts';
+import { cellId } from '../render/svg/grid.ts';
 
 /** Kinds of drawn element, by their SVG id prefix (URS-RN-005); `d` is the diagram as a whole (title, legend…). */
 export type ElementKind = 'd' | 'n' | 'e' | 'c' | 'l' | 'p' | 'lg' | 'pg';
@@ -88,6 +89,14 @@ function fieldChanges(a: Item, b: Item): FieldChange[] {
 
 const quoted = (s: string) => `“${s}”`;
 
+/** A timeline span, [from, to) in days since 1970-01-01, as dates. */
+const days = (v: unknown) => {
+  if (!Array.isArray(v) || v.length !== 2) return 'none';
+  const iso = (d: number) => new Date(d * 86_400_000).toISOString().slice(0, 10);
+  const [from, to] = v as [number, number];
+  return from === to ? iso(from) : `${iso(from)} to ${iso(to - 1)}`;
+};
+
 /** A value in words: text as it is, a lane or phase by its label, anything else briefly. */
 function shown(v: unknown, bands: Map<string, string>): string {
   if (typeof v === 'string') return quoted(bands.get(v) ?? v);
@@ -105,11 +114,32 @@ export function diffIR(a: GraphIR, b: GraphIR): IrDiff {
     kind === 'e' ? `${quoted(labels.get(x.from!) ?? x.from!)} → ${quoted(labels.get(x.to!) ?? x.to!)}` : quoted(typeof x.label === 'string' && x.label ? x.label : x.id);
 
   const out: IrDiff = { changes: [], marksA: {}, marksB: {} };
-  const whole = (ir: GraphIR) => Object.fromEntries(WHOLE.map((k) => [k, ir[k]])) as Item;
+  // A timeline's shaded days follow its dates, so only its columns and markers count as the diagram's own.
+  const whole = (ir: GraphIR) => Object.fromEntries(WHOLE.map((k) => [k, k === 'timeline' && ir.timeline ? { columns: ir.timeline.columns, markers: ir.timeline.markers } : ir[k]])) as Item;
   const words = (fields: FieldChange[]) =>
-    fields.map((f) => `${FIELD_NAMES[f.field] ?? f.field} ${f.before === undefined ? `set to ${shown(f.after, bands)}` : f.after === undefined ? `${shown(f.before, bands)} cleared` : `${shown(f.before, bands)} → ${shown(f.after, bands)}`}`).join('; ');
+    fields.map((f) =>
+      f.field === 'span'
+        ? `dates ${days(f.before)} → ${days(f.after)}`
+        : `${FIELD_NAMES[f.field] ?? f.field} ${f.before === undefined ? `set to ${shown(f.after, bands)}` : f.after === undefined ? `${shown(f.before, bands)} cleared` : `${shown(f.before, bands)} → ${shown(f.after, bands)}`}`).join('; ');
   const top = fieldChanges(whole(a), whole(b));
   if (top.length) out.changes.push({ kind: 'd', type: 'changed', fields: top, text: `Diagram: ${words(top)}` });
+  // A timeline's table: each row's cells by column, named by the column's header (URS-WS-035).
+  const columns = new Map([...(a.timeline?.columns ?? []), ...(b.timeline?.columns ?? [])].map((c) => [c.id, c.label || c.id] as const));
+  const cellsOf = (x: Item) => (x.cells ?? {}) as Record<string, string>;
+  const markCells = (marks: Record<string, ChangeType>, x: Item, type: ChangeType, only?: (col: string) => boolean) => {
+    for (const col of Object.keys(cellsOf(x))) if (!only || only(col)) marks[cellId(x.id, col)] = type;
+  };
+  /** The `cells` change of a row, as one change per column that differs. */
+  const byColumn = (fields: FieldChange[], x: Item, y: Item): FieldChange[] =>
+    fields.flatMap((f) => {
+      if (f.field !== 'cells') return [f];
+      const [ca, cb] = [cellsOf(x), cellsOf(y)];
+      // Only the columns the table shows; the dates of the others are in `span`.
+      const cols = [...new Set([...Object.keys(ca), ...Object.keys(cb)])].filter((c) => ca[c] !== cb[c] && (!columns.size || columns.has(c)));
+      markCells(out.marksA, x, 'changed', (c) => cols.includes(c));
+      markCells(out.marksB, y, 'changed', (c) => cols.includes(c));
+      return cols.map((c) => ({ field: columns.get(c) ?? c, ...(ca[c] !== undefined && { before: ca[c] }), ...(cb[c] !== undefined && { after: cb[c] }) }));
+    });
   const kindsB = new Map(elements(b));
   for (const [kind, itemsA] of elements(a)) {
     const A = keyed(kind, itemsA);
@@ -119,9 +149,10 @@ export function diffIR(a: GraphIR, b: GraphIR): IrDiff {
       if (!y) {
         out.changes.push({ kind, type: 'removed', a: x.id, ...(x.src && { srcA: x.src }), fields: [], text: `${NAMES[kind]} ${name(kind, x, labelsA)} removed` });
         out.marksA[`${kind}-${x.id}`] = 'removed';
+        markCells(out.marksA, x, 'removed');
         continue;
       }
-      const fields = fieldChanges(x, y);
+      const fields = byColumn(fieldChanges(x, y), x, y);
       if (!fields.length) continue;
       out.changes.push({ kind, type: 'changed', a: x.id, b: y.id, ...(x.src && { srcA: x.src }), ...(y.src && { srcB: y.src }), fields, text: `${NAMES[kind]} ${name(kind, y, labelsB)}: ${words(fields)}` });
       out.marksA[`${kind}-${x.id}`] = 'changed';
@@ -131,6 +162,7 @@ export function diffIR(a: GraphIR, b: GraphIR): IrDiff {
       if (A.has(k)) continue;
       out.changes.push({ kind, type: 'added', b: y.id, ...(y.src && { srcB: y.src }), fields: [], text: `${NAMES[kind]} ${name(kind, y, labelsB)} added` });
       out.marksB[`${kind}-${y.id}`] = 'added';
+      markCells(out.marksB, y, 'added');
     }
   }
   return out;

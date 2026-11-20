@@ -65,6 +65,7 @@
   --color-removed-soft: #fdecea;
   --color-removed-strong: #f6c4be;
   --color-changed-soft: #fdf3dc;
+  --color-changed-strong: #f5d88a;
   --shadow-sm: 0 1px 2px rgb(31 30 28 / 0.06);
   --shadow-md: 0 4px 16px rgb(31 30 28 / 0.08), 0 1px 3px rgb(31 30 28 / 0.06);
 }
@@ -97,6 +98,7 @@
     --color-removed-soft: #3b2220;
     --color-removed-strong: #6a3530;
     --color-changed-soft: #3a2f1a;
+    --color-changed-strong: #6b5420;
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.3);
   }

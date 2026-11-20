@@ -85,6 +85,8 @@ export interface PlacedCell extends Box {
   fill?: 'header' | 'shade';
   /** Draw its outline. */
   border?: boolean;
+  /** The node row and table column this cell shows, so comparisons can mark it (URS-WS-035). */
+  of?: { node: string; column: string };
 }
 
 /** A straight line: a grid line, or a marker such as a deadline with its label. */

@@ -529,3 +529,25 @@ As built (WS-035): `core/src/diff/ir.ts` matches nodes, containers, lanes, phase
 5. Versions and history (WS-020..022).
 6. Diff engine and Compare pane: text, Markdown, CSV (WS-030..034).
 7. Diagram comparison (WS-035).
+
+## 15. Direct editing, an isolated experiment (URS-WEB-025, WEB-026, EXT-012, D-009)
+
+Editing from the diagram writes to the source text, which stays the single truth; nothing else holds diagram state. All of it is in `packages/web/src/edit/`:
+
+```
+edit/index.ts        public surface (useEdit) and the removal recipe
+edit/useEdit.tsx     selection, connect mode, add, delete; returns the toolbar and the details pane
+edit/EditBar.tsx     Add (the type's additions), Connect, Delete, Details
+edit/DetailsPane.tsx a field per property the schema allows at the element's source pointer
+edit/schema.ts       schema at a JSON Pointer (properties, items, local $ref, allOf, anyOf/oneOf) and the field kind for each property
+edit/source.ts       set, remove and append by pointer with jsonc-parser (formatting kept), fresh ids
+edit/edit.css
+```
+
+The details pane is type-agnostic: a clicked element's IR `src` pointer leads to its value in the parsed source and, through the type's authoring schema, to its properties. Text, number, choice (enums), yes/no, colour (hex patterns), comma-separated lists, nested groups (two levels; deeper as JSON) and JSON for anything else; arrays of objects (connections, nested items) are summarised, since they are elements of their own. Ids are read-only, since references to them live elsewhere.
+
+The toolbar needs to know what a type can add and how two of its elements connect. That is type-specific, so it lives in each type's folder as optional `edit` assets (`diagrams/<type>/edit.ts`: flowchart, state, orgchart, gantt). Each addition is a `SourceEdit` (a pointer and a value, appended or set) made from a fresh id and the model, with an optional `available(model)` (e.g. one initial state per region); `connect(model, from, to)` returns the edit or undefined. Types without assets keep Details and Delete.
+
+Wiring: `App.tsx` calls `useEdit` once and places `edit.bar` above the drawing and `edit.pane` in the `details` pane (stacked under Preview, hidden until asked for); the click handler gives `edit.pick` first refusal (connect mode). Each place is marked "Direct editing". Preview only gained a generic `mode` attribute.
+
+**To remove the experiment:** delete `packages/web/src/edit/` and `packages/web/test/edit.test.ts`, `e2e/edit.spec.ts`; remove the lines marked "Direct editing" in `App.tsx`; remove `details` from `PANES`, `DEFAULT_LAYOUT`, `withDetails` (layout.ts) and `PANE_LABELS` (Toolbar.tsx). Optionally remove `diagrams/*/edit.ts`, the `edit` entries in the types, `EditAssets`/`SourceEdit` in `registry/diagram-type.ts` and `core/test/edit-assets.test.ts`; nothing else uses them.

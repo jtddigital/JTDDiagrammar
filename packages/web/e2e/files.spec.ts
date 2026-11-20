@@ -51,7 +51,7 @@ test('creates folders and files from the context menu, renames them, and opens e
   await typeName(page, 'todo.txt');
   await item(page, 'todo.txt').click();
   await expect(pane(page, 'Preview')).toHaveCount(0);
-  await expect(page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: 'Preview', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await item(page, 'Untitled.json').click();
   await expect(pane(page, 'Preview')).toBeVisible();
   await expect(status(page)).toHaveText('Valid');

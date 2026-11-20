@@ -14,6 +14,7 @@ import { pointerOf } from './pick.ts';
 import { elementAt, labelTarget, pointerAt, related, setAt, type Ref } from './preview/interact.ts';
 import { Preview } from './preview/Preview.tsx';
 import { examples, pretty, registry } from './registry.ts';
+import { useEdit } from './edit/index.ts';
 import { useDiagram } from './useDiagram.ts';
 import { CsvTable } from './viewers/CsvTable.tsx';
 import { Markdown, type MarkdownLinks } from './viewers/Markdown.tsx';
@@ -104,7 +105,19 @@ export function App() {
     return () => window.removeEventListener('keydown', keys);
   });
 
+  // Direct editing: an isolated experiment (D-009); see edit/index.ts to remove it.
+  const edit = useEdit({
+    text,
+    setText: viewing ? () => {} : setText,
+    value: ready && !viewing ? d.value : undefined,
+    ir,
+    reveal: (path, t) => setReveal(locate(t, { code: 'pick', path })),
+    detailsShown: !layout.hidden.includes('details'),
+    toggleDetails: () => setLayout((l) => toggle(l, 'details', auto)),
+  });
+
   const pick = (kind: string, id: string) => {
+    if (edit.pick(kind, id)) return; // Direct editing: a click used to connect two elements.
     const path = ir ? pointerOf(ir, kind, id) : undefined;
     if (path !== undefined) setReveal(locate(text, { code: 'pick', path }));
   };
@@ -195,6 +208,8 @@ export function App() {
             // A new pair of files starts fresh; swapping sides or picking versions keeps the view.
             body: comparison && <ComparePane key={[comparison.a.file, comparison.b.file].sort().join()} ws={ws} comparison={comparison} onChange={setComparison} onClose={() => setComparison(undefined)} links={links} />,
           },
+          // Direct editing: the details of the selected element.
+          details: { label: PANE_LABELS.details, body: edit.pane },
           preview: {
             label: PANE_LABELS.preview,
             body: !diagram ? (
@@ -210,6 +225,8 @@ export function App() {
                   <span className="pane__title">Preview</span>
                   <span className="text-muted text-small push-right">Click to find in source · double-click a label to edit</span>
                 </div>
+                {/* Direct editing: the diagram toolbar. */}
+                {!viewing && edit.bar}
                 <Preview
                 {...(d.svg !== undefined && { svg: d.svg })}
                 current={d.current}
@@ -218,6 +235,8 @@ export function App() {
                 relatedOf={relatedOf}
                 labelOf={labelOf}
                   onLabel={onLabel}
+                  // Direct editing: the connect mode's cursor.
+                  {...(!viewing && { mode: edit.mode })}
                 />
               </div>
             ),
