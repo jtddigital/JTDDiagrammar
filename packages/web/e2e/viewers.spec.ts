@@ -75,6 +75,12 @@ test('renders Markdown with GFM, alerts, contents, math, code, diagrams and work
   await importFile(page, 'guide.md', md);
   const view = page.locator('article.md');
   await expect(view.getByRole('heading', { name: 'Guide', level: 1 })).toBeVisible();
+  // Blocks use the whole width of the pane, less its padding, however wide it is.
+  for (const p of ['Files', 'AI', 'Source']) await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: p, exact: true }).click();
+  const [page_, para] = [(await view.boundingBox())!, (await view.locator('p').first().boundingBox())!];
+  expect(page_.width).toBeGreaterThan(1000);
+  expect(para.width).toBeGreaterThan(page_.width - 80);
+  for (const p of ['Files', 'AI', 'Source']) await page.getByRole('group', { name: 'Panes' }).getByRole('button', { name: p, exact: true }).click();
   await expect(view.getByRole('navigation', { name: 'Contents' }).getByRole('link', { name: 'Steps' })).toBeVisible();
   await expect(view.getByRole('checkbox', { name: 'Done', exact: true })).toBeChecked();
   await expect(view.getByRole('cell', { name: '2', exact: true })).toHaveCSS('text-align', 'right');
