@@ -21,6 +21,7 @@ export const FILES = [
   'pnpm-workspace.yaml',
   'LICENSE',
   'README.md',
+  'docs/ADMIN.md',
   '.env.example',
   ...['core', 'documents', 'ai', 'api'].flatMap((p) => [`packages/${p}/package.json`, `packages/${p}/src`]),
   'packages/web/package.json',

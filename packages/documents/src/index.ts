@@ -11,3 +11,7 @@ export { changeStarts, diffLines, fold, rows, splitLines, type LineDiff, type Ro
 export { diffWords, tokens, type Part } from './diff/words.ts';
 export { blocks, diffBlocks, fingerprint, type BlockDiff, type Mark } from './diff/blocks.ts';
 export { diffTable, type TableDiff, type TableRow } from './diff/table.ts';
+export { cellNumber, column, sheetName, xlsx } from './xlsx/write.ts';
+export { svgPath, type PathInfo } from './pdf/path.ts';
+export { A4, FONTS, MM, pdf, PdfPage, winAnsi, type FontName, type Paint, type Rgb } from './pdf/write.ts';
+export { typeset, type Block, type FlowOptions, type Measure, type Run } from './pdf/flow.ts';

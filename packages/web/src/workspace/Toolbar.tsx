@@ -21,6 +21,9 @@ interface Props {
   canExport: boolean;
   onSvg(): void;
   onPng(): void;
+  /** The file on screen as a PDF, any kind (URS-WS-046). */
+  onPdf(): void;
+  canPdf: boolean;
   /** Other formats the current type exports, e.g. BPMN (URS-PM-018). */
   formats: { id: string; label: string }[];
   onExport(format: string): void;
@@ -67,6 +70,9 @@ export function Toolbar(p: Props) {
       </button>
       <button type="button" className="btn" aria-label="Export PNG" disabled={!p.canExport} onClick={p.onPng}>
         <Download /> PNG
+      </button>
+      <button type="button" className="btn" aria-label="Export PDF" disabled={!p.canPdf} onClick={p.onPdf}>
+        <Download /> PDF
       </button>
       {p.formats.map((f) => (
         <button key={f.id} type="button" className="btn" aria-label={`Export ${f.label}`} onClick={() => p.onExport(f.id)}>

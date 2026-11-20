@@ -126,6 +126,9 @@ export function FilesPane({ ws, onView, viewing, onCompare }: { ws: Workspace; o
         },
       },
       { label: n ? 'Export' : 'Export workspace', hint: n?.kind === 'file' ? undefined : '.zip', onSelect: () => void ws.exportNode(n?.id ?? null) },
+      // Any file as a PDF; a table also as an Excel workbook (URS-WS-045, WS-046).
+      ...(n?.kind === 'file' ? [{ label: 'Export as PDF', hint: '.pdf', onSelect: () => void ws.exportAs(n.id, 'pdf') }] : []),
+      ...(n?.kind === 'file' && /\.(csv|tsv)$/i.test(n.name) ? [{ label: 'Export as Excel', hint: '.xlsx', onSelect: () => void ws.exportAs(n.id, 'xlsx') }] : []),
     ];
     if (n)
       items.push(
