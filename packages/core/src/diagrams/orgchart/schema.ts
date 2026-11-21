@@ -1,4 +1,4 @@
-import { envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { envelope, id, inGroup, quote, ref, sectionStyles, style } from '../../schema/fragments.ts';
 
 export const orgchartSchema = {
   $id: 'urn:jtd:schema:v1:orgchart',
@@ -49,17 +49,17 @@ export const orgchartSchema = {
           id,
           name: { type: 'string', description: 'Shown first, on its own line.' },
           title: { type: 'string', description: 'Role, shown under the name.' },
-          manager: ref('Id of the person this person reports to; omit at the top.', 'people'),
-          quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
+          manager: inGroup('links', ref('Id of the person this person reports to; omit at the top.', 'people')),
+          quote,
           style,
-          stack: { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." },
-          multi: { type: 'integer', minimum: 1, maximum: 12, description: "This person's team stacked in this many columns (rows when left to right)." },
-          tags: {
+          stack: inGroup('placement', { type: 'boolean', description: "This person's team: stacked (true) or in a row (false). Default: the chart's `stack`." }),
+          multi: inGroup('placement', { type: 'integer', minimum: 1, maximum: 12, description: "This person's team stacked in this many columns (rows when left to right)." }),
+          tags: inGroup('appearance', {
             type: 'array',
             items: { type: 'string', minLength: 1 },
             description: 'Tag names, e.g. `["contractor", "remote"]`. Each tag styled in the chart\'s `tags` decorates this person; where tags set the same field, the later one wins, and this person\'s own `style` wins over all of them.',
-          },
-          department: { type: 'string', minLength: 1, description: 'Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each.' },
+          }),
+          department: inGroup('placement', { type: 'string', minLength: 1, description: 'Department name. People in a department are boxed together, labelled with it; it needs no head, and their manager may be outside it. People reporting to different managers get a box under each.' }),
         },
       },
     },

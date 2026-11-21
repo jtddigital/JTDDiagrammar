@@ -1,4 +1,4 @@
-import { band, direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
+import { band, direction, edgeLabels, envelope, id, inGroup, quote, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { FLOWCHART_SHAPES } from './model.ts';
 
 const side = { type: 'string', enum: ['N', 'E', 'S', 'W'] } as const;
@@ -12,10 +12,10 @@ const link = {
     node: ref('Target node id.', 'nodes'),
     label: { type: 'string', description: 'Text on the connection, placed where it fits best.' },
     labels: edgeLabels,
-    exitSide: { ...side, description: 'Side of this node the line leaves by (N, E, S, W); default follows the flow.' },
-    entrySide: { ...side, description: 'Side of the target the line enters by; default follows the flow.' },
+    exitSide: inGroup('placement', { ...side, description: 'Side of this node the line leaves by (N, E, S, W); default follows the flow.' }),
+    entrySide: inGroup('placement', { ...side, description: 'Side of the target the line enters by; default follows the flow.' }),
     id: { ...id, description: 'Optional; generated when absent.' },
-    quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
+    quote,
     style: { ...style, description: 'Overrides `edgeStyle` field by field.' },
   },
 } as const;
@@ -29,12 +29,12 @@ const node = {
     shape: { type: 'string', enum: FLOWCHART_SHAPES, default: 'process', description: 'Default `process`.' },
     label: { type: 'string', description: 'Defaults to the id. `\\n` breaks lines; long text wraps.' },
     owner: { type: 'string', description: 'Who does it; shown under a line below the label, and matched by `styleBy.owner`.' },
-    lane: ref('Lane id; required when the diagram has lanes.', 'lanes'),
-    phase: ref('Phase id; required when the diagram has phases.', 'phases'),
-    order: { type: 'integer', description: 'Hint: nodes in the same column and lane are placed in ascending order.' },
-    quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
+    lane: inGroup('placement', ref('Lane id; required when the diagram has lanes.', 'lanes')),
+    phase: inGroup('placement', ref('Phase id; required when the diagram has phases.', 'phases')),
+    order: inGroup('placement', { type: 'integer', description: 'Hint: nodes in the same column and lane are placed in ascending order.' }),
+    quote,
     style,
-    to: { type: 'array', items: link, description: 'Outgoing connections, each to one target node.' },
+    to: inGroup('links', { type: 'array', items: link, description: 'Outgoing connections, each to one target node.' }),
   },
 } as const;
 
@@ -47,8 +47,8 @@ const note = {
     id: { ...id, description: 'Optional; generated when absent.' },
     text: { type: 'string', description: 'Note text; `\\n` breaks lines.' },
     for: ref('Node the note is attached to (dotted line, no arrow).', 'nodes'),
-    lane: ref('Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s.', 'lanes'),
-    phase: ref('Phase, likewise.', 'phases'),
+    lane: inGroup('placement', ref('Lane, for a free-standing note in a cross-functional flowchart; attached notes use their node’s.', 'lanes')),
+    phase: inGroup('placement', ref('Phase, likewise.', 'phases')),
     style,
   },
 } as const;

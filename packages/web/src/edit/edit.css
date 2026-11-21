@@ -7,12 +7,7 @@
   background: var(--color-surface);
 }
 
-.editbar .select {
-  max-width: 10rem;
-}
-
 .editbar__status {
-  padding-inline: var(--space-2);
   color: var(--color-accent);
 }
 
@@ -116,4 +111,135 @@
   --cluster-gap: var(--space-2);
   font-size: var(--step--1);
   font-weight: normal;
+}
+
+/* Categories from the schema, each collapsible (URS-WEB-028). */
+.details__form:has(> .details__section) {
+  --stack-gap: 0;
+}
+
+.details__section {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.details__summary {
+  --cluster-gap: var(--space-2);
+  padding: var(--space-2) 0;
+  font-size: var(--step--1);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.details__count {
+  font-size: var(--step--2);
+  font-weight: normal;
+}
+
+.details__fields {
+  --stack-gap: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.details__summary {
+  list-style: none;
+}
+
+.details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.details__summary::before {
+  content: '▸';
+  width: 1em;
+  color: var(--color-text-muted);
+}
+
+.details__section[open] > .details__summary::before {
+  content: '▾';
+}
+
+/* The palette: what the type can add, dragged onto the drawing or clicked and placed (URS-WEB-031). One row,
+   scrolling sideways when the type offers many; the status floats over the drawing so nothing jumps. */
+.editbar {
+  position: relative;
+}
+
+.editbar .editbar__palette {
+  --cluster-gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.editbar__palette .btn {
+  flex: none;
+}
+
+.editbar__label {
+  padding-inline-end: var(--space-1);
+}
+
+.editbar__shape {
+  cursor: grab;
+}
+
+.editbar__sep {
+  flex: none;
+  width: 1px;
+  align-self: stretch;
+  margin-inline: var(--space-1);
+  background: var(--color-border);
+}
+
+.editbar__status {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: var(--space-3);
+  z-index: 2;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.preview[data-mode='place'] {
+  cursor: copy;
+}
+
+/* A draft: where it was put, dashed until it is in the source. */
+.draft {
+  position: absolute;
+}
+
+.draft__shape {
+  outline: 1.5px dashed var(--color-accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.draft__shape svg {
+  display: block;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.draft[data-selected] .draft__shape {
+  outline-style: solid;
+  outline-width: 2px;
+}
+
+.draft__tools {
+  --cluster-gap: 2px;
+  justify-content: center;
+  margin-top: var(--space-2);
+  flex-wrap: nowrap;
+}
+
+.draft__tools .btn {
+  height: 22px;
+  padding-inline: var(--space-2);
+  background: var(--color-surface);
 }

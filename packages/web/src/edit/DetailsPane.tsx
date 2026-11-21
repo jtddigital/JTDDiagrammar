@@ -1,9 +1,32 @@
 import { compile, parseJson, type GraphIR } from '@jtd/core';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { kinds, type Ref } from '../preview/interact.ts';
 import { registry } from '../registry.ts';
-import { fields, problem, schemaAt, targets, type Field, type Schema } from './schema.ts';
+import { fields, problem, schemaAt, sections, targets, type Field, type Schema, type Section } from './schema.ts';
 import { setAt, valueAt } from './source.ts';
+
+/** How long typing must pause before a change is tried (URS-WEB-029). */
+export const IDLE_MS = 800;
+const OPEN_KEY = 'jtd:details-sections';
+
+/** Which categories the user opened or closed, remembered across elements and visits. */
+function useOpen() {
+  const [open, setOpen] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(open));
+    } catch {
+      /* Best-effort. */
+    }
+  }, [open]);
+  return [open, (id: string, v: boolean) => setOpen((o) => (o[id] === v ? o : { ...o, [id]: v }))] as const;
+}
 
 const KIND_NAMES: Record<string, string> = { n: 'Node', e: 'Connection', c: 'Group', l: 'Lane', p: 'Phase', lg: 'Lane group', pg: 'Phase group' };
 
@@ -13,6 +36,8 @@ interface Props {
   value: unknown;
   text: string;
   picked: Ref | undefined;
+  /** The name of the chosen draft, which has no source yet (URS-WEB-031). */
+  draft?: string;
   onText(text: string): void;
 }
 
@@ -32,11 +57,12 @@ const errorsOf = (text: string): string[] => {
 };
 
 /**
- * The details pane (URS-WEB-025, WEB-027, experimental, D-009): every property the type's schema allows for the
- * selected element, each edited in place. A value is written to the source only if it fits its schema and adds
- * no error to the diagram; otherwise the field keeps it and says why. References offer the ids they may take.
+ * The details pane (URS-WEB-025, WEB-027..029, experimental, D-009): every property the type's schema allows for
+ * the selected element, in collapsible categories the schema names, each edited in place. A value is tried when
+ * the field is left, on Enter, or once typing pauses; it is written to the source only if it fits its schema and
+ * adds no error to the diagram; otherwise the field keeps it and says why. References offer the ids they may take.
  */
-export function DetailsPane({ ir, value, text, picked, onText }: Props) {
+export function DetailsPane({ ir, value, text, picked, draft, onText }: Props) {
   const item = ir && picked ? kinds(ir).find(([k]) => k === picked.kind)?.[1].find((x) => x.id === picked.id) : undefined;
   const type = typeof (value as { type?: unknown } | undefined)?.type === 'string' ? registry.type((value as { type: string }).type) : undefined;
   const root = type?.schema as Schema | undefined;
@@ -45,6 +71,7 @@ export function DetailsPane({ ir, value, text, picked, onText }: Props) {
   const current = src !== undefined ? valueAt(value, src) : undefined;
   const isObject = current !== null && typeof current === 'object' && !Array.isArray(current);
   const before = useMemo(() => new Set(errorsOf(text)), [text]);
+  const [open, setOpen] = useOpen();
 
   const ctx: Ctx | undefined = root && {
     root,
@@ -62,18 +89,32 @@ export function DetailsPane({ ir, value, text, picked, onText }: Props) {
   };
 
   let body;
-  if (!picked) body = <p className="text-muted text-small">Click an element in the diagram to see its details here.</p>;
+  if (draft) body = <p className="text-muted text-small">This {draft} is a draft, not yet in the source: Apply it, or drag it onto a shape to connect them, and its details show here.</p>;
+  else if (!picked) body = <p className="text-muted text-small">Click an element in the diagram to see its details here.</p>;
   else if (!item) body = <p className="text-muted text-small">The selected element is no longer in the diagram.</p>;
   else if (src === undefined || !schema || !ctx) body = <p className="text-muted text-small">This element is made by the diagram itself and has nothing to edit.</p>;
   else {
     const list = isObject ? fields(ctx.root, schema) : fields(ctx.root, { properties: { [src.split('/').pop() ?? '']: schema } });
     const at = (f: Field) => (isObject ? `${src}/${f.name}` : src);
     const of = (f: Field) => (isObject ? (current as Record<string, unknown>)[f.name] : current);
+    const view = (f: Field, alone = false) =>
+      // A category holding only one nested group (e.g. Appearance: style) shows the group's fields directly.
+      alone && f.kind === 'group' ? <Group key={at(f)} at={at(f)} schema={f.schema} value={of(f)} ctx={ctx} depth={1} /> : <FieldView key={at(f)} field={f} at={at(f)} value={of(f)} ctx={ctx} depth={0} />;
+    const groups = sections(list);
+    const count = (g: Section) => g.fields.filter((f) => of(f) !== undefined).length;
     body = (
       <form className="details__form stack" onSubmit={(e) => e.preventDefault()}>
-        {list.map((f) => (
-          <FieldView key={at(f)} field={f} at={at(f)} value={of(f)} ctx={ctx} depth={0} />
-        ))}
+        {groups.length === 1
+          ? groups[0]!.fields.map((f) => view(f))
+          : groups.map((g) => (
+              <details key={g.id} className="details__section" data-section={g.id} open={open[g.id] ?? g.open} onToggle={(e) => e.currentTarget.open !== (open[g.id] ?? g.open) && setOpen(g.id, e.currentTarget.open)}>
+                <summary className="details__summary cluster">
+                  <span>{g.label}</span>
+                  {count(g) > 0 && <span className="details__count text-muted">{count(g)} set</span>}
+                </summary>
+                <div className="details__fields stack">{g.fields.map((f) => view(f, g.fields.length === 1))}</div>
+              </details>
+            ))}
       </form>
     );
   }
@@ -269,9 +310,17 @@ function Group(p: { at: string; schema: Schema; value: unknown; ctx: Ctx; depth:
   );
 }
 
+/** Try `done` once typing has paused for `IDLE_MS` (URS-WEB-029). */
+const useIdle = (draft: string | undefined, done: () => void) =>
+  useEffect(() => {
+    if (draft === undefined) return;
+    const t = setTimeout(done, IDLE_MS);
+    return () => clearTimeout(t);
+  }, [draft]);
+
 /**
- * A text box that writes when it loses focus or on Enter, not on every key. A refused value stays in the box
- * so it can be corrected; Escape puts back what the source holds.
+ * A text box that writes when typing pauses, when it loses focus or on Enter, not on every key. A refused
+ * value stays in the box so it can be corrected; Escape puts back what the source holds.
  */
 function Commit(p: { id: string; value: string; onCommit(v: string): boolean; onReset(): void; type?: string; placeholder?: string; invalid: boolean }) {
   const [draft, setDraft] = useState<string>();
@@ -279,6 +328,7 @@ function Commit(p: { id: string; value: string; onCommit(v: string): boolean; on
     if (draft === undefined || draft === p.value) return setDraft(undefined);
     if (p.onCommit(draft)) setDraft(undefined);
   };
+  useIdle(draft, done);
   return (
     <input
       id={p.id}
@@ -305,6 +355,18 @@ function Json({ id, value, onCommit, invalid }: { id: string; value: unknown; on
   const text = value === undefined ? '' : JSON.stringify(value);
   const [draft, setDraft] = useState<string>();
   const [bad, setBad] = useState(false);
+  const done = () => {
+    if (draft === undefined || draft === text) return setDraft(undefined);
+    let parsed: unknown;
+    try {
+      parsed = draft.trim() ? (JSON.parse(draft) as unknown) : undefined;
+    } catch {
+      return setBad(true);
+    }
+    setBad(false);
+    if (onCommit(parsed)) setDraft(undefined);
+  };
+  useIdle(draft, done);
   return (
     <>
       <textarea
@@ -314,17 +376,7 @@ function Json({ id, value, onCommit, invalid }: { id: string; value: unknown; on
         value={draft ?? text}
         {...((bad || invalid) && { 'aria-invalid': true })}
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          if (draft === undefined || draft === text) return setDraft(undefined);
-          let parsed: unknown;
-          try {
-            parsed = draft.trim() ? (JSON.parse(draft) as unknown) : undefined;
-          } catch {
-            return setBad(true);
-          }
-          setBad(false);
-          if (onCommit(parsed)) setDraft(undefined);
-        }}
+        onBlur={done}
       />
       {bad && (
         <span className="details__refused" role="alert">

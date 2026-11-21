@@ -31,7 +31,7 @@ export function apply(text: string, doc: unknown, e: SourceEdit): { text: string
 }
 
 /** Every id used anywhere in a document. */
-function ids(doc: unknown, out = new Set<string>()): Set<string> {
+export function ids(doc: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(doc)) doc.forEach((d) => ids(d, out));
   else if (doc && typeof doc === 'object')
     for (const [k, v] of Object.entries(doc)) {

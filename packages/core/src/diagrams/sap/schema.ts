@@ -1,4 +1,4 @@
-import { envelope, id, ref, sectionStyles, style } from '../../schema/fragments.ts';
+import { annotation, envelope, id, inGroup, quote, ref, sectionStyles, style } from '../../schema/fragments.ts';
 import { annotationSchema, tagsSchema } from '../annotations.ts';
 import { eventsSchema } from '../process/events.ts';
 import { REWORK, RULES } from './model.ts';
@@ -10,9 +10,9 @@ const code = { type: 'string', pattern: '^[A-Za-z0-9_][A-Za-z0-9_.-]*$', descrip
 /** A status code; references system statuses only, or either kind (URS-WEB-027). */
 const codeRef = (description: string, to = 'systemStatuses,userStatuses') => ({ ...code, description, $comment: `ref:${to}#code` }) as const;
 const notes = {
-  annotation: text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart.'),
+  annotation: annotation(),
   tags: tagsSchema,
-  quote: text('Supporting excerpt from the source material; shown as a tooltip.'),
+  quote: quote,
   style,
 } as const;
 const ruleIds = (description: string) => ({ type: 'array', items: ref('Rule id.', 'rules'), description }) as const;
@@ -29,7 +29,7 @@ const step = obj(['id'], {
   tcodes: texts('Transaction codes or apps the approver works in, e.g. "My Inbox"; shown under the recipients.'),
   optional: flag('Optional step (dashed).'),
   rework: { type: 'string', enum: REWORK, description: 'The approver can send it back to the requester for rework; after resubmission the workflow `repeat`s the step, `continue`s with the next, or `restart`s.' },
-  status: codeRef('Status the object is in during the step, which places it; default the workflow’s trigger status.'),
+  status: inGroup('placement', codeRef('Status the object is in during the step, which places it; default the workflow’s trigger status.')),
   ...notes,
 });
 
@@ -67,22 +67,22 @@ export const sapSchema = {
         low: { type: 'integer', minimum: 1, maximum: 99, description: 'Lowest number the next status may have; default its own.' },
         high: { type: 'integer', minimum: 1, maximum: 99, description: 'Highest number the next status may have; default its own.' },
         initial: flag('Set when the object is created.'),
-        system: codeRef('System status it is used in, which places its column; default the previous numbered status’s.', 'systemStatuses'),
+        system: inGroup('placement', codeRef('System status it is used in, which places its column; default the previous numbered status’s.', 'systemStatuses')),
         auth: text('Authorization key: who may set or delete it.'),
         control: {
           type: 'object',
           additionalProperties: { type: 'string', enum: RULES },
           description: 'Transaction control while it is active, by business transaction id: `allowed`, `warning` (allowed with a warning) or `forbidden`.',
         },
-        setBy: txRefs('Business transactions that set it.'),
-        deletedBy: txRefs('Business transactions that delete it.'),
+        setBy: inGroup('links', txRefs('Business transactions that set it.')),
+        deletedBy: inGroup('links', txRefs('Business transactions that delete it.')),
         ...notes,
       }),
     },
     transactions: {
       type: 'array',
       description: 'Business transactions, e.g. Release or Complete technically.',
-      items: obj(['id'], { id, label: text('Defaults to the id.'), tcodes: texts('Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix.'), sets: { type: 'array', items: codeRef('System status code.', 'systemStatuses'), description: 'System statuses it sets; labels the arrow into each.' }, ...notes }),
+      items: obj(['id'], { id, label: text('Defaults to the id.'), tcodes: texts('Transaction codes or apps that run it, e.g. `IW32`; shown after its name on arrows and under it in the matrix.'), sets: inGroup('links', { type: 'array', items: codeRef('System status code.', 'systemStatuses'), description: 'System statuses it sets; labels the arrow into each.' }), ...notes }),
     },
     workflows: {
       type: 'array',
@@ -90,7 +90,7 @@ export const sapSchema = {
       items: obj(['id', 'label', 'steps'], {
         id,
         label: text('Workflow name.'),
-        trigger: obj(['status'], { status: codeRef('Status whose setting raises the event that starts it.'), event: text('Event, e.g. "Order created"; default "<status> set".') }, 'What starts it: a dashed arrow from the status.'),
+        trigger: inGroup('links', obj(['status'], { status: codeRef('Status whose setting raises the event that starts it.'), event: text('Event, e.g. "Order created"; default "<status> set".') }, 'What starts it: a dashed arrow from the status.')),
         conditions: texts('Start conditions: the workflow is used only when they hold. Drawn as a gate.'),
         rules: ruleIds('Rules (from `rules`) that are start conditions too; shown with them.'),
         steps: { type: 'array', minItems: 1, items: step, description: 'Approval steps, in order: Release leads on, Reject cancels the workflow.' },
@@ -105,8 +105,8 @@ export const sapSchema = {
       items: obj(['id', 'label', 'codes'], {
         id,
         label: text('Strategy name, e.g. "Z1 Requisitions over 10,000 EUR".'),
-        document: ref('Document it releases: a dashed arrow from the document starts it.', 'documents'),
-        status: codeRef('Status the object is in while it runs, which places it; default the document’s.'),
+        document: inGroup('links', ref('Document it releases: a dashed arrow from the document starts it.', 'documents')),
+        status: inGroup('placement', codeRef('Status the object is in while it runs, which places it; default the document’s.')),
         conditions: texts('Release conditions (classification), e.g. "Total value > 10,000 EUR": the strategy applies only when they hold, else the document is released at once. Drawn as a gate.'),
         rules: ruleIds('Rules (from `rules`) that are release conditions too; shown with them.'),
         codes: {
@@ -117,7 +117,7 @@ export const sapSchema = {
           items: obj(['code'], {
             code: { type: 'string', pattern: '^[A-Za-z0-9]{1,2}$', description: 'Two-character release code, e.g. `P1`.' },
             label: text('Who releases, e.g. "Purchasing manager".'),
-            prerequisites: { type: 'array', items: text('Release code.'), description: 'Codes that must release first; none: released straight away.' },
+            prerequisites: inGroup('links', { type: 'array', items: text('Release code.'), description: 'Codes that must release first; none: released straight away.' }),
             indicator: text('Release indicator once released, e.g. "2 – Released, changeable".'),
             reject: flag('The holder can reject: the requester changes the document and resubmits, which starts the strategy again.'),
             ...notes,
@@ -134,8 +134,8 @@ export const sapSchema = {
         id,
         label: text('Document, e.g. "Purchase requisition".'),
         kind: text('Document type, e.g. "NB"; shown under the label.'),
-        status: codeRef('Status in which it is created: its column, and a dotted line from that status.'),
-        from: { type: 'array', items: ref('Document id.', 'documents'), description: 'Preceding documents: an arrow from each.' },
+        status: inGroup('placement', codeRef('Status in which it is created: its column, and a dotted line from that status.')),
+        from: inGroup('links', { type: 'array', items: ref('Document id.', 'documents'), description: 'Preceding documents: an arrow from each.' }),
         ...notes,
       }),
     },

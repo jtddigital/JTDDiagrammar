@@ -1,4 +1,4 @@
-import { envelope, id, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
+import { envelope, id, inGroup, quote, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { WEEKDAYS } from './dates.ts';
 import { COLUMNS, ITEM_TYPES, LINK_PATTERN } from './model.ts';
 
@@ -39,19 +39,19 @@ export const ganttSchema = {
         id,
         name: { type: 'string', description: 'Shown in the table.' },
         type: { type: 'string', enum: ITEM_TYPES, default: 'task', description: '`task` (a bar), `milestone` (a diamond), `deliverable` (a page), `gate` (a hexagon: an approval), `buffer` (a hatched bar: reserve time) or `external` (a dashed bar: work outside your control). Milestones, deliverables and gates take no time. An item with items inside is a summary.' },
-        start: date('Fixed start. The item keeps it even if a link says otherwise (that is a warning).'),
-        end: date('Fixed finish. The item keeps it even if a link says otherwise (that is a warning).'),
-        duration: { type: 'integer', minimum: 0, maximum: 10000, description: 'Working days. Without it, and without both dates, 1 day is assumed (a warning).' },
-        after: {
+        start: inGroup('schedule', date('Fixed start. The item keeps it even if a link says otherwise (that is a warning).')),
+        end: inGroup('schedule', date('Fixed finish. The item keeps it even if a link says otherwise (that is a warning).')),
+        duration: inGroup('schedule', { type: 'integer', minimum: 0, maximum: 10000, description: 'Working days. Without it, and without both dates, 1 day is assumed (a warning).' }),
+        after: inGroup('links', {
           type: 'array',
           items: { type: 'string', pattern: LINK_PATTERN },
           description: 'Items this one depends on: `"id"` (finish-to-start), or with a link type and a lag or lead in working days: `"id SS"`, `"id FS+2"`, `"id FF-1"`, `"id SF"`. Links may point at summaries.',
-        },
+        }),
         owner: { type: 'string', description: 'Who does it; shown in the table and matched by `styleBy.owner`.' },
-        tags: { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Tag names; each tag styled in `tags` decorates the item, later tags winning.' },
-        quote: { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' },
+        tags: inGroup('appearance', { type: 'array', items: { type: 'string', minLength: 1 }, description: 'Tag names; each tag styled in `tags` decorates the item, later tags winning.' }),
+        quote,
         style,
-        tasks: { type: 'array', items: { $ref: '#/$defs/item' }, description: 'Items inside this one, which makes it a summary spanning them.' },
+        tasks: inGroup('placement', { type: 'array', items: { $ref: '#/$defs/item' }, description: 'Items inside this one, which makes it a summary spanning them.' }),
       },
     },
   },

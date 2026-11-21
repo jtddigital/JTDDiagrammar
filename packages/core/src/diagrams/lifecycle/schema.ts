@@ -1,4 +1,4 @@
-import { direction, edgeLabels, envelope, id, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
+import { annotation as note, direction, edgeLabels, envelope, id, inGroup, quote, ref, sectionStyles, style, styleBy } from '../../schema/fragments.ts';
 import { annotationSchema, tagsSchema } from '../annotations.ts';
 import { eventsSchema } from '../process/events.ts';
 import { ANNOTATED, COMPLETIONS, STATE_TYPES, STEP_KINDS, TRIGGERS } from './model.ts';
@@ -9,11 +9,10 @@ const texts = (description: string) => ({ type: 'array', items: { type: 'string'
 const flag = (description: string) => ({ type: 'boolean', description }) as const;
 const map = (description: string) => ({ type: 'object', additionalProperties: { type: 'string' }, description }) as const;
 const rules = { type: 'array', items: ref('Rule id.', 'rules'), description: 'Rules (from the chart’s `rules`) this depends on; shown with its text.' } as const;
-const quote = text('Supporting excerpt from the source material; shown as a tooltip.');
 const optionalId = { ...id, description: 'Optional; generated when absent.' };
-const main = flag('On the main path: drawn bold while other connections fade.');
-const annotation = text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing.');
-const annotate = flag('Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type.');
+const main = inGroup('appearance', flag('On the main path: drawn bold while other connections fade.'));
+const annotation = note('Annotation: a numbered marker on the shape, with the text in the notes beside the chart, as on an engineering drawing.');
+const annotate = inGroup('notes', flag('Put the descriptive text in the annotation instead of on the chart. Default: the chart’s `annotate` for this shape type.'));
 
 /** A user action's fields; shared actions add their source states (URS-TYP-008, URS-TYP-009). */
 const action = {
@@ -32,8 +31,8 @@ const action = {
 const link = {
   step: ref('Next step id.', 'steps'),
   labels: edgeLabels,
-  exitSide: { ...side, description: 'Side of this step the line leaves by.' },
-  entrySide: { ...side, description: 'Side of the next step the line enters by.' },
+  exitSide: inGroup('placement', { ...side, description: 'Side of this step the line leaves by.' }),
+  entrySide: inGroup('placement', { ...side, description: 'Side of the next step the line enters by.' }),
   main,
   id: optionalId,
   quote,
@@ -54,11 +53,11 @@ const step = {
     },
     label: text('Defaults: the id; for a state change, the target state’s name.'),
     owner: text('Who performs the step (for a notification, who receives it); shown under a line below the label, matched by `styleBy.owner`, and its role band with `roleLanes`.'),
-    state: ref('State the record is in during this step. Optional for a state change (defaults to its target).', 'states'),
+    state: inGroup('placement', ref('State the record is in during this step. Optional for a state change (defaults to its target).', 'states')),
     target: ref('For a state change: the state it moves the record to.', 'states'),
     fields: texts('Task: fields the participant completes. System action: fields it sets, e.g. "Approval date = today". Shown under the label.'),
     rules,
-    verdicts: {
+    verdicts: inGroup('links', {
       type: 'array',
       description: 'Task outcomes, each leading to a next step; no decision diamond needed.',
       items: {
@@ -73,21 +72,21 @@ const step = {
           ...link,
         },
       },
-    },
+    }),
     signature: flag('Task: needs an eSignature (badge).'),
     due: text('Task: time allowed, e.g. "5d" (badge).'),
     completion: { type: 'string', enum: COMPLETIONS, description: 'Task with several participants: `all` must complete, `any` one completes, or `each` gets a task (badge).' },
-    order: { type: 'integer', description: 'Hint: steps in the same cell are placed in ascending order.' },
+    order: inGroup('placement', { type: 'integer', description: 'Hint: steps in the same cell are placed in ascending order.' }),
     annotation,
     tags: tagsSchema,
     annotate,
     quote,
     style,
-    to: {
+    to: inGroup('links', {
       type: 'array',
       description: 'Next steps.',
       items: { type: 'object', additionalProperties: false, required: ['step'], properties: { label: text('Text on the connection, placed where it fits best.'), ...link } },
-    },
+    }),
   },
 } as const;
 
@@ -185,11 +184,11 @@ export const lifecycleSchema = {
           tags: tagsSchema,
           quote,
           style,
-          to: {
+          to: inGroup('links', {
             type: 'array',
             description: 'User actions that move the record to another state, outside workflows; drawn in the lifecycle actions band.',
             items: { type: 'object', additionalProperties: false, required: ['state'], properties: action },
-          },
+          }),
         },
       },
     },

@@ -1,6 +1,6 @@
 import { error, pointer, type Diagnostic } from '../../diagnostics.ts';
 import type { Band, IREdge, IRNode, LegendItem, Style } from '../../ir/types.ts';
-import { ref, style } from '../../schema/fragments.ts';
+import { annotation, inGroup, quote, ref, style } from '../../schema/fragments.ts';
 import { noted, tagsSchema, type AnnotationOptions } from '../annotations.ts';
 import { over } from '../section-styles.ts';
 import { DASHED, DOTTED } from './draw.ts';
@@ -76,7 +76,7 @@ export const eventsSchema = (on: string, onRequired = true) =>
         id: ref('Signal id.'),
         label: text('Named in the past tense, e.g. "Order released"; defaults to the id.'),
         on: text(on),
-        to: {
+        to: inGroup('links', {
           type: 'array',
           description: 'Subscribers: each names exactly one of `workflow`, `operation`, `handler` or `system`.',
           items: obj([], {
@@ -86,10 +86,10 @@ export const eventsSchema = (on: string, onRequired = true) =>
             system: text('External system it is sent to.'),
             channel: text('How it is delivered, e.g. "event mesh", "IDoc"; the arrow’s label.'),
           }),
-        },
-        annotation: text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart.'),
+        }),
+        annotation: annotation(),
         tags: tagsSchema,
-        quote: text('Supporting excerpt from the source material; shown as a tooltip.'),
+        quote: quote,
         style,
       }),
     },

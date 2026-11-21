@@ -3,13 +3,44 @@ export const SUPPORTED_MAJOR = 1;
 
 export const id = { type: 'string', pattern: '^[A-Za-z_][A-Za-z0-9_.-]*$', description: 'Unique id: a letter or `_`, then letters, digits, `_`, `.` or `-`.' } as const;
 
-/** An id that refers to another element. */
+/**
+ * Editor hints kept in a property's `$comment`, which validators ignore (URS-WEB-027, WEB-028): space-separated
+ * `key:value` tags, `ref:…` for references and `group:…` for the property's category.
+ */
+const tagged = <S extends object>(s: S, tag: string) => {
+  const c = (s as { $comment?: unknown }).$comment;
+  return { ...s, $comment: typeof c === 'string' && c ? `${c} ${tag}` : tag };
+};
+
+/**
+ * Categories of an element's properties, in the order editors show them, and whether each starts open
+ * (URS-WEB-028). A property is put in one with `inGroup`; untagged properties are `general`.
+ */
+export const PROPERTY_GROUPS = [
+  { id: 'general', label: 'General', open: true },
+  { id: 'links', label: 'Connections', open: true },
+  { id: 'placement', label: 'Placement', open: true },
+  { id: 'schedule', label: 'Schedule', open: true },
+  { id: 'notes', label: 'Notes and sources', open: false },
+  { id: 'appearance', label: 'Appearance', open: false },
+] as const;
+export type PropertyGroup = (typeof PROPERTY_GROUPS)[number]['id'];
+
+/** A property schema put in a category (`$comment` tag `group:<id>`). */
+export const inGroup = <S extends object>(group: PropertyGroup, s: S) => tagged(s, `group:${group}`);
+
 /**
  * A reference to another element's id. `to` names the collection whose items' ids it may take (`lanes`, `states`, …,
- * at any depth); it is kept as `$comment: "ref:<to>"`, which validators ignore, so editors can offer the ids (URS-WEB-027).
+ * at any depth); it is kept as the `$comment` tag `ref:<to>`, so editors can offer the ids (URS-WEB-027).
  * The full form is `ref:<collection>[,<collection>…][#<key>]`, the key defaulting to `id` (SAP statuses use `code`).
  */
-export const ref = (what: string, to?: string) => ({ ...id, description: what, ...(to && { $comment: `ref:${to}` }) }) as const;
+export const ref = (what: string, to?: string) => (to ? tagged({ ...id, description: what }, `ref:${to}`) : { ...id, description: what });
+
+/** Where an element came from, for provenance tooltips (URS-AI-014). */
+export const quote = inGroup('notes', { type: 'string', description: 'Supporting excerpt from the source material; shown as a tooltip.' } as const);
+
+/** A numbered marker on the shape, its text in the notes beside the chart (URS-DM-029). */
+export const annotation = (description = 'Annotation: a numbered marker on the shape, with the text in the notes beside the chart.') => inGroup('notes', { type: 'string', description } as const);
 
 export const direction = { type: 'string', enum: ['LR', 'TB'], default: 'LR', description: 'Flow direction: left to right (default) or top to bottom.' } as const;
 
@@ -17,7 +48,7 @@ export const direction = { type: 'string', enum: ['LR', 'TB'], default: 'LR', de
 export const color = { type: 'string', pattern: '^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$', description: 'Hex colour, `#rgb` or `#rrggbb`.' } as const;
 
 /** Per-element style overrides (URS-DM-010, URS-DM-014, URS-DM-016, URS-DM-017). */
-export const style = {
+export const style = inGroup('appearance', {
   type: 'object',
   title: 'Style',
   description: 'Colours, lines, text and node sizing (see Styling).',
@@ -38,7 +69,7 @@ export const style = {
     width: { type: 'number', minimum: 16, maximum: 600, description: 'Nodes: fixed width in pixels.' },
     height: { type: 'number', minimum: 16, maximum: 400, description: 'Nodes: fixed height in pixels.' },
   },
-} as const;
+} as const);
 
 /** Diagram-level default style for each named section; an item's own `style` overrides it field by field (URS-DM-015). */
 export const sectionStyles = (sections: readonly string[]) =>

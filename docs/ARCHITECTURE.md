@@ -530,16 +530,19 @@ As built (WS-035): `core/src/diff/ir.ts` matches nodes, containers, lanes, phase
 6. Diff engine and Compare pane: text, Markdown, CSV (WS-030..034).
 7. Diagram comparison (WS-035).
 
-## 15. Direct editing, an isolated experiment (URS-WEB-025, WEB-026, EXT-012, D-009)
+## 15. Direct editing, an isolated experiment (URS-WEB-025..031, EXT-012, D-009)
 
 Editing from the diagram writes to the source text, which stays the single truth; nothing else holds diagram state. All of it is in `packages/web/src/edit/`:
 
 ```
 edit/index.ts        public surface (useEdit) and the removal recipe
-edit/useEdit.tsx     selection, connect mode, add, delete; returns the toolbar and the details pane
-edit/EditBar.tsx     Add (the type's additions), Connect, Delete, Details
-edit/DetailsPane.tsx a field per property the schema allows at the element's source pointer
-edit/schema.ts       schema at a JSON Pointer (properties, items, local $ref, allOf, anyOf/oneOf) and the field kind for each property
+edit/useEdit.tsx     selection, connect mode, placing, drafts, delete; returns the toolbar, the drawing's props and the details pane
+edit/EditBar.tsx     Connect, Delete, Details, and the palette of the type's additions (drag or click-and-place)
+edit/DetailsPane.tsx a field per property the schema allows at the element's source pointer, in categories; tried as typing pauses
+edit/schema.ts       schema at a JSON Pointer (properties, items, local $ref, allOf, anyOf/oneOf), field kinds, categories
+edit/drafts.ts       drafts: fresh ids, placing in the source (and in the band dropped in), connecting with drafts among the ends
+edit/Drafts.tsx      drafts drawn over the diagram, with Apply and discard
+edit/ghost.ts        a draft's shape, cut from a drawing of the diagram with it
 edit/source.ts       set, remove and append by pointer with jsonc-parser (formatting kept), fresh ids
 edit/edit.css
 ```
@@ -550,6 +553,10 @@ The toolbar needs to know what a type can add and how two of its elements connec
 
 Writes from the details pane are guarded: the value must fit the property's schema (`problem` in `schema.ts`: type, choices, pattern, bounds, lengths, items), and the changed source must compile without an error that was not there before; otherwise the field keeps the value and shows why, and the source is untouched. References are marked in the schemas with `$comment: "ref:<collection>[,<collection>][#<key>]"` (standard JSON Schema; validators ignore it), set by `ref(description, to)` in `schema/fragments.ts`; `targets()` collects the candidates from the document at any depth.
 
-Wiring: `App.tsx` calls `useEdit` once and places `edit.bar` above the drawing and `edit.pane` in the `details` pane (stacked under Preview, hidden until asked for); the click handler gives `edit.pick` first refusal (connect mode). Each place is marked "Direct editing". Preview only gained a generic `mode` attribute.
+**Categories** (URS-WEB-028) are schema hints too: the `$comment` tag `group:<id>`, set by `inGroup(group, schema)`; the categories and their order are `PROPERTY_GROUPS` in `schema/fragments.ts`, and untagged properties are General. Shared fragments carry theirs (`style` Appearance, `quote` and `annotation` Notes and sources), so a type only tags what is its own: lanes, phases, order and line sides as Placement, outgoing connections as Connections, dates as Schedule. `$comment` holds space-separated `key:value` tags, e.g. `ref:lanes group:placement`; a test checks every tag in every schema is known. Text fields try their value once typing pauses for 0.8 s (URS-WEB-029); while the changed source is drawn, the last diagram stands in so the field keeps its focus.
+
+**Dragging and drafts** (URS-WEB-030, WEB-031). Preview offers generic hooks, with no knowledge of editing: elements of given kinds can be dragged (the element follows the pointer by its `translate`, is put back on release, and `onDrop` gets what it was dropped on, how far it moved and everything under the pointer); an `overlay` layer in drawing coordinates; `onClickAt` with the point and everything under it; and HTML drops of one data type. The edit module uses them: a node dropped on a node is `connect`; a palette shape dropped or click-placed becomes a draft, drawn in the overlay as its own node cut from a drawing of the diagram with it (`ghost.ts`), with the id `draft-<key>` so the drawing treats it as an element. A draft is not in the source. Applying it writes the type's addition, then `settle`s it in the lanes, phases or columns it sits in: for each such band (an IR partition with a source pointer such as `/lanes/1` or `/states/2`), every placement reference of the new element (category `placement`) that may point into that collection takes the band's key. Connecting with a draft among the ends writes it first, then the connection, as one change.
+
+Wiring: `App.tsx` calls `useEdit` once and places `edit.bar` above the drawing, spreads `edit.preview` onto the drawing and puts `edit.pane` in the `details` pane (stacked under Preview, hidden until asked for); the click handler gives `edit.pick` first refusal (connect mode, drafts). Each place is marked "Direct editing". Preview only gained generic props (`mode`, `drag`, `overlay`, `onClickAt`, `dropType`/`onDropData`), which do nothing when not given.
 
 **To remove the experiment:** delete `packages/web/src/edit/` and `packages/web/test/edit.test.ts`, `e2e/edit.spec.ts`; remove the lines marked "Direct editing" in `App.tsx`; remove `details` from `PANES`, `DEFAULT_LAYOUT`, `withDetails` (layout.ts) and `PANE_LABELS` (Toolbar.tsx). Optionally remove `diagrams/*/edit.ts`, the `edit` entries in the types, `EditAssets`/`SourceEdit` in `registry/diagram-type.ts` and `core/test/edit-assets.test.ts`; nothing else uses them.

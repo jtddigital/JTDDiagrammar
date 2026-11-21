@@ -1,4 +1,4 @@
-import { envelope, id, ref, sectionStyles, style } from '../../../schema/fragments.ts';
+import { annotation, envelope, id, inGroup, quote, ref, sectionStyles, style } from '../../../schema/fragments.ts';
 import { annotationSchema, tagsSchema } from '../../annotations.ts';
 import { eventsSchema } from '../events.ts';
 import { NODE_KINDS } from '../model.ts';
@@ -13,9 +13,9 @@ const element = {
   label: text('Defaults to the id.'),
   stereotype: text('Stereotype, e.g. "Work Order"; free text unless `profile` names a profile, which must define it.'),
   values,
-  annotation: text('Annotation: a numbered marker on the shape, with the text in the notes beside the chart.'),
+  annotation: annotation(),
   tags: tagsSchema,
-  quote: text('Supporting excerpt from the source material; shown as a tooltip.'),
+  quote: quote,
   style,
 } as const;
 
@@ -49,7 +49,7 @@ export const processSchema = {
             ...element,
             initial: flag('The region starts here.'),
             final: flag('Entering it ends the region.'),
-            entry: refs('Operations called on entry.', 'operations'),
+            entry: inGroup('links', refs('Operations called on entry.', 'operations')),
           }),
         },
       }),
@@ -66,7 +66,7 @@ export const processSchema = {
         id: { ...id, description: 'Optional; generated when absent.' },
         from: ref('State id.', 'states'),
         to: ref('State id, in the same region.', 'states'),
-        trigger: obj(
+        trigger: inGroup('links', obj(
           [],
           {
             call: ref('Operation it waits for.', 'operations'),
@@ -76,10 +76,10 @@ export const processSchema = {
             when: ref('Rule whose becoming true fires it.', 'rules'),
           },
           'Exactly one of `call`, `signal`, `after`, `at` or `when`. Without a trigger, the transition is reported.',
-        ),
+        )),
         guard: ref('Rule that must hold.', 'rules'),
         label: text('Arrow label; defaults to the trigger.'),
-        quote: element.quote,
+        quote,
         style,
       }),
     },
@@ -104,7 +104,7 @@ export const processSchema = {
             ...element,
             kind: { type: 'string', enum: NODE_KINDS, description: '`initial`, `final`, `task`, `decision` and `merge` (exclusive), `fork` and `join` (parallel), or `send` (publishes a signal).' },
             role: text('Who performs it; shown under the label.'),
-            calls: refs('Operations it calls.', 'operations'),
+            calls: inGroup('links', refs('Operations it calls.', 'operations')),
             signal: ref('For `send`: the signal it publishes.', 'signals'),
           }),
         },
