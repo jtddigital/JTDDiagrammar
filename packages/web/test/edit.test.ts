@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { fields, problem, schemaAt, targets, type Schema } from '../src/edit/schema.ts';
+import type { EditAssets } from '@jtd/core';
+import { draft, join, place, settle } from '../src/edit/drafts.ts';
+import { fields, problem, schemaAt, sections, targets, type Schema } from '../src/edit/schema.ts';
 import { apply, freshId, setAt, valueAt } from '../src/edit/source.ts';
 import { registry } from '../src/registry.ts';
 
@@ -97,5 +99,71 @@ describe('editing the source by pointer (URS-WEB-025, WEB-026)', () => {
     expect(freshId(doc, 'Decision')).toBe('decision-3');
     expect(freshId(doc, 'Start / end')).toBe('start-end-1');
     expect(freshId(doc, '')).toBe('item-1');
+  });
+});
+
+describe('categories of the details pane, from the schema (URS-WEB-028)', () => {
+  it('groups an element’s fields in the order core lists the categories, leaving out empty ones', () => {
+    const root = schema('flowchart');
+    const node = sections(fields(root, schemaAt(root, '/nodes/0')!));
+    expect(node.map((g) => [g.id, g.fields.map((f) => f.name)])).toEqual([
+      ['general', ['id', 'shape', 'label', 'owner']],
+      ['links', ['to']],
+      ['placement', ['lane', 'phase', 'order']],
+      ['notes', ['quote']],
+      ['appearance', ['style']],
+    ]);
+    expect(node.find((g) => g.id === 'appearance')!.open).toBe(false);
+    // A Gantt item's dates are its schedule; a lifecycle step's state places it.
+    const gantt = schema('gantt');
+    expect(sections(fields(gantt, schemaAt(gantt, '/tasks/0')!)).find((g) => g.id === 'schedule')!.fields.map((f) => f.name)).toEqual(['start', 'end', 'duration']);
+    const life = schema('lifecycle');
+    expect(fields(life, schemaAt(life, '/workflows/0/steps/0')!).find((f) => f.name === 'state')).toMatchObject({ kind: 'ref', ref: 'states', section: 'placement' });
+  });
+
+  it('puts a category core does not know last, under its own name', () => {
+    const f = (name: string, section: string) => ({ name, section, kind: 'text' as const, schema: {}, required: false });
+    expect(sections([f('a', 'extra'), f('b', 'general')]).map((g) => [g.id, g.label])).toEqual([
+      ['general', 'General'],
+      ['extra', 'Extra'],
+    ]);
+  });
+});
+
+describe('drafts: shapes placed anywhere, in the source only when applied or connected (URS-WEB-030, WEB-031)', () => {
+  const lanes = { version: '1', type: 'flowchart', lanes: [{ id: 'ops', label: 'Ops' }, { id: 'fin', label: 'Finance' }], nodes: [{ id: 'a', lane: 'ops' }] };
+  const doc = { text: JSON.stringify(lanes, null, 2), value: lanes as unknown };
+  const edit = registry.type('flowchart')!.edit as EditAssets<never>;
+
+  it('get ids free in the document and among the other drafts', () => {
+    const one = draft(doc, [], 'Decision', { x: 10, y: 20 });
+    expect(one).toMatchObject({ id: 'decision-1', x: 10, y: 20, bands: [] });
+    expect(draft(doc, [one], 'Decision', { x: 0, y: 0 }).id).toBe('decision-2');
+  });
+
+  it('go in the lane they were dropped in when placed', () => {
+    const p = place(edit, doc, draft(doc, [], 'Process', { x: 0, y: 0 }, ['/lanes/1']))!;
+    expect(p.at).toBe('/nodes/1');
+    expect(valueAt(p.doc.value, '/nodes/1')).toMatchObject({ id: 'process-1', lane: 'fin' });
+    expect(p.end).toEqual({ id: 'process-1', src: '/nodes/1' });
+    // Only placement references take a band: a lifecycle step dropped in a state's column gets that state.
+    const life = { version: '1', type: 'lifecycle', states: [{ id: 'draft' }, { id: 'done' }], workflows: [{ id: 'w', label: 'W', steps: [{ id: 's', kind: 'start' }] }] };
+    const text = settle(JSON.stringify(life), life, '/workflows/0/steps/0', ['/states/1']);
+    expect(valueAt(JSON.parse(text), '/workflows/0/steps/0')).toEqual({ id: 's', kind: 'start', state: 'done' });
+  });
+
+  it('are written and connected in one change when dragged onto a shape, or onto each other', () => {
+    const d = draft(doc, [], 'Decision', { x: 0, y: 0 });
+    const out = join(edit, doc, [d], () => '/nodes/0', { kind: 'n', id: 'a' }, { kind: 'draft', id: d.key });
+    expect(out).toMatchObject({ used: [d.key], placed: '/nodes/1', at: '/nodes/0/to/0' });
+    const v = JSON.parse((out as { text: string }).text);
+    expect(v.nodes[0].to).toEqual([{ node: 'decision-1' }]);
+    const e = draft(doc, [d], 'Process', { x: 0, y: 0 });
+    const both = join(edit, doc, [d, e], () => undefined, { kind: 'draft', id: d.key }, { kind: 'draft', id: e.key });
+    expect(JSON.parse((both as { text: string }).text).nodes.slice(1).map((n: { id: string; to?: unknown }) => [n.id, n.to])).toEqual([
+      ['decision-1', [{ node: 'process-1' }]],
+      ['process-1', undefined],
+    ]);
+    expect(join(edit, doc, [], () => '/nodes/0', { kind: 'n', id: 'a' }, { kind: 'n', id: 'a' })).toEqual({ refused: 'Drop it on another shape to connect them' });
   });
 });

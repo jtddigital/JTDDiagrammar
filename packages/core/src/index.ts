@@ -6,6 +6,7 @@ export type * from './registry/layout-engine.ts';
 export { Registry } from './registry/registry.ts';
 export { createRegistry } from './builtins.ts';
 export { combinedSchema } from './schema/combined.ts';
+export { PROPERTY_GROUPS, type PropertyGroup } from './schema/fragments.ts';
 export { parseJson, type ParseResult } from './adapters/json.ts';
 export { parseXml, toXml } from './adapters/xml.ts';
 export { parseYaml } from './adapters/yaml.ts';

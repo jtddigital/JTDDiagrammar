@@ -1,3 +1,5 @@
+import { inGroup } from '../schema/fragments.ts';
+
 /** Annotation text from its parts, one per line; undefined when there are none (URS-DM-029). */
 export const noteOf = (...parts: (string | undefined)[]) => parts.filter(Boolean).join('\n') || undefined;
 
@@ -42,7 +44,7 @@ export const annotationSchema = {
 } as const;
 
 /** Tags of an item, for grouping its annotation (URS-DM-030). */
-export const tagsSchema = { type: 'array', items: { type: 'string' }, description: 'Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`.' } as const;
+export const tagsSchema = inGroup('notes', { type: 'array', items: { type: 'string' }, description: 'Tags, e.g. for grouping annotations with `annotationGroups: ["tag"]`.' } as const);
 
 /** The headings an annotation goes under, one list of values per grouping level; items without an owner or tag get "No owner" / "No tag". */
 const groupsOf = (by: readonly AnnotationGroup[], a: About): string[][] =>

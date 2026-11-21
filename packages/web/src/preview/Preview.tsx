@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Ref } from './interact.ts';
 import { sanitizeSvg } from './sanitize.ts';
 
-interface Props {
+export interface PreviewProps {
   svg?: string;
   current: boolean;
   /** Called with the kind prefix (n, c, e, l, p, lg, pg) and model id of a clicked element (URS-WEB-009). */
@@ -25,6 +25,34 @@ interface Props {
   label?: string;
   /** A mode the drawing is in, set as `data-mode`, e.g. while connecting two elements. */
   mode?: string | undefined;
+  /**
+   * Elements that can be dragged onto one another, by SVG id prefix (other drags pan). The dragged element follows
+   * the pointer and goes back when let go; `onDrop` gets what it was dropped on, if anything, and how far it moved.
+   */
+  drag?: { kinds: readonly string[]; onDrop(from: Ref, to: Ref | undefined, by: Point, under: Ref[]): void } | undefined;
+  /** Drawn over the diagram in its coordinates, moving and zooming with it. */
+  overlay?: ReactNode;
+  /**
+   * A click on the drawing (not a drag), at that point of the diagram, with every element under it, topmost
+   * first; true when it was used, so it picks nothing.
+   */
+  onClickAt?(at: Point, under: Ref[]): boolean;
+  /** Data of this type dropped on the drawing (HTML drag and drop), at that point of the diagram. */
+  dropType?: string | undefined;
+  onDropData?(data: string, at: Point, under: Ref[]): void;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** An element being dragged: where it started, its own transform, and what it is over. */
+interface Moving {
+  ref: Ref;
+  g: Element;
+  base: [number, number];
+  over?: { g: Element; ref: Ref };
 }
 
 export interface View {
@@ -44,7 +72,7 @@ const refOf = (el: EventTarget | null): { g: Element; ref: Ref } | undefined => 
  * Interactive (URS-WEB-020): click selects an element's source, hover highlights its connections, and
  * double-click edits its label in place. Fits the pane until the user pans or zooms.
  */
-export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram', mode }: Props) {
+export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram', mode, drag: dragging, overlay, onClickAt, dropType, onDropData }: PreviewProps) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [own, setOwn] = useState<View | undefined>();
@@ -60,7 +88,7 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
   };
   const [hover, setHover] = useState<Ref>();
   const [editing, setEditing] = useState<{ ref: Ref; text: string; left: number; top: number; width: number }>();
-  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; y: number; moved: boolean; start: Point; moving?: Moving } | null>(null);
   /** Auto-fit until the user pans or zooms; Fit turns it back on. */
   const manual = useRef(false);
 
@@ -115,6 +143,32 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
     });
   };
 
+  /** A point of the window in diagram coordinates. */
+  const toDiagram = (clientX: number, clientY: number): Point | undefined => {
+    const v = latest.current.view;
+    const box = host.current?.getBoundingClientRect();
+    return v && box ? { x: (clientX - box.left - v.x) / v.scale, y: (clientY - box.top - v.y) / v.scale } : undefined;
+  };
+
+  /** Every element under a point of the window, topmost first, but the one being dragged. */
+  const underAt = (x: number, y: number, skip?: Element): Ref[] => {
+    const out: Ref[] = [];
+    for (const el of document.elementsFromPoint(x, y)) {
+      const hit = refOf(el);
+      if (hit && (!skip || (hit.g !== skip && !skip.contains(hit.g))) && !out.some((r) => r.kind === hit.ref.kind && r.id === hit.ref.id)) out.push(hit.ref);
+    }
+    return out;
+  };
+
+  /** The element under the pointer that a dragged one could be dropped on. */
+  const targetAt = (x: number, y: number, m: Moving) => {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const hit = refOf(el);
+      if (hit && hit.g !== m.g && !m.g.contains(hit.g) && dragging?.kinds.includes(hit.ref.kind)) return hit;
+    }
+    return undefined;
+  };
+
   const commit = (text: string) => {
     if (editing && text !== editing.text) onLabel?.(editing.ref, text);
     setEditing(undefined);
@@ -130,21 +184,69 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
         const box = host.current!.getBoundingClientRect();
         zoom(e.deltaY < 0 ? 1.1 : 1 / 1.1, e.clientX - box.left, e.clientY - box.top);
       }}
-      onPointerDown={(e) => (drag.current = { x: e.clientX, y: e.clientY, moved: false })}
+      onPointerDown={(e) => {
+        const hit = refOf(e.target);
+        const t = hit?.g.getAttribute('transform') ?? '';
+        const base = /^translate\(([-\d.]+) ([-\d.]+)\)$/.exec(t);
+        const moving = hit && dragging?.kinds.includes(hit.ref.kind) && (base || !t) ? { ref: hit.ref, g: hit.g, base: [Number(base?.[1] ?? 0), Number(base?.[2] ?? 0)] as [number, number] } : undefined;
+        drag.current = { x: e.clientX, y: e.clientY, moved: false, start: { x: e.clientX, y: e.clientY }, ...(moving && { moving }) };
+      }}
       onPointerMove={(e) => {
         const d = drag.current;
         if (!d || !(e.buttons & 1)) return;
         const [dx, dy] = [e.clientX - d.x, e.clientY - d.y];
-        if (Math.abs(dx) + Math.abs(dy) > 2) d.moved = manual.current = true;
-        drag.current = { x: e.clientX, y: e.clientY, moved: d.moved };
-        setView((v) => v && { ...v, x: v.x + dx, y: v.y + dy });
+        if (Math.abs(e.clientX - d.start.x) + Math.abs(e.clientY - d.start.y) > 3) d.moved = true;
+        d.x = e.clientX;
+        d.y = e.clientY;
+        const m = d.moving;
+        if (!m) {
+          if (d.moved) manual.current = true;
+          setView((v) => v && { ...v, x: v.x + dx, y: v.y + dy });
+          return;
+        }
+        if (!d.moved) return;
+        // The element follows the pointer; what it would be dropped on is marked.
+        const s = latest.current.view?.scale ?? 1;
+        m.g.setAttribute('transform', `translate(${m.base[0] + (e.clientX - d.start.x) / s} ${m.base[1] + (e.clientY - d.start.y) / s})`);
+        m.g.classList.add('is-dragging');
+        const over = targetAt(e.clientX, e.clientY, m);
+        if (over?.g !== m.over?.g) {
+          m.over?.g.classList.remove('is-drop-target');
+          over?.g.classList.add('is-drop-target');
+        }
+        m.over = over;
       }}
       onPointerUp={(e) => {
-        const moved = drag.current?.moved;
+        const d = drag.current;
         drag.current = null;
-        const hit = !moved && refOf(e.target);
+        const m = d?.moving;
+        if (m && d.moved) {
+          m.g.setAttribute('transform', `translate(${m.base[0]} ${m.base[1]})`);
+          m.g.classList.remove('is-dragging');
+          m.over?.g.classList.remove('is-drop-target');
+          const s = latest.current.view?.scale ?? 1;
+          dragging?.onDrop(m.ref, m.over?.ref, { x: (e.clientX - d.start.x) / s, y: (e.clientY - d.start.y) / s }, underAt(e.clientX, e.clientY, m.g));
+          return;
+        }
+        if (d?.moved) return;
+        const at = onClickAt && toDiagram(e.clientX, e.clientY);
+        if (at && onClickAt!(at, underAt(e.clientX, e.clientY))) return;
+        const hit = refOf(e.target);
         if (hit) onPick?.(hit.ref.kind, hit.ref.id);
       }}
+      {...(dropType &&
+        onDropData && {
+          onDragOver: (e: React.DragEvent) => {
+            if (e.dataTransfer.types.includes(dropType)) e.preventDefault();
+          },
+          onDrop: (e: React.DragEvent) => {
+            const data = e.dataTransfer.getData(dropType);
+            const at = toDiagram(e.clientX, e.clientY);
+            if (!data || !at) return;
+            e.preventDefault();
+            onDropData(data, at, underAt(e.clientX, e.clientY));
+          },
+        })}
       onPointerOver={(e) => {
         const r = refOf(e.target)?.ref;
         setHover((h) => (h?.kind === r?.kind && h?.id === r?.id ? h : r));
@@ -192,6 +294,11 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
         </button>
       </div>
       <div className="stage" data-testid="preview" ref={stage} style={view ? { transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` } : undefined} />
+      {overlay && (
+        <div className="stage stage--overlay" style={view ? { transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` } : undefined}>
+          {overlay}
+        </div>
+      )}
     </section>
   );
 }

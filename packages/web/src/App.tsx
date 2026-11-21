@@ -110,6 +110,7 @@ export function App() {
     text,
     setText: viewing ? () => {} : setText,
     value: ready && !viewing ? d.value : undefined,
+    updating: pending && !viewing,
     ir,
     reveal: (path, t) => setReveal(locate(t, { code: 'pick', path })),
     detailsShown: !layout.hidden.includes('details'),
@@ -235,8 +236,8 @@ export function App() {
                 relatedOf={relatedOf}
                 labelOf={labelOf}
                   onLabel={onLabel}
-                  // Direct editing: the connect mode's cursor.
-                  {...(!viewing && { mode: edit.mode })}
+                  // Direct editing: dragging shapes together, drafts, placing.
+                  {...(!viewing && edit.preview)}
                 />
               </div>
             ),

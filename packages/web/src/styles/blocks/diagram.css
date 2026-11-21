@@ -37,6 +37,28 @@
   filter: drop-shadow(0 0 2px var(--color-select)) drop-shadow(0 0 2px var(--color-select));
 }
 
+/* Over the drawing, in its coordinates: only what is drawn on it takes the pointer. */
+.stage--overlay {
+  pointer-events: none;
+}
+
+.stage--overlay > * {
+  pointer-events: auto;
+}
+
+/* An element dragged onto another (URS-WEB-030), and the one it would be dropped on. */
+.stage g.is-dragging,
+.stage--overlay g.is-dragging {
+  opacity: 0.75;
+  cursor: grabbing;
+  pointer-events: none;
+}
+
+.stage g.is-drop-target,
+.stage--overlay g.is-drop-target {
+  filter: drop-shadow(0 0 3px var(--color-accent)) drop-shadow(0 0 3px var(--color-accent));
+}
+
 .stage g.is-related {
   filter: drop-shadow(0 0 1.5px var(--color-accent));
 }

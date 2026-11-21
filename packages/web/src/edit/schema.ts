@@ -3,6 +3,8 @@
  * `items`, `$ref` (local), `allOf`, `anyOf` and `oneOf`, so the details pane can offer a field per property
  * the element allows. Type-agnostic: every diagram type's schema works.
  */
+import { PROPERTY_GROUPS } from '@jtd/core';
+
 export type Schema = Readonly<Record<string, unknown>>;
 
 const obj = (v: unknown): Schema | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Schema) : undefined);
@@ -64,10 +66,22 @@ export interface Field {
   options?: readonly string[];
   /** For a reference: the collection whose items' ids it takes (URS-WEB-027). */
   ref?: string;
+  /** Its category, from the schema (URS-WEB-028). */
+  section: string;
 }
 
-/** The collection a reference points into, from the schema's `$comment: "ref:<collection>"`. */
-export const refOf = (s: Schema | undefined): string | undefined => (typeof s?.$comment === 'string' ? /^ref:([\w,]+(?:#\w+)?)$/.exec(s.$comment)?.[1] : undefined);
+/** A tag of the schema's `$comment` (space-separated `key:value` editor hints), e.g. `ref` or `group`. */
+const tag = (s: Schema | undefined, key: string): string | undefined =>
+  typeof s?.$comment === 'string' ? s.$comment.split(' ').find((t) => t.startsWith(`${key}:`))?.slice(key.length + 1) : undefined;
+
+/** The collection a reference points into, from the tag `ref:<collection>` (URS-WEB-027). */
+export const refOf = (s: Schema | undefined): string | undefined => {
+  const to = tag(s, 'ref');
+  return to && /^[\w,]+(?:#\w+)?$/.test(to) ? to : undefined;
+};
+
+/** A property's category, from the tag `group:<id>`; untagged properties are `general` (URS-WEB-028). */
+export const groupOf = (s: Schema | undefined): string => tag(s, 'group') ?? 'general';
 
 const typeOf = (s: Schema) => (Array.isArray(s.type) ? (s.type as string[]).find((t) => t !== 'null') : (s.type as string | undefined));
 
@@ -103,7 +117,29 @@ export function fields(root: Schema, s: Schema): Field[] {
   return Object.entries(obj(s.properties) ?? {}).map(([name, raw]) => {
     const schema = resolve(root, obj(raw)) ?? {};
     const k = kindOf(root, schema);
-    return { name, schema, required: required.has(name), ...k, ...(typeof schema.description === 'string' && { description: schema.description }) };
+    return { name, schema, required: required.has(name), section: groupOf(schema), ...k, ...(typeof schema.description === 'string' && { description: schema.description }) };
+  });
+}
+
+export interface Section {
+  id: string;
+  label: string;
+  /** Whether it starts open. */
+  open: boolean;
+  fields: Field[];
+}
+
+/**
+ * Fields by category (URS-WEB-028), in the order core lists the categories; a category core does not know comes
+ * last, under its own name. Empty categories are left out.
+ */
+export function sections(list: readonly Field[]): Section[] {
+  const known: readonly { id: string; label: string; open: boolean }[] = PROPERTY_GROUPS;
+  const ids = [...known.map((g) => g.id), ...new Set(list.map((f) => f.section).filter((s) => !known.some((g) => g.id === s)))];
+  return ids.flatMap((id) => {
+    const fields = list.filter((f) => f.section === id);
+    const g = known.find((x) => x.id === id) ?? { id, label: id[0]!.toUpperCase() + id.slice(1), open: true };
+    return fields.length ? [{ ...g, fields }] : [];
   });
 }
 
