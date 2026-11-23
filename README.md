@@ -77,7 +77,7 @@ The Source pane is the text of the open file. For a diagram it completes field n
 
 ### Preview
 
-**Diagrams.** Scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click an element to find its source: the editor jumps to it and puts it at the top. The element your cursor is in is outlined, and hovering a node highlights its connections. Double-click a label to edit it in place. Hover an element the AI generated to see the passage from your material it came from.
+**Diagrams.** Scroll to zoom, drag to pan, or use **Fit** and **1:1**. Click an element to find its source: the editor jumps to it and puts it at the top. The element your cursor is in is outlined, and hovering a node highlights its connections. Double-click a label to edit it in place. Hover an element the AI generated to see the passage from your material it came from. A diagram with mistakes is still drawn, as far as it can be: whatever a problem points at is left out, a note says so, and you can keep clicking and editing it while you fix the problems listed under the editor.
 
 **Markdown** renders here with no plug-ins needed:
 

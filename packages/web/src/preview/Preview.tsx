@@ -5,6 +5,8 @@ import { sanitizeSvg } from './sanitize.ts';
 export interface PreviewProps {
   svg?: string;
   current: boolean;
+  /** Drawn with what is in error left out (URS-WEB-032). */
+  partial?: boolean | undefined;
   /** Called with the kind prefix (n, c, e, l, p, lg, pg) and model id of a clicked element (URS-WEB-009). */
   onPick?(kind: string, id: string): void;
   /** Element to outline: the one the editor cursor is in (URS-WEB-020). */
@@ -72,7 +74,7 @@ const refOf = (el: EventTarget | null): { g: Element; ref: Ref } | undefined => 
  * Interactive (URS-WEB-020): click selects an element's source, hover highlights its connections, and
  * double-click edits its label in place. Fits the pane until the user pans or zooms.
  */
-export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram', mode, drag: dragging, overlay, onClickAt, dropType, onDropData }: PreviewProps) {
+export function Preview({ svg, current, partial, onPick, selected, relatedOf, labelOf, onLabel, marks, view: held, onView, onFit, label = 'Diagram', mode, drag: dragging, overlay, onClickAt, dropType, onDropData }: PreviewProps) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const [own, setOwn] = useState<View | undefined>();
@@ -261,6 +263,11 @@ export function Preview({ svg, current, onPick, selected, relatedOf, labelOf, on
       }}
     >
       {!current && svg && <p className="preview__note">Showing the last valid diagram</p>}
+      {current && partial && svg && (
+        <p className="preview__note">
+          Drawn as far as it can be: what has errors is left out until it is fixed
+        </p>
+      )}
       {!svg && <p className="empty">Nothing to show yet.</p>}
       {editing && (
         <input
