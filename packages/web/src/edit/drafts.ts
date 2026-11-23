@@ -82,7 +82,7 @@ export function look(edit: Assets, doc: Doc, d: Draft): { svg: string; id: strin
   const out = apply(doc.text, doc.value, a.make(d.id, doc.value as never));
   const value = parseJson(out.text).value;
   if (value === undefined) return undefined;
-  const r = render(value, registry);
+  const r = render(value, registry, { bestEffort: true });
   const node = nodeAt(r.ir, out.at);
   const box = node && r.geometry?.nodes.find((n) => n.id === node.id);
   return r.svg && box ? { svg: r.svg, id: box.id, w: box.w, h: box.h } : undefined;

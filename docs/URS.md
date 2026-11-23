@@ -2,7 +2,7 @@
 
 | Field   | Value |
 |---------|-------|
-| Version | 0.82 (draft) |
+| Version | 0.83 (draft) |
 | Status  | Planning |
 | Owner   | Product |
 
@@ -186,7 +186,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
 |----|-----|-------------|---------------------|--------|--------|
 | URS-WEB-001 | M | Source editor with syntax highlighting. | D | D | Verified |
-| URS-WEB-002 | M | Live preview with debounced re-render on edit. The last good render is kept when there is an error. | E2E test. | T | Verified |
+| URS-WEB-002 | M | Live preview with debounced re-render on edit. The last good render is kept when there is an error and nothing can be drawn (otherwise URS-WEB-032). | E2E test. | T | Verified |
 | URS-WEB-003 | M | Export SVG download, byte-identical to the API output for the same input. | E2E hash comparison. | T | Verified |
 | URS-WEB-004 | M | Diagnostics shown inline at their source location. | E2E test. | T | Verified |
 | URS-WEB-005 | S | Schema-aware autocomplete: property names and enum values from the document type's schema. | Unit and E2E tests. | T | Verified |
@@ -216,6 +216,7 @@ A multi-type diagram language. Users define diagrams (flowcharts, cross-function
 | URS-WEB-029 | C | **Changes tried as typing pauses** (experimental, D-009). A text, number, colour, list or JSON field in the details pane tries its value about 0.8 s after the user stops typing, with no Enter needed, under the same checks as URS-WEB-025; a refused value stays in the field with the reason. The field keeps the focus while the diagram redraws. | E2E: a label written without Enter, focus kept; a bad colour refused while typing. | T | Verified |
 | URS-WEB-030 | C | **Connect by dragging** (experimental, D-009). Dragging a shape onto another connects them, from the dragged one to the one it is dropped on, as **Connect** would (URS-EXT-012). The dragged shape follows the pointer and the shape it would be dropped on is highlighted; let go anywhere else, it goes back, since the layout places shapes. Dragging elsewhere still pans. | E2E: drag a node onto another, a link is drawn; dropped on nothing, nothing changes. | T | Verified |
 | URS-WEB-031 | C | **Shapes placed anywhere, as drafts** (experimental, D-009). A shape from the palette is dragged onto the drawing, or clicked and then placed with a click anywhere on it. It stays where it was put, drawn as it will look but dashed, as a **draft**: it is not in the source and the layout does not move it, and it can be moved freely. It goes into the source, where the layout then places it, when it is applied (its Apply button, or Enter) or connected (dragged onto a shape, a shape dragged onto it, or Connect). A draft dropped in a lane, phase or column takes it as its placement: each placement reference of the new element (schema category `placement`) that may point into that band's collection is set to it. Delete, or its ✕, discards a draft; drafts are dropped when another diagram type is opened. | Unit tests of draft ids, placement and connecting drafts; E2E: drag from the palette, move, discard, connect a draft, a draft applied in a lane. | T | Verified |
+| URS-WEB-032 | S | **Best-effort drawing.** A diagram with errors is still drawn in the web app, as far as it can be: what an error points at (a value, a property, or the item holding it) is left out, then whatever that leaves broken, and the rest is drawn. Warnings never stop a drawing. JSON that does not parse yet (mid-edit) is read as far as it goes. A note over the drawing says it is incomplete until the errors are fixed. Drawn elements still lead to their place in the source, and the diagram can still be edited from the drawing (URS-WEB-025..031) while it has errors, as long as its JSON parses. The errors listed are the same as without it. Only when nothing at all can be drawn (e.g. an unknown type) is the last good drawing kept (URS-WEB-002). Core offers it as `render(…, { bestEffort: true })`; the API still refuses a document with errors. | Unit tests: a broken flowchart draws its valid part with source pointers of the original, same diagnostics as a plain compile, nothing changes for valid documents; for every example of every type, a stray property draws exactly as without it. E2E: a flowchart with errors drawn, clicked to source and connected from the drawing; half-typed JSON drawn. | T | Verified |
 
 ### 3.9 AI Generation (AI)
 | ID | Pri | Requirement | Acceptance criteria | Verify | Status |
@@ -404,6 +405,7 @@ Updated with each change. `—` = not started.
 | IN-006, IN-007 | core/src/adapters/{xml,yaml,index}.ts | core/test/adapters.test.ts | Schema-guided, type-agnostic XML; DOCTYPE refused; YAML alias cap. Every golden and example round-trips to byte-identical SVG. |
 | DOC-006 | scripts/docs/reference.ts, schema descriptions | scripts/docs/readme.test.ts, `pnpm docs:check` | |
 | API-008 | packages/api/src/openapi.ts (derived from route table) | api.test.ts | |
+| WEB-032 | core/src/best-effort.ts (`compileBestEffort`), render.ts (`bestEffort`, `partial`, `omitted`); web/src/useDiagram.ts (best effort, lenient JSON), preview/Preview.tsx (`partial` note), App.tsx | core/test/best-effort.test.ts, web/e2e/app.spec.ts (errors drawn and edited; half-typed JSON) | Type-agnostic: follows the diagnostics' pointers only. Not used by the API or the AI repair loop. |
 | WEB-001..004, WEB-007 | packages/web/src/** | packages/web/e2e/app.spec.ts, web/test/locate.test.ts | Includes regression test for stale export during debounce. |
 | WEB-010 | packages/web/src (no type-specific code) | web/e2e/app.spec.ts (all examples; state edit, validate, export) | |
 | TYP-003..005 | core/src/diagrams/state/* | core/test/state.test.ts, golden/state-* | |
@@ -487,6 +489,7 @@ Tests:        <added / updated>
 | Ver | Date | Change |
 |-----|------|--------|
 | 0.1 | 2026-11-11 | Initial draft. |
+| 0.83 | 2026-11-23 | Owner request: a diagram with errors is drawn as far as it can be, and can still be edited from the drawing (WEB-032, new; WEB-002 updated). |
 | 0.82 | 2026-11-21 | Owner feedback on the editing experiment: details in collapsible categories named by the schemas (WEB-028, new), changes tried as typing pauses (WEB-029, new), connecting by dragging one shape onto another (WEB-030, new), shapes placed anywhere as drafts until applied or connected (WEB-031, new); WEB-025 and WEB-026 updated. |
 | 0.81 | 2026-11-20 | Owner feedback on the editing experiment: adding and connecting for every type (EXT-012, WEB-026), refusing invalid values in the details pane with the reason shown (WEB-025), and references chosen from lists (WEB-027, new). |
 | 0.80 | 2026-11-20 | Owner request: Markdown uses the full width of its pane (WS-041). |

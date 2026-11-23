@@ -231,6 +231,7 @@ export function App() {
                 <Preview
                 {...(d.svg !== undefined && { svg: d.svg })}
                 current={d.current}
+                partial={d.partial}
                 onPick={pick}
                 {...(selected && { selected })}
                 relatedOf={relatedOf}

@@ -32,6 +32,44 @@ test('live preview follows edits and keeps the last good render on error (URS-WE
   await expect(page.getByRole('button', { name: 'Export SVG' })).toBeDisabled();
 });
 
+test('a diagram with errors is drawn as far as it can be, and can still be edited from the drawing (URS-WEB-032)', async ({ page }) => {
+  await open(page);
+  await setSource(page, {
+    version: '1',
+    type: 'flowchart',
+    nodes: [
+      { id: 'a', label: 'Start', to: [{ node: 'b' }] },
+      { id: 'b', label: 'Broken', shape: 'star' },
+      { id: 'c', label: 'Still here', to: [{ node: 'nowhere' }] },
+    ],
+  });
+  // The schema error is reported first (the link is checked once the schema passes); only the bad value and
+  // the bad link are left out of the drawing.
+  await expect(status(page)).toHaveText('1 error');
+  await expect(preview(page).locator('[id="n-b"]')).toContainText('Broken');
+  await expect(preview(page).locator('[id="n-c"]')).toContainText('Still here');
+  await expect(page.getByText('Drawn as far as it can be')).toBeVisible();
+  // Clicking still finds the source, and the toolbar still edits.
+  await preview(page).locator('[id="n-c"]').click();
+  await expect(page.locator('.cm-activeLine + .cm-line')).toContainText('"id": "c"');
+  await page.getByRole('toolbar', { name: 'Edit diagram' }).getByRole('button', { name: 'Connect', exact: true }).click();
+  await preview(page).locator('[id="n-c"]').click();
+  await preview(page).locator('[id="n-a"]').click();
+  await expect(page.locator('.cm-content')).toContainText('"node": "a"');
+  // Fixed, the note goes.
+  await setSource(page, flow('Fixed'));
+  await expect(status(page)).toHaveText('Valid');
+  await expect(page.getByText('Drawn as far as it can be')).toHaveCount(0);
+});
+
+test('half-typed JSON is drawn as far as it goes (URS-WEB-032)', async ({ page }) => {
+  await open(page);
+  await setSource(page, '{ "version": "1", "type": "flowchart", "nodes": [ { "id": "a", "label": "Typed so far" }, { "id": "b", "label": "Half');
+  await expect(status(page)).toHaveText('1 error');
+  await expect(preview(page).locator('[id="n-a"]')).toContainText('Typed so far');
+  await expect(page.getByText('Drawn as far as it can be')).toBeVisible();
+});
+
 test('shows diagnostics inline at their source location (URS-WEB-004)', async ({ page }) => {
   await open(page);
   await setSource(page, flow('A', { nodes: [{ id: 'a', shape: 'star' }] }));

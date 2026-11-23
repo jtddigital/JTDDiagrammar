@@ -91,6 +91,8 @@
 
 .preview__note {
   position: absolute;
+  /* Over the drawing, but clicks go through to it. */
+  pointer-events: none;
   top: var(--space-3);
   left: 50%;
   transform: translateX(-50%);
